@@ -44,6 +44,7 @@ The current working prototype now includes:
 
 # Open Tasks
 
+- [ ] Update the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
 - [ ] Split simplified identification logic out of `ClassificationSystem` into a dedicated `IdentificationSystem`.
 - [ ] Add a simple `IntentSystem` for behavior assessment from track history.
 - [ ] Move Monte Carlo execution into an inline Web Worker to keep the UI responsive at higher iteration counts.
@@ -114,6 +115,7 @@ Do not implement until after the first vertical slice works.
 
 - [ ] Scenario JSON schema is intentionally deferred until the first prototype stabilizes.
 - [ ] UI Architecture is broader than first prototype scope.
+- [ ] Current UI theme does not yet match the requested dark neon purple / neon blue direction for panels and buttons.
 - [ ] Current prototype folds identification into `ClassificationSystem`; a dedicated `IdentificationSystem` is still pending.
 - [ ] Current prototype does not yet implement a dedicated `IntentSystem`.
 - [ ] Monte Carlo currently runs on the main thread instead of an inline Web Worker.
@@ -173,6 +175,8 @@ Use this prompt for the next Codex pass:
 
 ```text
 Read AGENTS.md, TODO.md, README.md, and the root design docs.
+
+Update the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
 
 Refactor the current vertical-slice prototype so classification, identification, and intent are separate systems.
 
