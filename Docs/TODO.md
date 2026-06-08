@@ -10,11 +10,11 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Extend the browser-only vertical slice after the core perception and worker refactor:
+Stabilize the updated browser-only vertical slice after the theme, placeholder, and validation pass:
 
-- apply the requested dark neon UI direction
-- add the first ghost-track and clutter placeholders
-- tighten scenario validation and browser-side verification
+- complete a full browser verification pass outside the current sandbox limits
+- decide the next step for environment realism or UI polish
+- keep the prototype explainable and local-only
 
 ---
 
@@ -30,24 +30,24 @@ The current working prototype now includes:
 - Red UAS waypoint movement
 - Detection candidate generation
 - Track creation and updates
-- Simple classification with simplified identification
+- Separate classification, identification, and intent stages
 - Simple C2 engagement decision
+- Ghost-track placeholder and clutter overlay placeholders
 - Effector firing
 - Damage resolution using Effective_Pk-style modifiers
 - Single-run report
-- Monte Carlo execution
+- Monte Carlo execution in an inline Web Worker with fallback
 - Results table
 - Flat CSV export
 - Event log panel
+- Scenario validation dashboard
 
 ---
 
 # Open Tasks
 
-- [ ] Update the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
-- [ ] Add ghost-track and clutter placeholders without building the full scenario editor UI.
-- [ ] Add stronger scenario validation and user-facing import error reporting for malformed JSON inputs.
-- [ ] Manually open `index.html` in a browser and complete the browser-side checklist below.
+- [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
+- [ ] Refactor the `Interceptor Launcher` so it spawns a child interceptor sub-component / active map object, and ensure that interceptor appears in the map state and reporting outputs.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
 ---
@@ -87,6 +87,10 @@ The current working prototype now includes:
 - [x] Moved Monte Carlo execution into an inline Web Worker with main-thread fallback.
 - [x] Added local scenario JSON import/export for the current template + instance baseline format.
 - [x] Added track aging, stale track drop behavior, and dropped-track report metrics.
+- [x] Updated the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
+- [x] Added ghost-track and clutter placeholders without building the full scenario editor UI.
+- [x] Added stronger scenario validation and user-facing import error reporting for malformed JSON inputs.
+- [x] Attempted browser-side verification using local headless Chromium invocations in the sandbox.
 
 ---
 
@@ -115,11 +119,9 @@ Do not implement until after the first vertical slice works.
 
 - [ ] Scenario JSON schema is intentionally deferred until the first prototype stabilizes.
 - [ ] UI Architecture is broader than first prototype scope.
-- [ ] Current UI theme does not yet match the requested dark neon purple / neon blue direction for panels and buttons.
-- [ ] Scenario import currently performs normalization but still lacks deeper validation and structured error messages.
 - [ ] Docs now live under `Agents/` and `Docs/`, while several instructions still refer to root-level files and lowercase `docs/`.
-- [ ] Physical-track flow is implemented, but ghost tracks, spoofed tracks, and clutter generation are still deferred.
-- [ ] Manual browser validation checklist still needs to be completed in an actual browser session.
+- [ ] Chromium headless verification is blocked in this sandbox by repeated GPU-process startup failures and hangs, so a full browser pass still needs to be completed elsewhere.
+- [ ] Physical-track flow is implemented, but ghost tracks, spoofed tracks, and clutter generation remain placeholder-level only.
 - [ ] Need to ensure `roles` remains an array, not an enum, as new import/export paths are added.
 
 ---
@@ -141,6 +143,9 @@ Do not implement until after the first vertical slice works.
 - Zero-delay follow-on state changes in the engagement chain enforce a minimum mechanical delay of `0.1` seconds.
 - Monte Carlo execution now runs in an inline Blob Web Worker and uses a main-thread fallback only when workers are unavailable.
 - Scenario JSON import/export uses normalization around the current template + instance vertical-slice schema.
+- Environment placeholders currently use a minimal `EnvironmentSystem` that can spawn a track-only ghost placeholder and render a clutter overlay without full object generation.
+- Scenario validation now gates execution and surfaces blocking errors plus warnings directly in the dashboard UI.
+- The current `Interceptor Launcher` is still resolved abstractly; future work should model a spawned interceptor child object as an active entity in the simulation and reports.
 
 ---
 
@@ -154,11 +159,15 @@ Use this after each major prototype update.
 - [ ] Canvas renders.
 - [ ] Blue object renders.
 - [ ] Red object renders.
+- [ ] Ghost placeholder toggle updates the dashboard and run-time behavior.
+- [ ] Clutter placeholder toggle updates the dashboard and map overlay.
 - [ ] Red UAS moves.
 - [ ] Single-run simulation completes.
 - [ ] Detection occurs.
 - [ ] Track is created.
 - [ ] Classification occurs.
+- [ ] Identification occurs.
+- [ ] Intent assessment occurs.
 - [ ] C2 decision occurs.
 - [ ] Effector fires.
 - [ ] Damage resolves.
@@ -166,6 +175,7 @@ Use this after each major prototype update.
 - [ ] Monte Carlo run completes.
 - [ ] Results table updates.
 - [ ] CSV export downloads.
+- [ ] Scenario validation blocks malformed scenarios with clear feedback.
 
 ---
 
@@ -176,9 +186,9 @@ Use this prompt for the next Codex pass:
 ```text
 Read AGENTS.md, TODO.md, README.md, and the root design docs.
 
-Update the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
+Perform a browser verification pass for the current prototype on a machine where Chromium can run reliably, then address any UI or runtime defects found.
 
-Add ghost-track and clutter placeholders, strengthen scenario validation and malformed-import feedback, and complete a browser-side verification pass.
+If the verification pass is clean, choose the next focused step: improve environment realism beyond placeholders, or refactor the `Interceptor Launcher` into a spawned child interceptor object that appears on the map and in reports.
 
 Keep the app browser-only, vanilla HTML, CSS, and JavaScript only, and do not build the full scenario editor yet.
 ```
