@@ -459,10 +459,10 @@
           <div class="panel">
             <h2>Current Slice</h2>
             <ul class="report-list">
-              <li><span>Scenario model</span><strong>Hardcoded templates and instances</strong></li>
-              <li><span>Physical chain</span><strong>Move -> detect -> track -> classify -> engage</strong></li>
+              <li><span>Scenario model</span><strong>Template + instance JSON with local import/export</strong></li>
+              <li><span>Physical chain</span><strong>Move -> detect -> track -> classify -> identify -> intent -> engage</strong></li>
               <li><span>Decision style</span><strong>Simple hostile-track engagement rule</strong></li>
-              <li><span>Damage model</span><strong>Effective_Pk with kinetic damage resolution</strong></li>
+              <li><span>Damage model</span><strong>Effective_Pk with kinetic damage and stale track drop</strong></li>
             </ul>
           </div>
           <div class="panel">
@@ -483,7 +483,9 @@
               <li><span>MovementSystem</span><strong>Waypoint motion</strong></li>
               <li><span>SensorSystem</span><strong>Range, FOV, signal, noise</strong></li>
               <li><span>TrackSystem</span><strong>Track create / update</strong></li>
-              <li><span>ClassificationSystem</span><strong>Classify and identify</strong></li>
+              <li><span>ClassificationSystem</span><strong>Classify track type</strong></li>
+              <li><span>IdentificationSystem</span><strong>Assess affiliation</strong></li>
+              <li><span>IntentSystem</span><strong>Estimate behavior</strong></li>
               <li><span>C2System</span><strong>Task available effector</strong></li>
               <li><span>Effect + Damage</span><strong>Resolve hit and destruction</strong></li>
               <li><span>LoggingSystem</span><strong>Explainable event history</strong></li>
@@ -498,7 +500,10 @@
         <div class="controls">
           <button id="run-single-btn">Run Single Scenario</button>
           <button id="run-monte-carlo-btn">Run Monte Carlo</button>
+          <button id="load-scenario-btn">Load Scenario JSON</button>
+          <button id="export-scenario-btn">Export Scenario JSON</button>
           <button id="reset-view-btn">Reset Scenario View</button>
+          <input id="scenario-file-input" type="file" accept=".json,application/json" hidden>
           <div class="field">
             <label for="monte-carlo-count">Iterations</label>
             <input id="monte-carlo-count" type="number" min="1" max="250" value="25">
@@ -509,6 +514,7 @@
           <div class="badge"><span>Playback</span><strong id="playback-text">Idle</strong></div>
           <div class="badge"><span>Queue</span><strong id="queue-text">0</strong></div>
           <div class="badge"><span>Last seed</span><strong id="seed-text">-</strong></div>
+          <div class="badge"><span>Scenario</span><strong id="scenario-text">Baseline Vertical Slice</strong></div>
         </div>
       </div>
 
@@ -563,9 +569,11 @@
               <tr>
                 <th>Iteration</th>
                 <th>Detected</th>
-                <th>Track</th>
+                <th>Identified</th>
+                <th>Intent</th>
                 <th>Engaged</th>
                 <th>Destroyed</th>
+                <th>Dropped</th>
                 <th>Detect Time (s)</th>
                 <th>Kill Time (s)</th>
                 <th>Shots</th>
@@ -584,6 +592,7 @@
             <button id="export-single-btn">Export Single Run CSV</button>
             <button id="export-monte-carlo-btn">Export Monte Carlo CSV</button>
             <button id="export-log-btn">Export Event Log JSON</button>
+            <button id="export-scenario-file-btn">Export Scenario JSON</button>
           </div>
           <p style="margin: 0; color: var(--muted);">
             Preview area shows the most recent export payload before download.
@@ -598,1026 +607,1395 @@
   </div>
 
   <script>
-    const EVENT_PRIORITIES = {
-      state: 1,
-      sensor: 2,
-      track: 3,
-      c2: 4,
-      movement: 5,
-      effector: 6,
-      effect: 7,
-      damage: 8,
-      log: 9
-    };
+    function createSimulationKernel() {
+      const EVENT_PRIORITIES = {
+        state: 1,
+        sensor: 2,
+        track: 3,
+        c2: 4,
+        movement: 5,
+        effector: 6,
+        effect: 7,
+        damage: 8,
+        log: 9
+      };
 
-    const MIN_STATE_DELAY_SEC = 0.1;
+      const MIN_STATE_DELAY_SEC = 0.1;
 
-    function clamp(value, min, max) {
-      return Math.max(min, Math.min(max, value));
-    }
-
-    function distance3D(a, b) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const dz = (b.z || 0) - (a.z || 0);
-      return Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
-    }
-
-    function distance2D(a, b) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      return Math.sqrt((dx * dx) + (dy * dy));
-    }
-
-    function angleDeg(from, to) {
-      const dx = to.x - from.x;
-      const dy = to.y - from.y;
-      let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-      if (angle < 0) {
-        angle += 360;
-      }
-      return angle;
-    }
-
-    function smallestAngleDifference(a, b) {
-      let diff = ((a - b + 540) % 360) - 180;
-      if (diff < -180) {
-        diff += 360;
-      }
-      return diff;
-    }
-
-    function round(value, decimals = 2) {
-      const factor = 10 ** decimals;
-      return Math.round(value * factor) / factor;
-    }
-
-    function deepClone(value) {
-      if (typeof structuredClone === "function") {
-        return structuredClone(value);
-      }
-      return JSON.parse(JSON.stringify(value));
-    }
-
-    class SeededRNG {
-      constructor(seed) {
-        this.seed = seed >>> 0;
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
       }
 
-      next() {
-        this.seed = (1664525 * this.seed + 1013904223) >>> 0;
-        return this.seed / 4294967296;
+      function round(value, decimals = 2) {
+        const factor = 10 ** decimals;
+        return Math.round(value * factor) / factor;
       }
 
-      nextGaussian(mean = 0, standardDeviation = 1) {
-        let u1 = this.next();
-        let u2 = this.next();
-        if (u1 <= 1e-12) {
-          u1 = 1e-12;
+      function deepClone(value) {
+        if (typeof structuredClone === "function") {
+          return structuredClone(value);
         }
-        const magnitude = Math.sqrt(-2 * Math.log(u1));
-        const z0 = magnitude * Math.cos(2 * Math.PI * u2);
-        return mean + (z0 * standardDeviation);
+        return JSON.parse(JSON.stringify(value));
       }
 
-      chance(probability) {
-        return this.next() <= probability;
-      }
-    }
-
-    class EventManager {
-      constructor() {
-        this.queue = [];
-        this.sequence = 0;
+      function distance3D(a, b) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = (b.z || 0) - (a.z || 0);
+        return Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
       }
 
-      schedule(event) {
-        this.queue.push({
-          ...event,
-          sequence: this.sequence++
-        });
-        this.queue.sort((left, right) => {
-          if (left.time !== right.time) {
-            return left.time - right.time;
+      function distance2D(a, b) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        return Math.sqrt((dx * dx) + (dy * dy));
+      }
+
+      function angleDeg(from, to) {
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        if (angle < 0) {
+          angle += 360;
+        }
+        return angle;
+      }
+
+      function smallestAngleDifference(a, b) {
+        let diff = ((a - b + 540) % 360) - 180;
+        if (diff < -180) {
+          diff += 360;
+        }
+        return diff;
+      }
+
+      function ensureArray(value) {
+        return Array.isArray(value) ? value : [];
+      }
+
+      function normalizeRoles(roles, fallbackRoles = []) {
+        if (Array.isArray(roles) && roles.length) {
+          return roles.slice();
+        }
+        return fallbackRoles.slice();
+      }
+
+      function normalizeSensor(sensor, index) {
+        const classification = sensor.classification || {};
+        const identification = sensor.identification || {};
+        return {
+          id: sensor.id || "Sensor-" + (index + 1),
+          name: sensor.name || sensor.type || ("Sensor " + (index + 1)),
+          type: sensor.type || "Radar",
+          maxRangeM: Number(sensor.maxRangeM ?? sensor.maxRange_m ?? 0),
+          horizontalFovDeg: Number(sensor.horizontalFovDeg ?? sensor.fov_azimuth_deg ?? 360),
+          verticalFovDeg: Number(sensor.verticalFovDeg ?? sensor.fov_elevation_deg ?? 180),
+          headingDeg: Number(sensor.headingDeg ?? sensor.heading_deg ?? 0),
+          transmitPowerDb: Number(sensor.transmitPowerDb ?? sensor.txPower_dB ?? 0),
+          noiseFloorDb: Number(sensor.noiseFloorDb ?? -94),
+          noiseSigmaDb: Number(sensor.noiseSigmaDb ?? 1.2),
+          detectionThresholdDb: Number(sensor.detectionThresholdDb ?? sensor.thresholdDb ?? 17),
+          scanIntervalSec: Number(sensor.scanIntervalSec ?? sensor.sweepRate_sec ?? 1),
+          classification: {
+            canClassify: classification.canClassify !== false,
+            latencySec: Number(classification.latencySec ?? classification.classificationLatency_sec ?? 0.2),
+            accuracyBase: Number(classification.accuracyBase ?? classification.classificationAccuracyBase ?? 0.72)
+          },
+          identification: {
+            canIdentify: identification.canIdentify !== false,
+            latencySec: Number(identification.latencySec ?? identification.identificationLatency_sec ?? 0.35),
+            accuracyBase: Number(identification.accuracyBase ?? identification.identificationAccuracyBase ?? 0.68)
           }
-          if (left.priority !== right.priority) {
-            return left.priority - right.priority;
-          }
-          return left.sequence - right.sequence;
-        });
+        };
       }
 
-      scheduleDelay(currentTime, delaySec, event, options = {}) {
-        const adjustedDelay = options.enforceMinimumDelay && delaySec <= 0
-          ? MIN_STATE_DELAY_SEC
-          : Math.max(0, delaySec);
-        this.schedule({
-          ...event,
-          time: round(currentTime + adjustedDelay, 3)
-        });
+      function normalizeEffector(effector, index) {
+        return {
+          id: effector.id || "Effector-" + (index + 1),
+          name: effector.name || effector.type || ("Effector " + (index + 1)),
+          type: effector.type || "Kinetic",
+          maxRangeM: Number(effector.maxRangeM ?? effector.maxRange_m ?? 0),
+          basePk: Number(effector.basePk ?? 0),
+          basePe: Number(effector.basePe ?? 0),
+          damagePoints: Number(effector.damagePoints ?? effector.payloadYield ?? 0),
+          ammoCapacity: Number(effector.ammoCapacity ?? 1),
+          commandDelaySec: Number(effector.commandDelaySec ?? 0.2),
+          timeToEffectSec: Number(effector.timeToEffectSec ?? 0.6),
+          cooldownSec: Number(effector.cooldownSec ?? effector.cooldown_sec ?? 1.5)
+        };
       }
 
-      next() {
-        return this.queue.shift();
-      }
-
-      hasEvents() {
-        return this.queue.length > 0;
-      }
-    }
-
-    class LoggingSystem {
-      record(world, timeSec, type, message, data = {}) {
-        world.logs.push({
-          timeSec: round(timeSec, 2),
-          type,
-          message,
-          data
-        });
-      }
-    }
-
-    class MovementSystem {
-      process(event, world, services) {
-        const object = world.objects[event.payload.objectId];
-        if (!object || object.runtime.destroyed) {
-          return;
-        }
-
-        const movement = object.components.movement;
-        const mission = object.runtime.mission;
-        if (!movement || !mission || mission.currentWaypointIndex >= mission.waypoints.length) {
-          return;
-        }
-
-        const waypoint = mission.waypoints[mission.currentWaypointIndex];
-        const current = object.runtime.position;
-        const stepDistance = movement.speedMps * movement.stepSec;
-        const remainingDistance = distance3D(current, waypoint);
-
-        if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
-          object.runtime.position = { x: waypoint.x, y: waypoint.y, z: waypoint.z };
-          mission.currentWaypointIndex += 1;
-          services.logger.record(
-            world,
-            event.time,
-            "movement",
-            object.name + " reached waypoint " + mission.currentWaypointIndex,
-            { objectId: object.id, waypointIndex: mission.currentWaypointIndex }
-          );
-        } else {
-          const ratio = stepDistance / remainingDistance;
-          object.runtime.position = {
-            x: current.x + ((waypoint.x - current.x) * ratio),
-            y: current.y + ((waypoint.y - current.y) * ratio),
-            z: current.z + ((waypoint.z - current.z) * ratio)
+      function normalizeScenario(inputScenario) {
+        const scenario = deepClone(inputScenario || {});
+        scenario.metadata = scenario.metadata || {};
+        scenario.metadata.name = scenario.metadata.name || scenario.name || "Baseline Vertical Slice";
+        scenario.metadata.description = scenario.metadata.description || "";
+        scenario.config = scenario.config || {};
+        scenario.config.maxTimeSec = Number(scenario.config.maxTimeSec ?? 45);
+        scenario.config.trackStaleAfterSec = Number(scenario.config.trackStaleAfterSec ?? 4);
+        scenario.config.attackRunRangeM = Number(scenario.config.attackRunRangeM ?? 240);
+        scenario.environment = scenario.environment || {};
+        scenario.environment.baseNoiseDb = Number(scenario.environment.baseNoiseDb ?? 1.8);
+        scenario.templates = ensureArray(scenario.templates).map((template, templateIndex) => {
+          const components = template.components || {};
+          return {
+            id: template.id || "Template-" + (templateIndex + 1),
+            name: template.name || ("Template " + (templateIndex + 1)),
+            category: template.category || "Generic",
+            defaultRoles: normalizeRoles(template.defaultRoles, []),
+            components: {
+              health: {
+                maxHealth: Number(components.health?.maxHealth ?? 100)
+              },
+              resistance: {
+                kineticResistance: Number(components.resistance?.kineticResistance ?? 0.1)
+              },
+              signature: {
+                radarSignatureDb: Number(components.signature?.radarSignatureDb ?? components.signature?.radarSignature_dB ?? -10)
+              },
+              movement: components.movement ? {
+                speedMps: Number(components.movement.speedMps ?? components.movement.maxSpeed_mps ?? 0),
+                stepSec: Number(components.movement.stepSec ?? 1),
+                waypointToleranceM: Number(components.movement.waypointToleranceM ?? 10)
+              } : null,
+              sensors: ensureArray(components.sensors).map(normalizeSensor),
+              effectors: ensureArray(components.effectors).map(normalizeEffector),
+              c2: components.c2 ? {
+                trackCapacity: Number(components.c2.trackCapacity ?? components.c2.maxTracks ?? 8),
+                processingLatencySec: Number(components.c2.processingLatencySec ?? components.c2.processingLatency_sec ?? 0.25)
+              } : null
+            }
           };
+        });
+
+        scenario.instances = ensureArray(scenario.instances).map((instance, instanceIndex) => ({
+          id: instance.id || "Instance-" + (instanceIndex + 1),
+          templateId: instance.templateId,
+          name: instance.name || ("Instance " + (instanceIndex + 1)),
+          side: instance.side || "Neutral",
+          roles: normalizeRoles(instance.roles, []),
+          posX: Number(instance.posX ?? 0),
+          posY: Number(instance.posY ?? 0),
+          posZ: Number(instance.posZ ?? 0),
+          missionWaypoints: ensureArray(instance.missionWaypoints).map((waypoint) => ({
+            x: Number(waypoint.x ?? 0),
+            y: Number(waypoint.y ?? 0),
+            z: Number(waypoint.z ?? 0)
+          }))
+        }));
+
+        return scenario;
+      }
+
+      function buildBaselineScenario() {
+        return normalizeScenario({
+          metadata: {
+            name: "Baseline Vertical Slice",
+            description: "One Blue C-sUAS site engages one Red UAS along a straight waypoint route."
+          },
+          config: {
+            maxTimeSec: 45,
+            trackStaleAfterSec: 4,
+            attackRunRangeM: 240
+          },
+          environment: {
+            baseNoiseDb: 1.8
+          },
+          templates: [
+            {
+              id: "Template-Blue-CUAS-Site",
+              name: "Blue CUAS Site",
+              defaultRoles: ["Asset", "Sensor", "Effector", "C2"],
+              components: {
+                health: { maxHealth: 120 },
+                resistance: { kineticResistance: 0.15 },
+                signature: { radarSignatureDb: -2 },
+                sensors: [
+                  {
+                    id: "Sensor-Blue-EO-RF-1",
+                    name: "Blue EO/RF Sensor",
+                    type: "EO_IR",
+                    maxRangeM: 420,
+                    horizontalFovDeg: 140,
+                    verticalFovDeg: 90,
+                    headingDeg: 180,
+                    transmitPowerDb: 53,
+                    noiseFloorDb: -94,
+                    noiseSigmaDb: 1.2,
+                    detectionThresholdDb: 17,
+                    scanIntervalSec: 1,
+                    classification: {
+                      canClassify: true,
+                      latencySec: 0.25,
+                      accuracyBase: 0.84
+                    },
+                    identification: {
+                      canIdentify: true,
+                      latencySec: 0.35,
+                      accuracyBase: 0.76
+                    }
+                  }
+                ],
+                effectors: [
+                  {
+                    id: "Effector-Blue-Kinetic-1",
+                    name: "Interceptor Launcher",
+                    type: "Kinetic",
+                    maxRangeM: 230,
+                    basePk: 0.74,
+                    damagePoints: 150,
+                    ammoCapacity: 3,
+                    commandDelaySec: 0,
+                    timeToEffectSec: 0.6,
+                    cooldownSec: 2
+                  }
+                ],
+                c2: {
+                  trackCapacity: 8,
+                  processingLatencySec: 0.3
+                }
+              }
+            },
+            {
+              id: "Template-Red-UAS-Generic",
+              name: "Red Recon Strike UAS",
+              defaultRoles: ["UAS"],
+              components: {
+                health: { maxHealth: 90 },
+                resistance: { kineticResistance: 0.18 },
+                signature: { radarSignatureDb: -14 },
+                movement: {
+                  speedMps: 35,
+                  stepSec: 1,
+                  waypointToleranceM: 10
+                }
+              }
+            }
+          ],
+          instances: [
+            {
+              id: "Blue-Site-01",
+              templateId: "Template-Blue-CUAS-Site",
+              name: "Blue Site 01",
+              side: "Blue",
+              roles: ["Asset", "Sensor", "Effector", "C2"],
+              posX: 670,
+              posY: 315,
+              posZ: 20,
+              missionWaypoints: []
+            },
+            {
+              id: "Red-UAS-01",
+              templateId: "Template-Red-UAS-Generic",
+              name: "Red UAS 01",
+              side: "Red",
+              roles: ["UAS"],
+              posX: 90,
+              posY: 315,
+              posZ: 120,
+              missionWaypoints: [
+                { x: 980, y: 315, z: 120 }
+              ]
+            }
+          ]
+        });
+      }
+
+      function getObject(world, objectId) {
+        return world.objects[objectId] || null;
+      }
+
+      function getTrack(world, trackId) {
+        return world.tracks[trackId] || null;
+      }
+
+      function getSensor(world, objectId, sensorId) {
+        const object = getObject(world, objectId);
+        if (!object) {
+          return null;
+        }
+        return (object.components.sensors || []).find((sensor) => sensor.id === sensorId) || null;
+      }
+
+      function snapshotWorld(world, timeSec, reason) {
+        return {
+          timeSec: round(timeSec, 2),
+          reason,
+          objects: world.objectIds.map((id) => {
+            const object = world.objects[id];
+            return {
+              id: object.id,
+              name: object.name,
+              side: object.side,
+              roles: deepClone(object.roles),
+              x: object.runtime.position.x,
+              y: object.runtime.position.y,
+              z: object.runtime.position.z,
+              destroyed: object.runtime.destroyed,
+              status: object.runtime.operationalStatus
+            };
+          }),
+          tracks: Object.values(world.tracks).map((track) => ({
+            id: track.id,
+            x: track.position ? track.position.x : null,
+            y: track.position ? track.position.y : null,
+            classification: track.classificationStatus,
+            identification: track.identificationStatus,
+            intent: track.intentStatus,
+            status: track.status
+          }))
+        };
+      }
+
+      function finalizeReport(world, seed) {
+        const blueObjects = world.objectIds
+          .map((id) => world.objects[id])
+          .filter((object) => object.side === "Blue");
+        const redObjects = world.objectIds
+          .map((id) => world.objects[id])
+          .filter((object) => object.side === "Red");
+        const destroyedRedObjects = redObjects.filter((object) => object.runtime.destroyed);
+        const survivingBlueObjects = blueObjects.filter((object) => !object.runtime.destroyed);
+        const primaryTrack = Object.values(world.tracks)
+          .sort((left, right) => (right.lastUpdateTimeSec || 0) - (left.lastUpdateTimeSec || 0))[0] || null;
+
+        return {
+          report: {
+            scenarioName: world.scenario.metadata.name,
+            seed,
+            endTimeSec: round(world.currentTimeSec, 2),
+            detected: world.metrics.detectionCandidates > 0,
+            trackCreated: world.metrics.tracksCreated > 0,
+            classified: world.metrics.classifications > 0,
+            identified: world.metrics.identifications > 0,
+            intentAssessed: world.metrics.intentsAssessed > 0,
+            engaged: world.metrics.shotsFired > 0,
+            targetDestroyed: destroyedRedObjects.length > 0,
+            tracksDropped: world.metrics.tracksDropped,
+            firstDetectionTimeSec: world.metrics.firstDetectionTimeSec,
+            firstDetectionRangeM: world.metrics.firstDetectionRangeM,
+            killTimeSec: world.metrics.killTimeSec,
+            blueAssetsSurvived: survivingBlueObjects.length,
+            threatsDestroyed: destroyedRedObjects.length,
+            shotsFired: world.metrics.shotsFired,
+            eventCount: world.logs.length,
+            ammoExpended: deepClone(world.metrics.ammoExpended),
+            finalTargetStatus: destroyedRedObjects.length > 0
+              ? "Destroyed"
+              : (redObjects[0]?.runtime.operationalStatus || "Unknown"),
+            finalTrackStatus: primaryTrack ? primaryTrack.status : "None",
+            finalClassificationStatus: primaryTrack ? primaryTrack.classificationStatus : "None",
+            finalIdentificationStatus: primaryTrack ? primaryTrack.identificationStatus : "None",
+            finalIntentStatus: primaryTrack ? primaryTrack.intentStatus : "None",
+            logs: deepClone(world.logs),
+            frames: deepClone(world.frames),
+            tracks: deepClone(world.tracks)
+          }
+        };
+      }
+
+      function createCsvRow(iterationId, report) {
+        return {
+          Iteration_ID: iterationId,
+          Scenario_Name: report.scenarioName,
+          Seed: report.seed,
+          Detected: report.detected ? "Yes" : "No",
+          Track_Created: report.trackCreated ? "Yes" : "No",
+          Classified: report.classified ? "Yes" : "No",
+          Identified: report.identified ? "Yes" : "No",
+          Intent_Assessed: report.intentAssessed ? "Yes" : "No",
+          Engaged: report.engaged ? "Yes" : "No",
+          Threat_Destroyed: report.targetDestroyed ? "Yes" : "No",
+          Tracks_Dropped: report.tracksDropped,
+          First_Detection_Time_s: report.firstDetectionTimeSec ?? "",
+          First_Detection_Range_m: report.firstDetectionRangeM ?? "",
+          Kill_Time_s: report.killTimeSec ?? "",
+          Blue_Assets_Survived: report.blueAssetsSurvived,
+          Threats_Destroyed: report.threatsDestroyed,
+          Shots_Fired: report.shotsFired,
+          Final_Target_Status: report.finalTargetStatus,
+          Final_Track_Status: report.finalTrackStatus,
+          Classification_Status: report.finalClassificationStatus,
+          Identification_Status: report.finalIdentificationStatus,
+          Intent_Status: report.finalIntentStatus,
+          Event_Count: report.eventCount,
+          Template_Blue_CUAS_Site_Ammo_Expended: report.ammoExpended["Template-Blue-CUAS-Site"] || 0
+        };
+      }
+
+      function rowsToCsv(rows) {
+        if (!rows.length) {
+          return "";
+        }
+        const headers = Object.keys(rows[0]);
+        const lines = [headers.join(",")];
+        rows.forEach((row) => {
+          const values = headers.map((header) => {
+            const rawValue = row[header] ?? "";
+            return "\"" + String(rawValue).replace(/"/g, "\"\"") + "\"";
+          });
+          lines.push(values.join(","));
+        });
+        return lines.join("\n");
+      }
+
+      class SeededRNG {
+        constructor(seed) {
+          this.seed = seed >>> 0;
         }
 
-        services.captureFrame(world, event.time, "movement");
+        next() {
+          this.seed = (1664525 * this.seed + 1013904223) >>> 0;
+          return this.seed / 4294967296;
+        }
 
-        if (mission.currentWaypointIndex < mission.waypoints.length) {
-          services.events.scheduleDelay(event.time, movement.stepSec, {
-            type: "movement.step",
-            priority: EVENT_PRIORITIES.movement,
-            payload: { objectId: object.id }
-          });
-        } else {
-          services.logger.record(
-            world,
-            event.time,
-            "movement",
-            object.name + " completed its waypoint route",
-            { objectId: object.id }
-          );
+        nextGaussian(mean = 0, standardDeviation = 1) {
+          let u1 = this.next();
+          let u2 = this.next();
+          if (u1 <= 1e-12) {
+            u1 = 1e-12;
+          }
+          const magnitude = Math.sqrt(-2 * Math.log(u1));
+          const z0 = magnitude * Math.cos(2 * Math.PI * u2);
+          return mean + (z0 * standardDeviation);
+        }
+
+        chance(probability) {
+          return this.next() <= probability;
         }
       }
-    }
 
-    class SensorSystem {
-      process(event, world, services) {
-        const host = world.objects[event.payload.objectId];
-        if (!host || host.runtime.destroyed) {
-          return;
+      class EventManager {
+        constructor() {
+          this.queue = [];
+          this.sequence = 0;
         }
 
-        const sensors = host.components.sensors || [];
-        sensors.forEach((sensor) => {
-          world.objectIds.forEach((targetId) => {
-            const target = world.objects[targetId];
-            if (!target || target.runtime.destroyed || target.side === host.side) {
-              return;
+        schedule(event) {
+          this.queue.push({
+            ...event,
+            sequence: this.sequence++
+          });
+          this.queue.sort((left, right) => {
+            if (left.time !== right.time) {
+              return left.time - right.time;
             }
-
-            const hostPosition = host.runtime.position;
-            const targetPosition = target.runtime.position;
-            const rangeM = distance3D(hostPosition, targetPosition);
-            const horizontalRangeM = distance2D(hostPosition, targetPosition);
-
-            if (rangeM > sensor.maxRangeM) {
-              return;
+            if (left.priority !== right.priority) {
+              return left.priority - right.priority;
             }
+            return left.sequence - right.sequence;
+          });
+        }
 
-            const bearingDeg = angleDeg(hostPosition, targetPosition);
-            const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
-            const elevationDeg = Math.abs(Math.atan2(targetPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI));
+        scheduleDelay(currentTime, delaySec, event, options = {}) {
+          const adjustedDelay = options.enforceMinimumDelay && delaySec <= 0
+            ? MIN_STATE_DELAY_SEC
+            : Math.max(0, delaySec);
+          this.schedule({
+            ...event,
+            time: round(currentTime + adjustedDelay, 3)
+          });
+        }
 
-            if (relativeBearingDeg > sensor.horizontalFovDeg / 2) {
-              return;
-            }
+        next() {
+          return this.queue.shift();
+        }
 
-            if (elevationDeg > sensor.verticalFovDeg / 2) {
-              return;
-            }
+        hasEvents() {
+          return this.queue.length > 0;
+        }
+      }
 
-            const radarSignatureDb = target.components.signature.radarSignatureDb;
-            const signalStrengthDb = sensor.transmitPowerDb + radarSignatureDb - (20 * Math.log10(Math.max(1, rangeM)));
-            const noiseDb = sensor.noiseFloorDb + world.environment.baseNoiseDb + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
+      class LoggingSystem {
+        record(world, timeSec, type, message, data = {}) {
+          world.logs.push({
+            timeSec: round(timeSec, 2),
+            type,
+            message,
+            data
+          });
+        }
+      }
 
-            if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
-              return;
-            }
+      class MovementSystem {
+        process(event, world, services) {
+          const object = getObject(world, event.payload.objectId);
+          if (!object || object.runtime.destroyed) {
+            return;
+          }
 
-            const confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
-            world.metrics.detectionCandidates += 1;
-            if (world.metrics.firstDetectionTimeSec === null) {
-              world.metrics.firstDetectionTimeSec = round(event.time, 2);
-              world.metrics.firstDetectionRangeM = round(rangeM, 2);
-            }
+          const movement = object.components.movement;
+          const mission = object.runtime.mission;
+          if (!movement || mission.currentWaypointIndex >= mission.waypoints.length) {
+            return;
+          }
 
+          const waypoint = mission.waypoints[mission.currentWaypointIndex];
+          const current = object.runtime.position;
+          const stepDistance = movement.speedMps * movement.stepSec;
+          const remainingDistance = distance3D(current, waypoint);
+
+          if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
+            object.runtime.position = { x: waypoint.x, y: waypoint.y, z: waypoint.z };
+            mission.currentWaypointIndex += 1;
             services.logger.record(
               world,
               event.time,
-              "detection",
-              host.name + " generated a detection candidate on " + target.name,
-              {
-                sensorId: sensor.id,
-                targetId: target.id,
-                rangeM: round(rangeM, 2),
-                confidence: round(confidence, 2)
-              }
+              "movement",
+              object.name + " reached waypoint " + mission.currentWaypointIndex,
+              { objectId: object.id, waypointIndex: mission.currentWaypointIndex }
             );
+          } else {
+            const ratio = stepDistance / remainingDistance;
+            object.runtime.position = {
+              x: current.x + ((waypoint.x - current.x) * ratio),
+              y: current.y + ((waypoint.y - current.y) * ratio),
+              z: current.z + ((waypoint.z - current.z) * ratio)
+            };
+          }
 
-            services.events.schedule({
-              time: event.time,
-              type: "track.process",
-              priority: EVENT_PRIORITIES.track,
-              payload: {
-                observerId: host.id,
-                sensorId: sensor.id,
-                targetId: target.id,
-                confidence,
-                rangeM,
-                bearingDeg
-              }
+          services.captureFrame(world, event.time, "movement");
+
+          if (mission.currentWaypointIndex < mission.waypoints.length) {
+            services.events.scheduleDelay(event.time, movement.stepSec, {
+              type: "movement.step",
+              priority: EVENT_PRIORITIES.movement,
+              payload: { objectId: object.id }
             });
+          } else {
+            services.logger.record(
+              world,
+              event.time,
+              "movement",
+              object.name + " completed its waypoint route",
+              { objectId: object.id }
+            );
+          }
+        }
+      }
+
+      class SensorSystem {
+        process(event, world, services) {
+          const host = getObject(world, event.payload.objectId);
+          if (!host || host.runtime.destroyed) {
+            return;
+          }
+
+          (host.components.sensors || []).forEach((sensor) => {
+            world.objectIds.forEach((targetId) => {
+              const target = getObject(world, targetId);
+              if (!target || target.runtime.destroyed || target.side === host.side) {
+                return;
+              }
+
+              const hostPosition = host.runtime.position;
+              const targetPosition = target.runtime.position;
+              const rangeM = distance3D(hostPosition, targetPosition);
+              const horizontalRangeM = distance2D(hostPosition, targetPosition);
+              if (rangeM > sensor.maxRangeM) {
+                return;
+              }
+
+              const bearingDeg = angleDeg(hostPosition, targetPosition);
+              const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
+              const elevationDeg = Math.abs(
+                Math.atan2(targetPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI)
+              );
+
+              if (relativeBearingDeg > sensor.horizontalFovDeg / 2 || elevationDeg > sensor.verticalFovDeg / 2) {
+                return;
+              }
+
+              const signalStrengthDb = sensor.transmitPowerDb
+                + target.components.signature.radarSignatureDb
+                - (20 * Math.log10(Math.max(1, rangeM)));
+              const noiseDb = sensor.noiseFloorDb
+                + world.environment.baseNoiseDb
+                + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
+
+              if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
+                return;
+              }
+
+              const confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
+              world.metrics.detectionCandidates += 1;
+              if (world.metrics.firstDetectionTimeSec === null) {
+                world.metrics.firstDetectionTimeSec = round(event.time, 2);
+                world.metrics.firstDetectionRangeM = round(rangeM, 2);
+              }
+
+              services.logger.record(
+                world,
+                event.time,
+                "detection",
+                host.name + " generated a detection candidate on " + target.name,
+                {
+                  observerId: host.id,
+                  sensorId: sensor.id,
+                  targetId: target.id,
+                  rangeM: round(rangeM, 2),
+                  confidence: round(confidence, 2)
+                }
+              );
+
+              services.events.schedule({
+                time: event.time,
+                type: "track.process",
+                priority: EVENT_PRIORITIES.track,
+                payload: {
+                  observerId: host.id,
+                  sensorId: sensor.id,
+                  targetId: target.id,
+                  confidence,
+                  rangeM,
+                  bearingDeg
+                }
+              });
+            });
+
+            if (event.time + sensor.scanIntervalSec <= world.config.maxTimeSec) {
+              services.events.scheduleDelay(event.time, sensor.scanIntervalSec, {
+                type: "sensor.scan",
+                priority: EVENT_PRIORITIES.sensor,
+                payload: { objectId: host.id }
+              });
+            }
+          });
+        }
+      }
+
+      class TrackSystem {
+        scheduleTrackAging(track, timeSec, events) {
+          track.agingToken += 1;
+          events.scheduleDelay(timeSec, track.staleAfterSec, {
+            type: "track.age",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id,
+              agingToken: track.agingToken
+            }
+          });
+        }
+
+        process(event, world, services) {
+          const target = getObject(world, event.payload.targetId);
+          const observer = getObject(world, event.payload.observerId);
+          const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
+          if (!target || !observer || !sensor || target.runtime.destroyed) {
+            return;
+          }
+
+          let track = Object.values(world.tracks).find((candidate) =>
+            candidate.realObjectId === target.id
+            && candidate.owningSide === observer.side
+            && candidate.status === "Active"
+          );
+
+          if (!track) {
+            const trackId = "Track-" + world.nextTrackId++;
+            track = {
+              id: trackId,
+              realObjectId: target.id,
+              trackType: "Real",
+              owningSide: observer.side,
+              perceivedSide: "Unknown",
+              sourceSensorIds: [sensor.id],
+              detectionConfidence: 0,
+              classificationStatus: "Unknown Air Object",
+              classificationConfidence: 0,
+              identificationStatus: "Unknown",
+              identificationConfidence: 0,
+              intentStatus: "Unknown",
+              intentConfidence: 0,
+              trackQuality: 0,
+              status: "Active",
+              staleAfterSec: world.config.trackStaleAfterSec,
+              lastUpdateTimeSec: 0,
+              history: [],
+              pendingEngagement: false,
+              agingToken: 0
+            };
+            world.tracks[trackId] = track;
+            world.metrics.tracksCreated += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "track",
+              "Track created for " + target.name,
+              { trackId: track.id, targetId: target.id }
+            );
+          } else {
+            services.logger.record(
+              world,
+              event.time,
+              "track",
+              "Track updated for " + target.name,
+              { trackId: track.id, targetId: target.id }
+            );
+          }
+
+          if (!track.sourceSensorIds.includes(sensor.id)) {
+            track.sourceSensorIds.push(sensor.id);
+          }
+          track.lastUpdateTimeSec = round(event.time, 2);
+          track.position = deepClone(target.runtime.position);
+          track.rangeM = round(event.payload.rangeM, 2);
+          track.detectionConfidence = round(event.payload.confidence, 2);
+          track.trackQuality = round(clamp((track.trackQuality * 0.45) + (event.payload.confidence * 0.55), 0.1, 0.99), 2);
+          track.history.push({
+            timeSec: round(event.time, 2),
+            confidence: round(event.payload.confidence, 2),
+            rangeM: round(event.payload.rangeM, 2),
+            position: deepClone(target.runtime.position)
           });
 
-          const maxTimeReached = event.time + sensor.scanIntervalSec > world.config.maxTimeSec;
-          if (!maxTimeReached) {
-            services.events.scheduleDelay(event.time, sensor.scanIntervalSec, {
-              type: "sensor.scan",
-              priority: EVENT_PRIORITIES.sensor,
-              payload: { objectId: host.id }
-            });
-          }
-        });
-      }
-    }
+          this.scheduleTrackAging(track, event.time, services.events);
+          services.captureFrame(world, event.time, "track");
 
-    class TrackSystem {
-      process(event, world, services) {
-        const target = world.objects[event.payload.targetId];
-        if (!target || target.runtime.destroyed) {
-          return;
-        }
-
-        let track = Object.values(world.tracks).find((candidate) => candidate.realObjectId === target.id);
-        if (!track) {
-          const trackId = "Track-" + world.nextTrackId++;
-          track = {
-            id: trackId,
-            realObjectId: target.id,
-            trackType: "Physical",
-            status: "Active",
-            classification: "Unknown Air Object",
-            classificationConfidence: 0,
-            identification: "Unknown",
-            history: []
-          };
-          world.tracks[trackId] = track;
-          world.metrics.tracksCreated += 1;
-          services.logger.record(
-            world,
-            event.time,
-            "track",
-            "Track created for " + target.name,
-            { trackId, targetId: target.id }
-          );
-        } else {
-          services.logger.record(
-            world,
-            event.time,
-            "track",
-            "Track updated for " + target.name,
-            { trackId: track.id, targetId: target.id }
-          );
-        }
-
-        track.lastUpdateTimeSec = round(event.time, 2);
-        track.position = deepClone(target.runtime.position);
-        track.rangeM = round(event.payload.rangeM, 2);
-        track.history.push({
-          timeSec: round(event.time, 2),
-          confidence: round(event.payload.confidence, 2),
-          position: deepClone(target.runtime.position)
-        });
-
-        services.captureFrame(world, event.time, "track");
-
-        services.events.schedule({
-          time: event.time,
-          type: "classification.process",
-          priority: EVENT_PRIORITIES.track,
-          payload: {
-            trackId: track.id,
-            observerId: event.payload.observerId,
-            baseConfidence: event.payload.confidence
-          }
-        });
-      }
-    }
-
-    class ClassificationSystem {
-      process(event, world, services) {
-        const track = world.tracks[event.payload.trackId];
-        if (!track) {
-          return;
-        }
-
-        const target = world.objects[track.realObjectId];
-        if (!target || target.runtime.destroyed) {
-          return;
-        }
-
-        const confidence = clamp(
-          event.payload.baseConfidence * 0.78
-            + 0.16
-            + world.randomization.classificationBias
-            + services.rng.nextGaussian(0, 0.04),
-          0.05,
-          0.99
-        );
-
-        track.classification = target.roles.includes("UAS") && confidence >= 0.56
-          ? "UAS"
-          : "Unknown Air Object";
-        track.classificationConfidence = round(confidence, 2);
-        track.identification = target.side === world.objects[event.payload.observerId].side
-          ? "Friendly"
-          : (track.classification === "UAS" ? "Hostile" : "Suspect");
-        world.metrics.classifications += 1;
-
-        services.logger.record(
-          world,
-          event.time,
-          "classification",
-          track.id + " classified as " + track.classification + " / " + track.identification,
-          {
-            trackId: track.id,
-            classification: track.classification,
-            identification: track.identification,
-            confidence: track.classificationConfidence
-          }
-        );
-
-        services.captureFrame(world, event.time, "classification");
-
-        services.events.schedule({
-          time: event.time,
-          type: "c2.decide",
-          priority: EVENT_PRIORITIES.c2,
-          payload: {
-            trackId: track.id
-          }
-        });
-      }
-    }
-
-    class C2System {
-      process(event, world, services) {
-        const track = world.tracks[event.payload.trackId];
-        if (!track || track.status !== "Active" || track.pendingEngagement) {
-          return;
-        }
-
-        const target = world.objects[track.realObjectId];
-        if (!target || target.runtime.destroyed) {
-          return;
-        }
-
-        const blueObjects = world.objectIds
-          .map((id) => world.objects[id])
-          .filter((object) => object.side === "Blue" && !object.runtime.destroyed && object.components.c2);
-
-        for (const blueObject of blueObjects) {
-          const effectors = blueObject.components.effectors || [];
-          for (const effector of effectors) {
-            const ammoState = blueObject.runtime.ammo[effector.id];
-            const rangeM = distance3D(blueObject.runtime.position, target.runtime.position);
-            const cooldownReady = event.time >= (blueObject.runtime.lastFireTimeSec[effector.id] || 0);
-            if (ammoState <= 0 || rangeM > effector.maxRangeM || !cooldownReady) {
-              continue;
+          services.events.scheduleDelay(event.time, sensor.classification.latencySec, {
+            type: "classification.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id,
+              observerId: observer.id,
+              sensorId: sensor.id,
+              baseConfidence: event.payload.confidence
             }
+          }, { enforceMinimumDelay: sensor.classification.latencySec <= 0 });
+        }
 
-            if (track.identification !== "Hostile") {
+        age(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          if (!track || track.status !== "Active" || track.agingToken !== event.payload.agingToken) {
+            return;
+          }
+
+          if (round(event.time - track.lastUpdateTimeSec, 2) < track.staleAfterSec) {
+            return;
+          }
+
+          track.status = "Dropped";
+          world.metrics.tracksDropped += 1;
+          services.logger.record(
+            world,
+            event.time,
+            "track",
+            track.id + " dropped due to staleness",
+            { trackId: track.id, staleAfterSec: track.staleAfterSec }
+          );
+          services.captureFrame(world, event.time, "track-drop");
+        }
+      }
+
+      class ClassificationSystem {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active" || !sensor || !target || target.runtime.destroyed) {
+            return;
+          }
+
+          const confidence = clamp(
+            (event.payload.baseConfidence * sensor.classification.accuracyBase)
+              + 0.14
+              + world.randomization.classificationBias
+              + services.rng.nextGaussian(0, 0.035),
+            0.05,
+            0.99
+          );
+
+          track.classificationStatus = target.roles.includes("UAS") && confidence >= 0.52
+            ? "UAS"
+            : "Unknown Air Object";
+          track.classificationConfidence = round(confidence, 2);
+          world.metrics.classifications += 1;
+
+          services.logger.record(
+            world,
+            event.time,
+            "classification",
+            track.id + " classified as " + track.classificationStatus,
+            {
+              trackId: track.id,
+              classification: track.classificationStatus,
+              confidence: track.classificationConfidence
+            }
+          );
+
+          services.captureFrame(world, event.time, "classification");
+
+          const delaySec = sensor.identification.canIdentify ? sensor.identification.latencySec : 0;
+          services.events.scheduleDelay(event.time, delaySec, {
+            type: "identification.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id,
+              observerId: event.payload.observerId,
+              sensorId: sensor.id
+            }
+          }, { enforceMinimumDelay: delaySec <= 0 });
+        }
+      }
+
+      class IdentificationSystem {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
+          const observer = getObject(world, event.payload.observerId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active" || !sensor || !observer || !target || target.runtime.destroyed) {
+            return;
+          }
+
+          const confidence = clamp(
+            (track.classificationConfidence * sensor.identification.accuracyBase)
+              + 0.12
+              + world.randomization.identificationBias
+              + services.rng.nextGaussian(0, 0.04),
+            0.05,
+            0.99
+          );
+
+          let identificationStatus = "Unknown";
+          if (target.side === observer.side && confidence >= 0.52) {
+            identificationStatus = "Friendly";
+          } else if (track.classificationStatus === "UAS" && confidence >= 0.58) {
+            identificationStatus = "Hostile";
+          } else if (track.classificationStatus === "UAS" && confidence >= 0.42) {
+            identificationStatus = "Suspect";
+          }
+
+          track.identificationStatus = identificationStatus;
+          track.identificationConfidence = round(confidence, 2);
+          track.perceivedSide = identificationStatus;
+          world.metrics.identifications += 1;
+
+          services.logger.record(
+            world,
+            event.time,
+            "identification",
+            track.id + " identified as " + identificationStatus,
+            {
+              trackId: track.id,
+              identification: identificationStatus,
+              confidence: track.identificationConfidence
+            }
+          );
+
+          services.captureFrame(world, event.time, "identification");
+
+          services.events.scheduleDelay(event.time, 0.2, {
+            type: "intent.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id
+            }
+          }, { enforceMinimumDelay: true });
+        }
+      }
+
+      class IntentSystem {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active" || !target || target.runtime.destroyed) {
+            return;
+          }
+
+          const history = track.history;
+          const previousEntry = history.length > 1 ? history[history.length - 2] : null;
+          const currentEntry = history.length ? history[history.length - 1] : null;
+          let intentStatus = "Unknown";
+          let confidence = clamp(0.42 + world.randomization.intentBias + services.rng.nextGaussian(0, 0.03), 0.1, 0.99);
+
+          if (track.classificationStatus === "UAS") {
+            intentStatus = "Transit";
+            if (previousEntry && currentEntry) {
+              const closingRangeM = previousEntry.rangeM - currentEntry.rangeM;
+              if (Math.abs(closingRangeM) < 8) {
+                intentStatus = "Loiter";
+                confidence += 0.12;
+              } else if (currentEntry.rangeM <= world.config.attackRunRangeM && closingRangeM > 0) {
+                intentStatus = "Attack Run";
+                confidence += 0.18;
+              }
+            }
+          }
+
+          track.intentStatus = intentStatus;
+          track.intentConfidence = round(clamp(confidence, 0.05, 0.99), 2);
+          world.metrics.intentsAssessed += 1;
+
+          services.logger.record(
+            world,
+            event.time,
+            "intent",
+            track.id + " assessed intent " + intentStatus,
+            {
+              trackId: track.id,
+              intent: intentStatus,
+              confidence: track.intentConfidence
+            }
+          );
+
+          services.captureFrame(world, event.time, "intent");
+
+          services.events.schedule({
+            time: event.time,
+            type: "c2.decide",
+            priority: EVENT_PRIORITIES.c2,
+            payload: {
+              trackId: track.id
+            }
+          });
+        }
+      }
+
+      class C2System {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || !target || track.status !== "Active" || track.pendingEngagement || target.runtime.destroyed) {
+            return;
+          }
+
+          const c2Objects = world.objectIds
+            .map((id) => world.objects[id])
+            .filter((object) =>
+              object.side === track.owningSide
+              && !object.runtime.destroyed
+              && object.components.c2
+              && (object.components.effectors || []).length
+            );
+
+          for (const c2Object of c2Objects) {
+            for (const effector of c2Object.components.effectors || []) {
+              const ammoRemaining = c2Object.runtime.ammo[effector.id];
+              const cooldownReady = event.time >= (c2Object.runtime.lastFireTimeSec[effector.id] || 0);
+              const rangeM = distance3D(c2Object.runtime.position, target.runtime.position);
+              if (ammoRemaining <= 0 || !cooldownReady || rangeM > effector.maxRangeM) {
+                continue;
+              }
+
+              if (track.identificationStatus !== "Hostile") {
+                services.logger.record(
+                  world,
+                  event.time,
+                  "c2",
+                  c2Object.name + " held fire on " + track.id,
+                  { trackId: track.id, reason: "not-hostile" }
+                );
+                return;
+              }
+
+              track.pendingEngagement = true;
+              world.metrics.c2Decisions += 1;
               services.logger.record(
                 world,
                 event.time,
                 "c2",
-                blueObject.name + " held fire on " + track.id,
-                { trackId: track.id, reason: "not-hostile" }
+                c2Object.name + " ordered engagement against " + track.id,
+                {
+                  trackId: track.id,
+                  effectorId: effector.id,
+                  targetId: target.id,
+                  intent: track.intentStatus
+                }
               );
+
+              services.events.scheduleDelay(event.time, c2Object.components.c2.processingLatencySec + effector.commandDelaySec, {
+                type: "effector.fire",
+                priority: EVENT_PRIORITIES.effector,
+                payload: {
+                  shooterId: c2Object.id,
+                  effectorId: effector.id,
+                  trackId: track.id,
+                  targetId: target.id
+                }
+              }, { enforceMinimumDelay: true });
               return;
             }
+          }
+        }
+      }
 
-            world.metrics.c2Decisions += 1;
-            track.pendingEngagement = true;
+      class EffectSystem {
+        fire(event, world, services) {
+          const shooter = getObject(world, event.payload.shooterId);
+          const target = getObject(world, event.payload.targetId);
+          const track = getTrack(world, event.payload.trackId);
+          if (!shooter || !target || !track || target.runtime.destroyed) {
+            if (track) {
+              track.pendingEngagement = false;
+            }
+            return;
+          }
+
+          const effector = (shooter.components.effectors || []).find((candidate) => candidate.id === event.payload.effectorId);
+          if (!effector || shooter.runtime.ammo[effector.id] <= 0) {
+            track.pendingEngagement = false;
+            return;
+          }
+
+          shooter.runtime.ammo[effector.id] -= 1;
+          shooter.runtime.lastFireTimeSec[effector.id] = round(event.time + effector.cooldownSec, 2);
+          world.metrics.shotsFired += 1;
+          world.metrics.ammoExpended[shooter.templateId] = (world.metrics.ammoExpended[shooter.templateId] || 0) + 1;
+
+          const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
+          const rangeFactor = clamp(1 - ((rangeM / effector.maxRangeM) * 0.35), 0.35, 1);
+          const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
+          const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
+          const effectivePk = clamp(
+            (effector.basePk + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
+            0.05,
+            0.98
+          );
+
+          services.logger.record(
+            world,
+            event.time,
+            "effector",
+            shooter.name + " fired " + effector.name + " at " + target.name,
+            {
+              trackId: track.id,
+              targetId: target.id,
+              effectivePk: round(effectivePk, 2),
+              rangeM: round(rangeM, 2)
+            }
+          );
+
+          services.events.scheduleDelay(event.time, effector.timeToEffectSec, {
+            type: "effect.resolve",
+            priority: EVENT_PRIORITIES.effect,
+            payload: {
+              shooterId: shooter.id,
+              targetId: target.id,
+              trackId: track.id,
+              damagePoints: effector.damagePoints,
+              effectivePk
+            }
+          }, { enforceMinimumDelay: true });
+        }
+
+        resolve(event, world, services) {
+          const target = getObject(world, event.payload.targetId);
+          const track = getTrack(world, event.payload.trackId);
+          if (!target || !track) {
+            return;
+          }
+
+          const hit = services.rng.chance(event.payload.effectivePk);
+          services.logger.record(
+            world,
+            event.time,
+            "effect",
+            hit ? "Effect resolved as a hit on " + target.name : "Effect missed " + target.name,
+            {
+              targetId: target.id,
+              trackId: track.id,
+              hit,
+              effectivePk: round(event.payload.effectivePk, 2)
+            }
+          );
+
+          services.events.scheduleDelay(event.time, 0, {
+            type: "damage.resolve",
+            priority: EVENT_PRIORITIES.damage,
+            payload: {
+              targetId: target.id,
+              trackId: track.id,
+              hit,
+              damagePoints: event.payload.damagePoints
+            }
+          }, { enforceMinimumDelay: true });
+        }
+      }
+
+      class DamageSystem {
+        process(event, world, services) {
+          const target = getObject(world, event.payload.targetId);
+          const track = getTrack(world, event.payload.trackId);
+          if (!target || !track) {
+            return;
+          }
+
+          track.pendingEngagement = false;
+          if (!event.payload.hit) {
             services.logger.record(
               world,
               event.time,
-              "c2",
-              blueObject.name + " ordered engagement against " + track.id,
-              {
-                trackId: track.id,
-                effectorId: effector.id,
-                targetId: target.id
-              }
+              "damage",
+              target.name + " was not damaged",
+              { targetId: target.id, remainingHealth: target.runtime.health }
             );
-
-            services.events.scheduleDelay(event.time, effector.commandDelaySec, {
-              type: "effector.fire",
-              priority: EVENT_PRIORITIES.effector,
-              payload: {
-                shooterId: blueObject.id,
-                effectorId: effector.id,
-                trackId: track.id,
-                targetId: target.id
-              }
-            }, { enforceMinimumDelay: true });
             return;
           }
+
+          target.runtime.health = Math.max(0, target.runtime.health - event.payload.damagePoints);
+          world.metrics.damageResolutions += 1;
+          if (target.runtime.health <= 0) {
+            target.runtime.destroyed = true;
+            target.runtime.operationalStatus = "Destroyed";
+            track.status = "Destroyed";
+            world.metrics.targetsDestroyed += 1;
+            world.metrics.killTimeSec = round(event.time, 2);
+            services.logger.record(
+              world,
+              event.time,
+              "damage",
+              target.name + " was destroyed",
+              { targetId: target.id, trackId: track.id }
+            );
+          } else {
+            services.logger.record(
+              world,
+              event.time,
+              "damage",
+              target.name + " survived with " + round(target.runtime.health, 2) + " health",
+              { targetId: target.id, remainingHealth: round(target.runtime.health, 2) }
+            );
+          }
+
+          services.captureFrame(world, event.time, "damage");
         }
       }
-    }
 
-    class EffectSystem {
-      fire(event, world, services) {
-        const shooter = world.objects[event.payload.shooterId];
-        const target = world.objects[event.payload.targetId];
-        const track = world.tracks[event.payload.trackId];
-        if (!shooter || !target || !track || target.runtime.destroyed) {
-          if (track) {
-            track.pendingEngagement = false;
-          }
-          return;
+      class MonteCarloManager {
+        constructor(simulationManager) {
+          this.simulationManager = simulationManager;
         }
 
-        const effector = (shooter.components.effectors || []).find((candidate) => candidate.id === event.payload.effectorId);
-        if (!effector) {
-          track.pendingEngagement = false;
-          return;
-        }
-
-        if (shooter.runtime.ammo[effector.id] <= 0) {
-          track.pendingEngagement = false;
-          return;
-        }
-
-        shooter.runtime.ammo[effector.id] -= 1;
-        shooter.runtime.lastFireTimeSec[effector.id] = round(event.time + effector.cooldownSec, 2);
-        world.metrics.shotsFired += 1;
-        world.metrics.ammoExpended[shooter.templateId] = (world.metrics.ammoExpended[shooter.templateId] || 0) + 1;
-
-        const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
-        const rangeFactor = clamp(1 - ((rangeM / effector.maxRangeM) * 0.35), 0.35, 1);
-        const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
-        const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
-        const effectivePk = clamp(
-          (effector.basePk + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
-          0.05,
-          0.98
-        );
-
-        services.logger.record(
-          world,
-          event.time,
-          "effector",
-          shooter.name + " fired " + effector.name + " at " + target.name,
-          {
-            trackId: track.id,
-            targetId: target.id,
-            effectivePk: round(effectivePk, 2),
-            rangeM: round(rangeM, 2)
-          }
-        );
-
-        services.events.scheduleDelay(event.time, effector.timeToEffectSec, {
-          type: "effect.resolve",
-          priority: EVENT_PRIORITIES.effect,
-          payload: {
-            shooterId: shooter.id,
-            targetId: target.id,
-            trackId: track.id,
-            damagePoints: effector.damagePoints,
-            effectivePk
-          }
-        }, { enforceMinimumDelay: true });
-      }
-
-      resolve(event, world, services) {
-        const target = world.objects[event.payload.targetId];
-        const track = world.tracks[event.payload.trackId];
-        if (!target || !track) {
-          return;
-        }
-
-        const hit = services.rng.chance(event.payload.effectivePk);
-        services.logger.record(
-          world,
-          event.time,
-          "effect",
-          hit ? "Effect resolved as a hit on " + target.name : "Effect missed " + target.name,
-          {
-            targetId: target.id,
-            trackId: track.id,
-            hit,
-            effectivePk: round(event.payload.effectivePk, 2)
-          }
-        );
-
-        services.events.scheduleDelay(event.time, 0, {
-          type: "damage.resolve",
-          priority: EVENT_PRIORITIES.damage,
-          payload: {
-            targetId: target.id,
-            trackId: track.id,
-            hit,
-            damagePoints: event.payload.damagePoints
-          }
-        }, { enforceMinimumDelay: true });
-      }
-    }
-
-    class DamageSystem {
-      process(event, world, services) {
-        const target = world.objects[event.payload.targetId];
-        const track = world.tracks[event.payload.trackId];
-        if (!target || !track) {
-          return;
-        }
-
-        track.pendingEngagement = false;
-        if (!event.payload.hit) {
-          services.logger.record(
-            world,
-            event.time,
-            "damage",
-            target.name + " was not damaged",
-            { targetId: target.id, remainingHealth: target.runtime.health }
-          );
-          return;
-        }
-
-        target.runtime.health = Math.max(0, target.runtime.health - event.payload.damagePoints);
-        world.metrics.damageResolutions += 1;
-
-        if (target.runtime.health <= 0) {
-          target.runtime.destroyed = true;
-          target.runtime.operationalStatus = "Destroyed";
-          track.status = "Destroyed";
-          world.metrics.targetsDestroyed += 1;
-          world.metrics.killTimeSec = round(event.time, 2);
-          services.logger.record(
-            world,
-            event.time,
-            "damage",
-            target.name + " was destroyed",
-            { targetId: target.id, trackId: track.id }
-          );
-        } else {
-          services.logger.record(
-            world,
-            event.time,
-            "damage",
-            target.name + " survived with " + round(target.runtime.health, 2) + " health",
-            { targetId: target.id, remainingHealth: round(target.runtime.health, 2) }
-          );
-        }
-
-        services.captureFrame(world, event.time, "damage");
-      }
-    }
-
-    class MonteCarloManager {
-      constructor(simulationManager) {
-        this.simulationManager = simulationManager;
-      }
-
-      async run(iterations, options = {}) {
-        const rows = [];
-        for (let index = 0; index < iterations; index += 1) {
-          const seed = options.baseSeed + index;
-          const result = this.simulationManager.run({
-            seed,
-            captureFrames: false
-          });
-          rows.push(createCsvRow(index + 1, result.report));
-          if (typeof options.onProgress === "function") {
-            options.onProgress(index + 1, iterations);
-          }
-          if ((index + 1) % 10 === 0) {
-            await new Promise((resolve) => window.setTimeout(resolve, 0));
-          }
-        }
-        return rows;
-      }
-    }
-
-    class SimulationManager {
-      constructor() {
-        this.logger = new LoggingSystem();
-        this.movementSystem = new MovementSystem();
-        this.sensorSystem = new SensorSystem();
-        this.trackSystem = new TrackSystem();
-        this.classificationSystem = new ClassificationSystem();
-        this.c2System = new C2System();
-        this.effectSystem = new EffectSystem();
-        this.damageSystem = new DamageSystem();
-      }
-
-      run(options = {}) {
-        const seed = Number.isFinite(options.seed) ? options.seed : Math.floor((Date.now() % 2147483647));
-        const rng = new SeededRNG(seed);
-        const scenario = buildBaselineScenario();
-        const runtime = this.createRuntimeWorld(scenario, rng, options.captureFrames !== false);
-
-        const services = {
-          rng,
-          logger: this.logger,
-          events: runtime.eventManager,
-          captureFrame: (world, timeSec, reason) => {
-            if (!world.captureFrames) {
-              return;
+        run(iterations, options = {}) {
+          const rows = [];
+          for (let index = 0; index < iterations; index += 1) {
+            const seed = options.baseSeed + index;
+            const result = this.simulationManager.run({
+              seed,
+              captureFrames: false,
+              scenario: options.scenario
+            });
+            rows.push(createCsvRow(index + 1, result.report));
+            if (typeof options.onProgress === "function") {
+              options.onProgress(index + 1, iterations);
             }
-            world.frames.push(snapshotWorld(world, timeSec, reason));
           }
-        };
-
-        runtime.objectIds.forEach((objectId) => {
-          const object = runtime.objects[objectId];
-          if (object.components.movement && object.runtime.mission.waypoints.length > 0) {
-            runtime.eventManager.schedule({
-              time: 0,
-              type: "movement.step",
-              priority: EVENT_PRIORITIES.movement,
-              payload: { objectId }
-            });
-          }
-          if ((object.components.sensors || []).length > 0) {
-            runtime.eventManager.schedule({
-              time: 0,
-              type: "sensor.scan",
-              priority: EVENT_PRIORITIES.sensor,
-              payload: { objectId }
-            });
-          }
-        });
-
-        services.captureFrame(runtime, 0, "initial");
-
-        while (runtime.eventManager.hasEvents()) {
-          const event = runtime.eventManager.next();
-          runtime.currentTimeSec = event.time;
-          if (runtime.currentTimeSec > runtime.config.maxTimeSec) {
-            break;
-          }
-
-          switch (event.type) {
-            case "movement.step":
-              this.movementSystem.process(event, runtime, services);
-              break;
-            case "sensor.scan":
-              this.sensorSystem.process(event, runtime, services);
-              break;
-            case "track.process":
-              this.trackSystem.process(event, runtime, services);
-              break;
-            case "classification.process":
-              this.classificationSystem.process(event, runtime, services);
-              break;
-            case "c2.decide":
-              this.c2System.process(event, runtime, services);
-              break;
-            case "effector.fire":
-              this.effectSystem.fire(event, runtime, services);
-              break;
-            case "effect.resolve":
-              this.effectSystem.resolve(event, runtime, services);
-              break;
-            case "damage.resolve":
-              this.damageSystem.process(event, runtime, services);
-              break;
-            default:
-              break;
-          }
-
-          const targetDestroyed = runtime.objectIds
-            .map((id) => runtime.objects[id])
-            .filter((object) => object.side === "Red" && object.roles.includes("UAS"))
-            .every((object) => object.runtime.destroyed);
-
-          if (targetDestroyed) {
-            runtime.currentTimeSec = round(event.time, 2);
-            break;
-          }
+          return rows;
         }
-
-        services.captureFrame(runtime, runtime.currentTimeSec, "final");
-        return finalizeReport(runtime, seed);
       }
 
-      createRuntimeWorld(scenario, rng, captureFrames) {
-        const eventManager = new EventManager();
-        const templateMap = {};
-        scenario.templates.forEach((template) => {
-          templateMap[template.id] = deepClone(template);
-        });
+      class SimulationManager {
+        constructor() {
+          this.logger = new LoggingSystem();
+          this.movementSystem = new MovementSystem();
+          this.sensorSystem = new SensorSystem();
+          this.trackSystem = new TrackSystem();
+          this.classificationSystem = new ClassificationSystem();
+          this.identificationSystem = new IdentificationSystem();
+          this.intentSystem = new IntentSystem();
+          this.c2System = new C2System();
+          this.effectSystem = new EffectSystem();
+          this.damageSystem = new DamageSystem();
+        }
 
-        const objects = {};
-        const objectIds = [];
+        run(options = {}) {
+          const seed = Number.isFinite(options.seed) ? options.seed : Math.floor((Date.now() % 2147483647));
+          const scenario = normalizeScenario(options.scenario || buildBaselineScenario());
+          const rng = new SeededRNG(seed);
+          const runtime = this.createRuntimeWorld(scenario, rng, options.captureFrames !== false);
 
-        scenario.instances.forEach((instance) => {
-          const template = templateMap[instance.templateId];
-          const object = {
-            id: instance.id,
-            templateId: template.id,
-            name: instance.name,
-            side: instance.side,
-            roles: deepClone(instance.roles),
-            components: deepClone(template.components),
-            runtime: {
-              position: { x: instance.posX, y: instance.posY, z: instance.posZ },
-              health: template.components.health.maxHealth,
-              operationalStatus: "Active",
-              destroyed: false,
-              ammo: {},
-              lastFireTimeSec: {},
-              mission: {
-                currentWaypointIndex: 0,
-                waypoints: deepClone(instance.missionWaypoints || [])
+          const services = {
+            rng,
+            logger: this.logger,
+            events: runtime.eventManager,
+            captureFrame: (world, timeSec, reason) => {
+              if (!world.captureFrames) {
+                return;
               }
+              world.frames.push(snapshotWorld(world, timeSec, reason));
             }
           };
 
-          (object.components.effectors || []).forEach((effector) => {
-            object.runtime.ammo[effector.id] = effector.ammoCapacity;
-            object.runtime.lastFireTimeSec[effector.id] = 0;
+          runtime.objectIds.forEach((objectId) => {
+            const object = runtime.objects[objectId];
+            if (object.components.movement && object.runtime.mission.waypoints.length > 0) {
+              runtime.eventManager.schedule({
+                time: 0,
+                type: "movement.step",
+                priority: EVENT_PRIORITIES.movement,
+                payload: { objectId }
+              });
+            }
+            if ((object.components.sensors || []).length > 0) {
+              runtime.eventManager.schedule({
+                time: 0,
+                type: "sensor.scan",
+                priority: EVENT_PRIORITIES.sensor,
+                payload: { objectId }
+              });
+            }
           });
 
-          objects[object.id] = object;
-          objectIds.push(object.id);
-        });
+          services.captureFrame(runtime, 0, "initial");
 
-        return {
-          objects,
-          objectIds,
-          tracks: {},
-          nextTrackId: 1,
-          logs: [],
-          frames: [],
-          config: deepClone(scenario.config),
-          environment: deepClone(scenario.environment),
-          eventManager,
-          captureFrames,
-          currentTimeSec: 0,
-          randomization: {
-            classificationBias: clamp(rng.nextGaussian(0, 0.03), -0.08, 0.08),
-            pkBias: clamp(rng.nextGaussian(0, 0.05), -0.12, 0.12)
-          },
-          metrics: {
-            detectionCandidates: 0,
-            tracksCreated: 0,
-            classifications: 0,
-            c2Decisions: 0,
-            shotsFired: 0,
-            damageResolutions: 0,
-            targetsDestroyed: 0,
-            firstDetectionTimeSec: null,
-            firstDetectionRangeM: null,
-            killTimeSec: null,
-            ammoExpended: {}
-          }
-        };
-      }
-    }
-
-    function buildBaselineScenario() {
-      return {
-        config: {
-          maxTimeSec: 45
-        },
-        environment: {
-          baseNoiseDb: 1.8
-        },
-        templates: [
-          {
-            id: "Template-Blue-CUAS-Site",
-            name: "Blue CUAS Site",
-            components: {
-              health: { maxHealth: 120 },
-              resistance: { kineticResistance: 0.15 },
-              signature: { radarSignatureDb: -2 },
-              sensors: [
-                {
-                  id: "Sensor-Blue-EO-RF-1",
-                  name: "Blue EO/RF Sensor",
-                  maxRangeM: 420,
-                  horizontalFovDeg: 140,
-                  verticalFovDeg: 90,
-                  headingDeg: 180,
-                  transmitPowerDb: 53,
-                  noiseFloorDb: -94,
-                  noiseSigmaDb: 1.2,
-                  detectionThresholdDb: 17,
-                  scanIntervalSec: 1
-                }
-              ],
-              effectors: [
-                {
-                  id: "Effector-Blue-Kinetic-1",
-                  name: "Interceptor Launcher",
-                  maxRangeM: 230,
-                  basePk: 0.74,
-                  damagePoints: 150,
-                  ammoCapacity: 3,
-                  commandDelaySec: 0,
-                  timeToEffectSec: 0.6,
-                  cooldownSec: 2
-                }
-              ],
-              c2: {
-                trackCapacity: 8
-              }
+          while (runtime.eventManager.hasEvents()) {
+            const event = runtime.eventManager.next();
+            runtime.currentTimeSec = event.time;
+            if (runtime.currentTimeSec > runtime.config.maxTimeSec) {
+              break;
             }
-          },
-          {
-            id: "Template-Red-UAS-Generic",
-            name: "Red Recon Strike UAS",
-            components: {
-              health: { maxHealth: 90 },
-              resistance: { kineticResistance: 0.18 },
-              signature: { radarSignatureDb: -14 },
-              movement: {
-                speedMps: 35,
-                stepSec: 1,
-                waypointToleranceM: 10
-              }
+
+            switch (event.type) {
+              case "movement.step":
+                this.movementSystem.process(event, runtime, services);
+                break;
+              case "sensor.scan":
+                this.sensorSystem.process(event, runtime, services);
+                break;
+              case "track.process":
+                this.trackSystem.process(event, runtime, services);
+                break;
+              case "track.age":
+                this.trackSystem.age(event, runtime, services);
+                break;
+              case "classification.process":
+                this.classificationSystem.process(event, runtime, services);
+                break;
+              case "identification.process":
+                this.identificationSystem.process(event, runtime, services);
+                break;
+              case "intent.process":
+                this.intentSystem.process(event, runtime, services);
+                break;
+              case "c2.decide":
+                this.c2System.process(event, runtime, services);
+                break;
+              case "effector.fire":
+                this.effectSystem.fire(event, runtime, services);
+                break;
+              case "effect.resolve":
+                this.effectSystem.resolve(event, runtime, services);
+                break;
+              case "damage.resolve":
+                this.damageSystem.process(event, runtime, services);
+                break;
+              default:
+                break;
+            }
+
+            const allRedUasDestroyed = runtime.objectIds
+              .map((id) => runtime.objects[id])
+              .filter((object) => object.side === "Red" && object.roles.includes("UAS"))
+              .every((object) => object.runtime.destroyed);
+            if (allRedUasDestroyed) {
+              runtime.currentTimeSec = round(event.time, 2);
+              break;
             }
           }
-        ],
-        instances: [
-          {
-            id: "Blue-Site-01",
-            templateId: "Template-Blue-CUAS-Site",
-            name: "Blue Site 01",
-            side: "Blue",
-            roles: ["Asset", "Sensor", "Effector", "C2"],
-            posX: 670,
-            posY: 315,
-            posZ: 20,
-            missionWaypoints: []
-          },
-          {
-            id: "Red-UAS-01",
-            templateId: "Template-Red-UAS-Generic",
-            name: "Red UAS 01",
-            side: "Red",
-            roles: ["UAS"],
-            posX: 90,
-            posY: 315,
-            posZ: 120,
-            missionWaypoints: [
-              { x: 980, y: 315, z: 120 }
-            ]
-          }
-        ]
-      };
-    }
 
-    function snapshotWorld(world, timeSec, reason) {
-      const objects = world.objectIds.map((id) => {
-        const object = world.objects[id];
-        return {
-          id: object.id,
-          name: object.name,
-          side: object.side,
-          roles: deepClone(object.roles),
-          x: object.runtime.position.x,
-          y: object.runtime.position.y,
-          z: object.runtime.position.z,
-          destroyed: object.runtime.destroyed,
-          status: object.runtime.operationalStatus
-        };
-      });
+          services.captureFrame(runtime, runtime.currentTimeSec, "final");
+          return finalizeReport(runtime, seed);
+        }
 
-      const tracks = Object.values(world.tracks).map((track) => ({
-        id: track.id,
-        x: track.position ? track.position.x : null,
-        y: track.position ? track.position.y : null,
-        classification: track.classification,
-        identification: track.identification,
-        status: track.status
-      }));
+        createRuntimeWorld(scenario, rng, captureFrames) {
+          const eventManager = new EventManager();
+          const templateMap = {};
+          scenario.templates.forEach((template) => {
+            templateMap[template.id] = deepClone(template);
+          });
 
-      return {
-        timeSec: round(timeSec, 2),
-        reason,
-        objects,
-        tracks
-      };
-    }
+          const objects = {};
+          const objectIds = [];
+          scenario.instances.forEach((instance) => {
+            const template = templateMap[instance.templateId];
+            if (!template) {
+              return;
+            }
+            const object = {
+              id: instance.id,
+              templateId: template.id,
+              name: instance.name,
+              side: instance.side,
+              roles: normalizeRoles(instance.roles, template.defaultRoles),
+              components: deepClone(template.components),
+              runtime: {
+                position: { x: instance.posX, y: instance.posY, z: instance.posZ },
+                health: template.components.health.maxHealth,
+                operationalStatus: "Active",
+                destroyed: false,
+                ammo: {},
+                lastFireTimeSec: {},
+                mission: {
+                  currentWaypointIndex: 0,
+                  waypoints: deepClone(instance.missionWaypoints || [])
+                }
+              }
+            };
 
-    function finalizeReport(world, seed) {
-      const blueObjects = world.objectIds.map((id) => world.objects[id]).filter((object) => object.side === "Blue");
-      const redObjects = world.objectIds.map((id) => world.objects[id]).filter((object) => object.side === "Red");
-      const destroyedRedObjects = redObjects.filter((object) => object.runtime.destroyed);
-      const survivingBlueObjects = blueObjects.filter((object) => !object.runtime.destroyed);
+            (object.components.effectors || []).forEach((effector) => {
+              object.runtime.ammo[effector.id] = effector.ammoCapacity;
+              object.runtime.lastFireTimeSec[effector.id] = 0;
+            });
 
-      const report = {
-        seed,
-        endTimeSec: round(world.currentTimeSec, 2),
-        detected: world.metrics.detectionCandidates > 0,
-        trackCreated: world.metrics.tracksCreated > 0,
-        classified: world.metrics.classifications > 0,
-        engaged: world.metrics.shotsFired > 0,
-        targetDestroyed: destroyedRedObjects.length > 0,
-        firstDetectionTimeSec: world.metrics.firstDetectionTimeSec,
-        firstDetectionRangeM: world.metrics.firstDetectionRangeM,
-        killTimeSec: world.metrics.killTimeSec,
-        blueAssetsSurvived: survivingBlueObjects.length,
-        threatsDestroyed: destroyedRedObjects.length,
-        shotsFired: world.metrics.shotsFired,
-        eventCount: world.logs.length,
-        ammoExpended: deepClone(world.metrics.ammoExpended),
-        finalTargetStatus: destroyedRedObjects.length > 0 ? "Destroyed" : redObjects[0].runtime.operationalStatus,
-        logs: deepClone(world.logs),
-        frames: deepClone(world.frames),
-        tracks: deepClone(world.tracks)
-      };
+            objects[object.id] = object;
+            objectIds.push(object.id);
+          });
 
-      return {
-        report
-      };
-    }
-
-    function createCsvRow(iterationId, report) {
-      return {
-        Iteration_ID: iterationId,
-        Seed: report.seed,
-        Detected: report.detected ? "Yes" : "No",
-        Track_Created: report.trackCreated ? "Yes" : "No",
-        Classified: report.classified ? "Yes" : "No",
-        Engaged: report.engaged ? "Yes" : "No",
-        Threat_Destroyed: report.targetDestroyed ? "Yes" : "No",
-        First_Detection_Time_s: report.firstDetectionTimeSec ?? "",
-        First_Detection_Range_m: report.firstDetectionRangeM ?? "",
-        Kill_Time_s: report.killTimeSec ?? "",
-        Blue_Assets_Survived: report.blueAssetsSurvived,
-        Threats_Destroyed: report.threatsDestroyed,
-        Shots_Fired: report.shotsFired,
-        Final_Target_Status: report.finalTargetStatus,
-        Event_Count: report.eventCount,
-        Template_Blue_CUAS_Site_Ammo_Expended: report.ammoExpended["Template-Blue-CUAS-Site"] || 0
-      };
-    }
-
-    function rowsToCsv(rows) {
-      if (!rows.length) {
-        return "";
+          return {
+            scenario: deepClone(scenario),
+            objects,
+            objectIds,
+            tracks: {},
+            nextTrackId: 1,
+            logs: [],
+            frames: [],
+            config: deepClone(scenario.config),
+            environment: deepClone(scenario.environment),
+            eventManager,
+            captureFrames,
+            currentTimeSec: 0,
+            randomization: {
+              classificationBias: clamp(rng.nextGaussian(0, 0.03), -0.08, 0.08),
+              identificationBias: clamp(rng.nextGaussian(0, 0.03), -0.08, 0.08),
+              intentBias: clamp(rng.nextGaussian(0, 0.02), -0.05, 0.05),
+              pkBias: clamp(rng.nextGaussian(0, 0.05), -0.12, 0.12)
+            },
+            metrics: {
+              detectionCandidates: 0,
+              tracksCreated: 0,
+              tracksDropped: 0,
+              classifications: 0,
+              identifications: 0,
+              intentsAssessed: 0,
+              c2Decisions: 0,
+              shotsFired: 0,
+              damageResolutions: 0,
+              targetsDestroyed: 0,
+              firstDetectionTimeSec: null,
+              firstDetectionRangeM: null,
+              killTimeSec: null,
+              ammoExpended: {}
+            }
+          };
+        }
       }
-      const headers = Object.keys(rows[0]);
-      const lines = [headers.join(",")];
-      rows.forEach((row) => {
-        const values = headers.map((header) => {
-          const rawValue = row[header] ?? "";
-          const text = String(rawValue).replace(/"/g, "\"\"");
-          return "\"" + text + "\"";
-        });
-        lines.push(values.join(","));
-      });
-      return lines.join("\n");
+
+      return {
+        EVENT_PRIORITIES,
+        clamp,
+        round,
+        deepClone,
+        normalizeScenario,
+        buildBaselineScenario,
+        createCsvRow,
+        rowsToCsv,
+        SimulationManager,
+        MonteCarloManager
+      };
     }
+
+    const SIMULATION_KERNEL = createSimulationKernel();
 
     function downloadText(filename, text, mimeType) {
       const blob = new Blob([text], { type: mimeType });
@@ -1627,6 +2005,57 @@
       anchor.download = filename;
       anchor.click();
       URL.revokeObjectURL(url);
+    }
+
+    function buildSafeFileStem(name) {
+      return String(name || "scenario")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        || "scenario";
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function createMonteCarloWorker() {
+      const workerSource = `
+        const createSimulationKernel = ${createSimulationKernel.toString()};
+        const kernel = createSimulationKernel();
+        const simulationManager = new kernel.SimulationManager();
+        const monteCarloManager = new kernel.MonteCarloManager(simulationManager);
+        self.onmessage = function (event) {
+          const message = event.data || {};
+          if (message.type !== "runMonteCarlo") {
+            return;
+          }
+          try {
+            const rows = monteCarloManager.run(message.iterations, {
+              baseSeed: message.baseSeed,
+              scenario: message.scenario,
+              onProgress: function (completed, total) {
+                if (completed % 5 === 0 || completed === total) {
+                  self.postMessage({ type: "progress", completed, total });
+                }
+              }
+            });
+            self.postMessage({ type: "complete", rows });
+          } catch (error) {
+            self.postMessage({ type: "error", message: error && error.message ? error.message : String(error) });
+          }
+        };
+      `;
+      const blob = new Blob([workerSource], { type: "application/javascript" });
+      const url = URL.createObjectURL(blob);
+      const worker = new Worker(url);
+      URL.revokeObjectURL(url);
+      return worker;
     }
 
     class MapRenderer {
@@ -1711,7 +2140,7 @@
       }
 
       drawBlueObject(ctx, object) {
-        const position = toCanvasPoint(object);
+        const position = { x: object.x, y: object.y };
         ctx.save();
         ctx.strokeStyle = "rgba(89, 183, 207, 0.24)";
         ctx.lineWidth = 1.5;
@@ -1733,7 +2162,6 @@
         ctx.strokeStyle = "#d9f2f8";
         ctx.lineWidth = 2;
         ctx.stroke();
-
         ctx.fillStyle = "#d9f2f8";
         ctx.font = "bold 13px Trebuchet MS";
         ctx.fillText(object.name, position.x + 16, position.y - 10);
@@ -1741,7 +2169,7 @@
       }
 
       drawRedObject(ctx, object) {
-        const position = toCanvasPoint(object);
+        const position = { x: object.x, y: object.y };
         ctx.save();
         ctx.fillStyle = object.destroyed ? "rgba(216, 91, 74, 0.35)" : "#d85b4a";
         ctx.beginPath();
@@ -1756,7 +2184,6 @@
         ctx.stroke();
 
         if (object.destroyed) {
-          ctx.strokeStyle = "#ffd4c8";
           ctx.beginPath();
           ctx.moveTo(position.x - 16, position.y - 16);
           ctx.lineTo(position.x + 16, position.y + 16);
@@ -1772,9 +2199,14 @@
       }
 
       drawTrack(ctx, track) {
-        const position = toCanvasPoint(track);
+        const position = { x: track.x, y: track.y };
         ctx.save();
-        ctx.strokeStyle = "#ffcc71";
+        if (track.status === "Dropped") {
+          ctx.setLineDash([5, 4]);
+          ctx.strokeStyle = "rgba(214, 214, 214, 0.9)";
+        } else {
+          ctx.strokeStyle = "#ffcc71";
+        }
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(position.x, position.y - 11);
@@ -1783,7 +2215,8 @@
         ctx.lineTo(position.x - 11, position.y);
         ctx.closePath();
         ctx.stroke();
-        ctx.fillStyle = "#ffcc71";
+        ctx.setLineDash([]);
+        ctx.fillStyle = track.status === "Dropped" ? "#d7d7d7" : "#ffcc71";
         ctx.font = "12px Trebuchet MS";
         ctx.fillText(track.id, position.x + 14, position.y + 4);
         ctx.restore();
@@ -1792,25 +2225,19 @@
       drawOverlay(ctx, frame, report) {
         ctx.save();
         ctx.fillStyle = "rgba(12, 16, 20, 0.6)";
-        ctx.fillRect(this.width - 244, 14, 226, 98);
+        ctx.fillRect(this.width - 280, 14, 262, 116);
         ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-        ctx.strokeRect(this.width - 244, 14, 226, 98);
+        ctx.strokeRect(this.width - 280, 14, 262, 116);
         ctx.fillStyle = "#f7f0df";
         ctx.font = "bold 14px Trebuchet MS";
-        ctx.fillText("Timeline Snapshot", this.width - 226, 36);
+        ctx.fillText("Timeline Snapshot", this.width - 262, 36);
         ctx.font = "13px Trebuchet MS";
-        ctx.fillText("Time: " + round(frame.timeSec, 2) + " s", this.width - 226, 58);
-        ctx.fillText("Tracks: " + frame.tracks.length, this.width - 226, 78);
-        ctx.fillText("Destroyed: " + (report && report.targetDestroyed ? "Yes" : "No"), this.width - 226, 98);
+        ctx.fillText("Scenario: " + escapeHtml(report?.scenarioName || "Preview"), this.width - 262, 58);
+        ctx.fillText("Time: " + SIMULATION_KERNEL.round(frame.timeSec, 2) + " s", this.width - 262, 78);
+        ctx.fillText("Tracks: " + frame.tracks.length, this.width - 262, 98);
+        ctx.fillText("Destroyed: " + (report && report.targetDestroyed ? "Yes" : "No"), this.width - 262, 118);
         ctx.restore();
       }
-    }
-
-    function toCanvasPoint(object) {
-      return {
-        x: object.x,
-        y: object.y
-      };
     }
 
     class UIManager {
@@ -1835,17 +2262,23 @@
 
     class AppController {
       constructor() {
+        this.kernel = SIMULATION_KERNEL;
         this.uiManager = new UIManager();
-        this.simulationManager = new SimulationManager();
-        this.monteCarloManager = new MonteCarloManager(this.simulationManager);
+        this.simulationManager = new this.kernel.SimulationManager();
+        this.monteCarloManager = new this.kernel.MonteCarloManager(this.simulationManager);
         this.renderer = new MapRenderer(document.getElementById("sim-canvas"));
         this.state = {
+          currentScenario: this.kernel.buildBaselineScenario(),
           singleRun: null,
           monteCarloRows: [],
-          playbackTimer: null
+          playbackTimer: null,
+          monteCarloWorker: null
         };
         this.bindEvents();
-        this.renderBaseline();
+        this.updateScenarioLabel();
+        this.clearResults();
+        this.renderScenarioSnapshot();
+        this.setExportPreview(JSON.stringify(this.state.currentScenario, null, 2));
       }
 
       bindEvents() {
@@ -1863,28 +2296,45 @@
           this.runMonteCarlo();
         });
 
+        document.getElementById("load-scenario-btn").addEventListener("click", () => {
+          document.getElementById("scenario-file-input").click();
+        });
+
+        document.getElementById("scenario-file-input").addEventListener("change", (event) => {
+          this.importScenarioFile(event);
+        });
+
+        document.getElementById("export-scenario-btn").addEventListener("click", () => {
+          this.exportCurrentScenario();
+        });
+
+        document.getElementById("export-scenario-file-btn").addEventListener("click", () => {
+          this.exportCurrentScenario();
+        });
+
         document.getElementById("reset-view-btn").addEventListener("click", () => {
-          this.renderBaseline();
-          this.setStatus("Ready");
+          this.stopPlayback();
+          this.renderScenarioSnapshot();
           this.setPlaybackStatus("Idle");
+          this.setStatus("Scenario preview reset");
         });
 
         document.getElementById("export-single-btn").addEventListener("click", () => {
           if (!this.state.singleRun) {
             return;
           }
-          const csv = rowsToCsv([createCsvRow(1, this.state.singleRun.report)]);
+          const csv = this.kernel.rowsToCsv([this.kernel.createCsvRow(1, this.state.singleRun.report)]);
           this.setExportPreview(csv);
-          downloadText("single_run_report.csv", csv, "text/csv;charset=utf-8");
+          downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_single_run.csv", csv, "text/csv;charset=utf-8");
         });
 
         document.getElementById("export-monte-carlo-btn").addEventListener("click", () => {
           if (!this.state.monteCarloRows.length) {
             return;
           }
-          const csv = rowsToCsv(this.state.monteCarloRows);
+          const csv = this.kernel.rowsToCsv(this.state.monteCarloRows);
           this.setExportPreview(csv);
-          downloadText("monte_carlo_results.csv", csv, "text/csv;charset=utf-8");
+          downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + "_monte_carlo.csv", csv, "text/csv;charset=utf-8");
         });
 
         document.getElementById("export-log-btn").addEventListener("click", () => {
@@ -1893,20 +2343,60 @@
           }
           const json = JSON.stringify(this.state.singleRun.report.logs, null, 2);
           this.setExportPreview(json);
-          downloadText("event_log.json", json, "application/json;charset=utf-8");
+          downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_event_log.json", json, "application/json;charset=utf-8");
         });
       }
 
-      renderBaseline() {
-        const baseline = buildBaselineScenario();
+      setBusy(isBusy) {
+        [
+          "run-single-btn",
+          "run-monte-carlo-btn",
+          "load-scenario-btn",
+          "export-scenario-btn",
+          "reset-view-btn",
+          "export-single-btn",
+          "export-monte-carlo-btn",
+          "export-log-btn",
+          "export-scenario-file-btn"
+        ].forEach((id) => {
+          document.getElementById(id).disabled = isBusy;
+        });
+      }
+
+      setStatus(text) {
+        document.getElementById("status-text").textContent = text;
+      }
+
+      setPlaybackStatus(text) {
+        document.getElementById("playback-text").textContent = text;
+      }
+
+      updateScenarioLabel() {
+        document.getElementById("scenario-text").textContent = this.state.currentScenario.metadata.name;
+      }
+
+      clearResults() {
+        document.getElementById("queue-text").textContent = "0";
+        document.getElementById("seed-text").textContent = "-";
+        this.state.singleRun = null;
+        this.state.monteCarloRows = [];
+        this.updateRunMetrics(null);
+        this.updateLog([]);
+        this.updateSingleRunReport(null);
+        this.updateMonteCarloReport([]);
+        this.setStatus("Ready");
+        this.setPlaybackStatus("Idle");
+      }
+
+      renderScenarioSnapshot() {
         const frame = {
           timeSec: 0,
-          reason: "baseline",
-          objects: baseline.instances.map((instance) => ({
+          reason: "scenario-preview",
+          objects: this.state.currentScenario.instances.map((instance) => ({
             id: instance.id,
             name: instance.name,
             side: instance.side,
-            roles: deepClone(instance.roles),
+            roles: this.kernel.deepClone(instance.roles),
             x: instance.posX,
             y: instance.posY,
             z: instance.posZ,
@@ -1915,8 +2405,7 @@
           })),
           tracks: []
         };
-        this.renderer.draw(frame, null);
-        this.updateRunMetrics(null);
+        this.renderer.draw(frame, { scenarioName: this.state.currentScenario.metadata.name, targetDestroyed: false });
       }
 
       stopPlayback() {
@@ -1931,7 +2420,6 @@
         if (!frames || !frames.length) {
           return;
         }
-
         let index = 0;
         this.setPlaybackStatus("Playing");
         this.renderer.draw(frames[0], report);
@@ -1945,17 +2433,38 @@
         }, 260);
       }
 
-      setBusy(isBusy) {
-        document.getElementById("run-single-btn").disabled = isBusy;
-        document.getElementById("run-monte-carlo-btn").disabled = isBusy;
+      async importScenarioFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const normalized = this.kernel.normalizeScenario(parsed);
+          if (!normalized.metadata.name || normalized.metadata.name === "Baseline Vertical Slice") {
+            normalized.metadata.name = file.name.replace(/\.json$/i, "");
+          }
+          this.state.currentScenario = normalized;
+          this.updateScenarioLabel();
+          this.stopPlayback();
+          this.clearResults();
+          this.renderScenarioSnapshot();
+          this.setExportPreview(JSON.stringify(normalized, null, 2));
+          this.setStatus("Loaded scenario " + normalized.metadata.name);
+        } catch (error) {
+          this.setStatus("Scenario load failed");
+          this.setExportPreview(String(error && error.message ? error.message : error));
+        } finally {
+          event.target.value = "";
+        }
       }
 
-      setStatus(text) {
-        document.getElementById("status-text").textContent = text;
-      }
-
-      setPlaybackStatus(text) {
-        document.getElementById("playback-text").textContent = text;
+      exportCurrentScenario() {
+        const payload = JSON.stringify(this.state.currentScenario, null, 2);
+        this.setExportPreview(payload);
+        downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + "_scenario.json", payload, "application/json;charset=utf-8");
       }
 
       async runSingleScenario() {
@@ -1966,7 +2475,8 @@
 
         const result = this.simulationManager.run({
           seed: Math.floor((Date.now() % 2147483647)),
-          captureFrames: true
+          captureFrames: true,
+          scenario: this.state.currentScenario
         });
 
         this.state.singleRun = result;
@@ -1983,47 +2493,96 @@
       }
 
       async runMonteCarlo() {
-        const iterations = clamp(Number(document.getElementById("monte-carlo-count").value) || 1, 1, 250);
+        const iterations = this.kernel.clamp(Number(document.getElementById("monte-carlo-count").value) || 1, 1, 250);
         const baseSeed = Math.floor((Date.now() % 2147483647));
         this.setBusy(true);
         this.setStatus("Running Monte Carlo");
         this.setPlaybackStatus("Idle");
         document.getElementById("seed-text").textContent = String(baseSeed);
 
-        this.state.monteCarloRows = await this.monteCarloManager.run(iterations, {
-          baseSeed,
-          onProgress: (completed, total) => {
-            this.setStatus("Monte Carlo " + completed + " / " + total);
-          }
-        });
+        try {
+          this.state.monteCarloRows = await this.runMonteCarloOffThread(iterations, baseSeed);
+          this.updateMonteCarloReport(this.state.monteCarloRows);
+          this.setExportPreview(this.kernel.rowsToCsv(this.state.monteCarloRows));
+          this.uiManager.showScreen("report");
+          this.setStatus("Monte Carlo complete");
+        } catch (error) {
+          this.setStatus("Monte Carlo failed");
+          this.setExportPreview(String(error && error.message ? error.message : error));
+        } finally {
+          this.setBusy(false);
+        }
+      }
 
-        this.updateMonteCarloReport(this.state.monteCarloRows);
-        this.setExportPreview(rowsToCsv(this.state.monteCarloRows));
-        this.uiManager.showScreen("report");
-        this.setStatus("Monte Carlo complete");
-        this.setBusy(false);
+      runMonteCarloOffThread(iterations, baseSeed) {
+        if (typeof Worker === "undefined") {
+          return Promise.resolve(this.monteCarloManager.run(iterations, {
+            baseSeed,
+            scenario: this.state.currentScenario,
+            onProgress: (completed, total) => {
+              this.setStatus("Monte Carlo " + completed + " / " + total);
+            }
+          }));
+        }
+
+        return new Promise((resolve, reject) => {
+          const worker = createMonteCarloWorker();
+          this.state.monteCarloWorker = worker;
+
+          worker.onmessage = (messageEvent) => {
+            const message = messageEvent.data || {};
+            if (message.type === "progress") {
+              this.setStatus("Monte Carlo " + message.completed + " / " + message.total);
+            } else if (message.type === "complete") {
+              worker.terminate();
+              this.state.monteCarloWorker = null;
+              resolve(message.rows || []);
+            } else if (message.type === "error") {
+              worker.terminate();
+              this.state.monteCarloWorker = null;
+              reject(new Error(message.message || "Worker error"));
+            }
+          };
+
+          worker.onerror = (error) => {
+            worker.terminate();
+            this.state.monteCarloWorker = null;
+            reject(error);
+          };
+
+          worker.postMessage({
+            type: "runMonteCarlo",
+            iterations,
+            baseSeed,
+            scenario: this.state.currentScenario
+          });
+        });
       }
 
       updateRunMetrics(report) {
         const container = document.getElementById("run-metrics");
         const metrics = report ? [
           { label: "Detected", value: report.detected ? "Yes" : "No" },
-          { label: "Track Created", value: report.trackCreated ? "Yes" : "No" },
+          { label: "Classified", value: report.classified ? report.finalClassificationStatus : "No" },
+          { label: "Identified", value: report.identified ? report.finalIdentificationStatus : "No" },
+          { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "No" },
+          { label: "Tracks Dropped", value: report.tracksDropped },
           { label: "Shots Fired", value: report.shotsFired },
-          { label: "Threat Destroyed", value: report.targetDestroyed ? "Yes" : "No" },
-          { label: "First Detect", value: report.firstDetectionTimeSec ?? "-" },
+          { label: "Destroyed", value: report.targetDestroyed ? "Yes" : "No" },
           { label: "Kill Time", value: report.killTimeSec ?? "-" }
         ] : [
           { label: "Detected", value: "-" },
-          { label: "Track Created", value: "-" },
+          { label: "Classified", value: "-" },
+          { label: "Identified", value: "-" },
+          { label: "Intent", value: "-" },
+          { label: "Tracks Dropped", value: "-" },
           { label: "Shots Fired", value: "-" },
-          { label: "Threat Destroyed", value: "-" },
-          { label: "First Detect", value: "-" },
+          { label: "Destroyed", value: "-" },
           { label: "Kill Time", value: "-" }
         ];
 
         container.innerHTML = metrics.map((metric) => (
-          "<div class=\"metric-card\"><span class=\"label\">" + metric.label + "</span><span class=\"value\">" + metric.value + "</span></div>"
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
         )).join("");
       }
 
@@ -2034,29 +2593,41 @@
           return;
         }
         container.innerHTML = logs.map((entry) => (
-          "<div class=\"log-entry\"><span class=\"time\">T+" + entry.timeSec.toFixed(2) + "s</span>" + escapeHtml(entry.message) + "</div>"
+          "<div class=\"log-entry\"><span class=\"time\">T+" + Number(entry.timeSec).toFixed(2) + "s</span>" + escapeHtml(entry.message) + "</div>"
         )).join("");
         container.scrollTop = 0;
       }
 
       updateSingleRunReport(report) {
-        this.updateRunMetrics(report);
+        const summaryContainer = document.getElementById("single-run-summary");
+        const detailsContainer = document.getElementById("single-run-details");
+        if (!report) {
+          summaryContainer.innerHTML = "";
+          detailsContainer.innerHTML = "";
+          return;
+        }
 
         const summary = [
           { label: "Detection", value: report.detected ? "Successful" : "Missed" },
-          { label: "Track", value: report.trackCreated ? "Created" : "None" },
-          { label: "Engagement", value: report.engaged ? "Ordered" : "No fire" },
+          { label: "Identification", value: report.identified ? report.finalIdentificationStatus : "None" },
+          { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "None" },
           { label: "Outcome", value: report.targetDestroyed ? "Threat destroyed" : "Threat survived" }
         ];
-        document.getElementById("single-run-summary").innerHTML = summary.map((metric) => (
-          "<div class=\"metric-card\"><span class=\"label\">" + metric.label + "</span><span class=\"value\">" + metric.value + "</span></div>"
+        summaryContainer.innerHTML = summary.map((metric) => (
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
         )).join("");
 
         const details = [
+          ["Scenario", report.scenarioName],
           ["Seed", report.seed],
           ["End time", report.endTimeSec + " s"],
           ["First detection time", report.firstDetectionTimeSec ?? "Not detected"],
           ["First detection range", report.firstDetectionRangeM ? report.firstDetectionRangeM + " m" : "Not detected"],
+          ["Classification", report.finalClassificationStatus],
+          ["Identification", report.finalIdentificationStatus],
+          ["Intent", report.finalIntentStatus],
+          ["Track status", report.finalTrackStatus],
+          ["Tracks dropped", report.tracksDropped],
           ["Kill time", report.killTimeSec ? report.killTimeSec + " s" : "No kill"],
           ["Blue assets survived", report.blueAssetsSurvived],
           ["Threats destroyed", report.threatsDestroyed],
@@ -2064,61 +2635,58 @@
           ["Event count", report.eventCount],
           ["Final target status", report.finalTargetStatus]
         ];
-        document.getElementById("single-run-details").innerHTML = details.map(([label, value]) => (
+        detailsContainer.innerHTML = details.map(([label, value]) => (
           "<li><span>" + escapeHtml(String(label)) + "</span><strong>" + escapeHtml(String(value)) + "</strong></li>"
         )).join("");
       }
 
       updateMonteCarloReport(rows) {
         const tableBody = document.getElementById("monte-carlo-table-body");
+        const summaryContainer = document.getElementById("monte-carlo-summary");
+        if (!rows.length) {
+          tableBody.innerHTML = "";
+          summaryContainer.innerHTML = "";
+          return;
+        }
+
         tableBody.innerHTML = rows.slice(0, 20).map((row) => (
           "<tr>" +
-            "<td>" + row.Iteration_ID + "</td>" +
-            "<td>" + row.Detected + "</td>" +
-            "<td>" + row.Track_Created + "</td>" +
-            "<td>" + row.Engaged + "</td>" +
-            "<td>" + row.Threat_Destroyed + "</td>" +
-            "<td>" + (row.First_Detection_Time_s || "-") + "</td>" +
-            "<td>" + (row.Kill_Time_s || "-") + "</td>" +
-            "<td>" + row.Shots_Fired + "</td>" +
+            "<td>" + escapeHtml(String(row.Iteration_ID)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Detected)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Identified)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Intent_Status)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Engaged)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Threat_Destroyed)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Tracks_Dropped)) + "</td>" +
+            "<td>" + escapeHtml(String(row.First_Detection_Time_s || "-")) + "</td>" +
+            "<td>" + escapeHtml(String(row.Kill_Time_s || "-")) + "</td>" +
+            "<td>" + escapeHtml(String(row.Shots_Fired)) + "</td>" +
           "</tr>"
         )).join("");
 
-        const total = rows.length || 1;
-        const killCount = rows.filter((row) => row.Threat_Destroyed === "Yes").length;
-        const detectCount = rows.filter((row) => row.Detected === "Yes").length;
+        const total = rows.length;
+        const detectionRate = rows.filter((row) => row.Detected === "Yes").length / total;
+        const identificationRate = rows.filter((row) => row.Identified === "Yes").length / total;
+        const killRate = rows.filter((row) => row.Threat_Destroyed === "Yes").length / total;
+        const dropRate = rows.filter((row) => Number(row.Tracks_Dropped) > 0).length / total;
         const averageShots = rows.reduce((sum, row) => sum + Number(row.Shots_Fired || 0), 0) / total;
-        const detectionTimes = rows
-          .map((row) => Number(row.First_Detection_Time_s))
-          .filter((value) => Number.isFinite(value) && value > 0);
-        const averageDetectionTime = detectionTimes.length
-          ? round(detectionTimes.reduce((sum, value) => sum + value, 0) / detectionTimes.length, 2)
-          : "-";
 
         const summary = [
-          { label: "Iterations", value: rows.length },
-          { label: "Detection rate", value: round((detectCount / total) * 100, 1) + "%" },
-          { label: "Kill rate", value: round((killCount / total) * 100, 1) + "%" },
-          { label: "Avg shots", value: round(averageShots, 2) },
-          { label: "Avg detect time", value: averageDetectionTime === "-" ? "-" : averageDetectionTime + " s" }
+          { label: "Iterations", value: total },
+          { label: "Detection rate", value: this.kernel.round(detectionRate * 100, 1) + "%" },
+          { label: "Identification rate", value: this.kernel.round(identificationRate * 100, 1) + "%" },
+          { label: "Kill rate", value: this.kernel.round(killRate * 100, 1) + "%" },
+          { label: "Drop rate", value: this.kernel.round(dropRate * 100, 1) + "%" },
+          { label: "Avg shots", value: this.kernel.round(averageShots, 2) }
         ];
-        document.getElementById("monte-carlo-summary").innerHTML = summary.map((metric) => (
-          "<div class=\"metric-card\"><span class=\"label\">" + metric.label + "</span><span class=\"value\">" + metric.value + "</span></div>"
+        summaryContainer.innerHTML = summary.map((metric) => (
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
         )).join("");
       }
 
       setExportPreview(text) {
         document.getElementById("export-preview").value = text;
       }
-    }
-
-    function escapeHtml(text) {
-      return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
     }
 
     window.addEventListener("DOMContentLoaded", () => {

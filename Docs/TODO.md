@@ -10,11 +10,11 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Stabilize the first working browser-only vertical slice and prepare the next expansion pass:
+Extend the browser-only vertical slice after the core perception and worker refactor:
 
-- split simplified perception logic into explicit systems
-- keep Monte Carlo explainable and deterministic
-- prepare local scenario I/O without starting the full scenario builder
+- apply the requested dark neon UI direction
+- add the first ghost-track and clutter placeholders
+- tighten scenario validation and browser-side verification
 
 ---
 
@@ -45,12 +45,8 @@ The current working prototype now includes:
 # Open Tasks
 
 - [ ] Update the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
-- [ ] Split simplified identification logic out of `ClassificationSystem` into a dedicated `IdentificationSystem`.
-- [ ] Add a simple `IntentSystem` for behavior assessment from track history.
-- [ ] Move Monte Carlo execution into an inline Web Worker to keep the UI responsive at higher iteration counts.
-- [ ] Add local scenario JSON import/export for the current template + instance baseline format.
-- [ ] Add track aging, stale track drop behavior, and report metrics for dropped tracks.
 - [ ] Add ghost-track and clutter placeholders without building the full scenario editor UI.
+- [ ] Add stronger scenario validation and user-facing import error reporting for malformed JSON inputs.
 - [ ] Manually open `index.html` in a browser and complete the browser-side checklist below.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
@@ -87,6 +83,10 @@ The current working prototype now includes:
 - [x] Added flat CSV export.
 - [x] Added README usage instructions.
 - [x] Added Node-based inline JavaScript syntax validation.
+- [x] Split classification, identification, and intent into separate systems.
+- [x] Moved Monte Carlo execution into an inline Web Worker with main-thread fallback.
+- [x] Added local scenario JSON import/export for the current template + instance baseline format.
+- [x] Added track aging, stale track drop behavior, and dropped-track report metrics.
 
 ---
 
@@ -116,10 +116,8 @@ Do not implement until after the first vertical slice works.
 - [ ] Scenario JSON schema is intentionally deferred until the first prototype stabilizes.
 - [ ] UI Architecture is broader than first prototype scope.
 - [ ] Current UI theme does not yet match the requested dark neon purple / neon blue direction for panels and buttons.
-- [ ] Current prototype folds identification into `ClassificationSystem`; a dedicated `IdentificationSystem` is still pending.
-- [ ] Current prototype does not yet implement a dedicated `IntentSystem`.
-- [ ] Monte Carlo currently runs on the main thread instead of an inline Web Worker.
-- [ ] Docs currently live at the repo root, and `Simulation_Design_Expanded.md` is being used in place of `docs/Simulation_Design.md`.
+- [ ] Scenario import currently performs normalization but still lacks deeper validation and structured error messages.
+- [ ] Docs now live under `Agents/` and `Docs/`, while several instructions still refer to root-level files and lowercase `docs/`.
 - [ ] Physical-track flow is implemented, but ghost tracks, spoofed tracks, and clutter generation are still deferred.
 - [ ] Manual browser validation checklist still needs to be completed in an actual browser session.
 - [ ] Need to ensure `roles` remains an array, not an enum, as new import/export paths are added.
@@ -136,11 +134,13 @@ Do not implement until after the first vertical slice works.
 - Behavior should come from components, not role strings.
 - Physical objects and tracks are separate concepts.
 - Detection creates detection candidates; `TrackSystem` owns track creation and updates.
-- Classification, identification, and intent remain logically separate even though identification is temporarily simplified in the current code.
+- Classification, identification, and intent now run as distinct systems in the event chain.
 - Red and Blue use the same object structure and runtime processing rules.
 - UI screens are managed by `UIManager`; core simulation logic lives in simulation and system classes.
 - Single-run playback reuses recorded snapshots after simulation completion so rendering does not drive outcomes.
 - Zero-delay follow-on state changes in the engagement chain enforce a minimum mechanical delay of `0.1` seconds.
+- Monte Carlo execution now runs in an inline Blob Web Worker and uses a main-thread fallback only when workers are unavailable.
+- Scenario JSON import/export uses normalization around the current template + instance vertical-slice schema.
 
 ---
 
@@ -178,9 +178,7 @@ Read AGENTS.md, TODO.md, README.md, and the root design docs.
 
 Update the UI to a dark theme using neon purple and neon blue as the primary panel and button colors.
 
-Refactor the current vertical-slice prototype so classification, identification, and intent are separate systems.
-
-Move Monte Carlo execution into an inline Web Worker, add local scenario JSON import/export for the current template + instance format, and add track aging / drop behavior.
+Add ghost-track and clutter placeholders, strengthen scenario validation and malformed-import feedback, and complete a browser-side verification pass.
 
 Keep the app browser-only, vanilla HTML, CSS, and JavaScript only, and do not build the full scenario editor yet.
 ```
