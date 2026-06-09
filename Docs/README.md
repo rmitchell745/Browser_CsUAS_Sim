@@ -7,25 +7,32 @@ This repository currently contains the first browser-only vertical slice for a c
 - Single-file `index.html`
 - Dark UI theme with neon purple and neon blue panel / button styling
 - Local scenario JSON import/export for the current template + instance format
+- Scenario Wizard for quick-start baseline, lock/refire, and TEWA-priority scenarios, including multi-group Red threat authoring
+- Scenario-local Template Builder with common-field editing plus selected-template JSON editing
+- Version / Limitations screen summarizing current prototype constraints and near-term feature work
 - Sample baseline scenario with one Blue site and one Red UAS
 - Discrete event queue with movement, sensing, tracking, classification, identification, intent, C2, firing, effect, and damage resolution
 - XY-only TEWA projected-target association with hysteresis-based threat drop
 - Stateful classification, identification, and intent refresh with retained assessment snapshots in single-run report JSON
 - Ghost-track placeholder spawning and clutter-field placeholder overlays
-- Scenario validation summary plus malformed JSON import feedback
+- Scenario validation grouped into blockers, warnings, and scenario-quality notes with editor jump-links
 - Track aging and stale track drop behavior
 - Event log, single-run report, worker-backed Monte Carlo aggregation, and flat CSV export with dynamic ammo columns and weighted survival metrics
+- Export preview tabs for scenario JSON, single-run report JSON, event log JSON, and Monte Carlo CSV
 
 ## Usage
 
 1. Open `index.html` directly in a browser.
 2. Use `Load Scenario JSON` to import a local scenario file, or keep the built-in baseline scenario.
 3. Use the dashboard toggles to enable or disable the ghost-track and clutter placeholders for the active scenario.
-4. Review the `Scenario Validation` panel before running to catch blocking errors and warnings.
-5. Use `Run Single Scenario` to execute the detailed vertical slice and animate the resulting frames on the canvas.
-6. Use `Run Monte Carlo` to execute repeated seeded runs in an inline Web Worker and populate the aggregate report table.
-7. Use the `Raw Data / Export` screen to export the current scenario JSON, single-run CSV, Monte Carlo CSV, or event log JSON.
-8. Inspect the single-run report JSON when needed to review `assessmentSnapshots` for stateful refresh/skip behavior.
+4. Use `Scenario Wizard` when you want to create a runnable starting point without hand-editing JSON.
+5. Use `Template Builder` to tune embedded templates, or drop to the selected-template JSON editor for advanced edits.
+6. Review the `Scenario Validation` panel before running to catch blockers, warnings, and quality notes.
+7. Use `Run Single Scenario` to execute the detailed vertical slice and animate the resulting frames on the canvas.
+8. Use `Run Monte Carlo` to execute repeated seeded runs in an inline Web Worker and populate the aggregate report table.
+9. Use the `Raw Data / Export` screen to export the current scenario JSON, single-run CSV, Monte Carlo CSV, or event log JSON.
+10. Inspect the single-run report JSON when needed to review `assessmentSnapshots` for stateful refresh/skip behavior.
+11. Use `Version / Limitations` to review current prototype gaps and the next recommended expert-user features.
 
 ## Playtest package
 
@@ -44,6 +51,7 @@ Use `Docs/Playtest/PLAYTEST_PLAN.md` as the execution checklist.
 ## Scope limits
 
 - No scenario builder yet
+- No reusable template library yet beyond the scenario-local Template Builder
 - No terrain editor yet
 - No external libraries, backend, build step, or network calls
 - Scenario validation is still lightweight and assumes the current template + instance schema

@@ -10,12 +10,12 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Verify the refactored browser-only vertical slice after the engagement, TEWA, and reporting pass:
+Exploit the new builder-first expert workflow before adding deeper debrief analytics:
 
-- complete a broader browser verification pass beyond the local headless smoke test
-- validate the new XY-only TEWA, hysteresis, and stateful assessment behavior in a fuller interactive browser pass
-- tune the first-pass assessment refresh thresholds and snapshot review workflow based on playtest feedback
-- decide whether the next step is interceptor-child modeling or deeper environment realism
+- conduct a fuller interactive browser pass against the new Scenario Wizard, Template Builder, and validation jump-links
+- review whether the first Template Builder common-field editor needs more exposed sensor / effector parameters before a separate library workflow
+- choose the next debrief-focused UX tranche: Event Timeline View, Top Failure Drivers analysis, or canvas overlays for effector FOV / intent headings
+- decide whether JSON export needs a dedicated single-run CSV preview tab in addition to the current report / event log / Monte Carlo preview tabs
 - keep the prototype explainable and local-only
 
 ---
@@ -51,7 +51,9 @@ The current working prototype now includes:
 
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
 - [ ] Review the new stateful assessment thresholds in live playtest and tighten any remaining over-refresh or under-refresh cases.
-- [ ] Decide whether assessment snapshots need a dedicated UI/export affordance beyond the current report JSON payload.
+- [ ] Build the Event Timeline View so SMEs can scrub key events without relying only on the flat log or raw JSON.
+- [ ] Add Top Failure Drivers analysis for Monte Carlo review, with a compact expert-facing ranking before any heavier heat-map work.
+- [ ] Add canvas overlays for effector coverage / fields of view and UAS intent headings during scenario review and playback.
 - [ ] Differentiate `track update` logging so playtest review can distinguish same-sensor refresh, new-sensor fusion, and major track-state changes.
 - [ ] Refactor the `Interceptor Launcher` so it spawns a child interceptor sub-component / active map object, and ensure that interceptor appears in the map state and reporting outputs.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
@@ -107,6 +109,12 @@ The current working prototype now includes:
 - [x] Implemented TEWA hysteresis so `Attack Run` / elevated threat status drops after 2 consecutive non-closing or low-speed updates.
 - [x] Refactored track assessment into a first-pass stateful model so classification, identification, and intent are refreshed only on meaningful triggers or staleness windows rather than every track update.
 - [x] Added compact periodic assessment snapshots to preserve per-cycle debugging and analysis after stateful assessment gating.
+- [x] Added a scenario-local Template Builder UI for editing embedded templates without switching to full raw scenario JSON.
+- [x] Added a Scenario Wizard with starter patterns for baseline, lock/refire, and TEWA-priority quick-build scenarios.
+- [x] Refactored the Scenario Wizard so Red threats can be authored as multiple threat groups with separate template profiles, counts, and routes.
+- [x] Upgraded validation into grouped blockers, warnings, and scenario-quality notes with recommended fixes and editor jump-links.
+- [x] Improved JSON import/export usability with preview tabs, pretty-print toggle, copy-to-clipboard, and normalized-vs-original scenario export selection.
+- [x] Reserved a Timeline / Analysis screen so the next UX tranche can land without refactoring the screen manager again.
 
 ---
 
@@ -141,7 +149,8 @@ Do not implement until after the first vertical slice works.
 - [ ] Need to ensure `roles` remains an array, not an enum, as new import/export paths are added.
 - [ ] TEWA payload assessment is still heuristic and intentionally explainable; it is not yet informed by richer size/classification observables or doctrine inputs.
 - [ ] Stateful assessment now uses fixed first-pass thresholds; those thresholds still need live browser tuning to avoid edge-case over-refresh or under-refresh behavior.
-- [ ] Assessment snapshots are currently available in the single-run report JSON, but not yet through a dedicated UI surface or separate export control.
+- [ ] Assessment snapshots remain available through single-run report JSON, but still need a dedicated debrief surface.
+- [ ] The first Template Builder exposes common fields plus selected-template JSON, but it does not yet provide a reusable local template library workflow.
 
 ---
 

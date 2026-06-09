@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Ryan D Mitchell -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>C-sUAS Monte Carlo DES Prototype</title>
+  <title>Browser CsUAS Sim</title>
   <style>
     :root {
       --bg-top: #080212;
@@ -50,9 +51,6 @@
     }
 
     .hero {
-      display: grid;
-      grid-template-columns: 1.6fr 1fr;
-      gap: 18px;
       padding: 18px 20px;
       border: 1px solid var(--panel-border);
       border-radius: 20px;
@@ -75,13 +73,6 @@
       color: var(--muted);
       line-height: 1.5;
       max-width: 72ch;
-    }
-
-    .hero-stats {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
-      align-content: start;
     }
 
     .stat-card,
@@ -227,6 +218,14 @@
 
     .field input {
       width: 84px;
+      padding: 6px 8px;
+      border: 1px solid rgba(80, 216, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(7, 9, 25, 0.72);
+      color: var(--text);
+    }
+
+    .field select {
       padding: 6px 8px;
       border: 1px solid rgba(80, 216, 255, 0.2);
       border-radius: 10px;
@@ -478,9 +477,282 @@
       color: #ff88b4;
     }
 
+    .panel-caption,
+    .muted-text {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .editor-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+    }
+
+    .editor-sidebar {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .template-list {
+      display: grid;
+      gap: 10px;
+      max-height: 620px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .template-card,
+    .summary-card,
+    .issue-card,
+    .timeline-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(80, 216, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .template-card {
+      cursor: pointer;
+      transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+
+    .template-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(80, 216, 255, 0.45);
+    }
+
+    .template-card.active {
+      border-color: rgba(80, 216, 255, 0.72);
+      background: rgba(80, 216, 255, 0.1);
+      box-shadow: 0 0 18px rgba(80, 216, 255, 0.15);
+    }
+
+    .template-card h4,
+    .issue-card h4,
+    .timeline-card h4 {
+      margin: 0 0 6px;
+    }
+
+    .template-meta,
+    .summary-meta,
+    .issue-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .summary-grid,
+    .wizard-grid,
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .form-grid.tight {
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .field-stack {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field-stack label {
+      color: var(--muted);
+      font-size: 0.84rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .field-stack input,
+    .field-stack textarea,
+    .field-stack select {
+      width: 100%;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid rgba(80, 216, 255, 0.16);
+      border-radius: 12px;
+      background: rgba(7, 9, 25, 0.78);
+      color: var(--text);
+    }
+
+    .field-stack textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .field-stack.inline-check {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(80, 216, 255, 0.14);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .field-stack.inline-check label {
+      margin: 0;
+      font-size: 0.92rem;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--text);
+    }
+
+    .field-stack.inline-check input {
+      width: auto;
+      accent-color: var(--neon-blue);
+    }
+
+    .toolbar-row,
+    .tab-strip,
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .tab-button {
+      padding-inline: 14px;
+    }
+
+    .tab-button.active {
+      background:
+        linear-gradient(180deg, rgba(80, 216, 255, 0.34), rgba(168, 85, 255, 0.22)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 58%);
+      border-color: rgba(80, 216, 255, 0.7);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(80, 216, 255, 0.16);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .split-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .json-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .issue-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .threat-group-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .threat-group-card {
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid rgba(80, 216, 255, 0.16);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .threat-group-card h4 {
+      margin: 0;
+    }
+
+    .threat-group-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .threat-group-subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .issue-card {
+      display: grid;
+      gap: 8px;
+    }
+
+    .issue-card .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .issue-severity {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .issue-card.error .issue-severity {
+      color: #ff88b4;
+    }
+
+    .issue-card.warning .issue-severity {
+      color: var(--warning);
+    }
+
+    .issue-card.note .issue-severity {
+      color: var(--accent-strong);
+    }
+
+    .button-link {
+      padding: 8px 12px;
+      font-size: 0.88rem;
+    }
+
+    .builder-section + .builder-section {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .empty-state {
+      padding: 18px;
+      border-radius: 14px;
+      border: 1px dashed rgba(80, 216, 255, 0.2);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .attention-card {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 216, 110, 0.28);
+      background: rgba(255, 216, 110, 0.08);
+      color: var(--text);
+    }
+
+    .attention-card strong {
+      color: var(--warning);
+    }
+
     @media (max-width: 1080px) {
-      .hero,
-      .screen-grid {
+      .screen-grid,
+      .editor-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -505,7 +777,7 @@
   <div class="app-shell">
     <header class="hero">
       <div>
-        <h1>C-sUAS Vertical Slice</h1>
+        <h1>Browser CsUAS Sim</h1>
         <p>
           Single-file browser prototype for a component-system discrete event simulation.
           The current slice runs one hardcoded Red UAS against one Blue sensor / effector site,
@@ -513,30 +785,15 @@
           and Monte Carlo reporting.
         </p>
       </div>
-      <div class="hero-stats">
-        <div class="stat-card">
-          <span class="label">Architecture</span>
-          <span class="value">Component + System</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Execution</span>
-          <span class="value">Browser Only</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Scenario</span>
-          <span class="value">1 Blue / 1 Red</span>
-        </div>
-        <div class="stat-card">
-          <span class="label">Export</span>
-          <span class="value">Flat CSV</span>
-        </div>
-      </div>
     </header>
 
     <nav class="nav-strip">
       <button class="nav-button active" data-screen="dashboard">Scenario Dashboard</button>
+      <button class="nav-button" data-screen="wizard">Scenario Wizard</button>
+      <button class="nav-button" data-screen="templates">Template Builder</button>
       <button class="nav-button" data-screen="run">Run Scenario</button>
       <button class="nav-button" data-screen="report">Report Viewer</button>
+      <button class="nav-button" data-screen="analysis">Version / Limits</button>
       <button class="nav-button" data-screen="export">Raw Data / Export</button>
     </nav>
 
@@ -573,12 +830,12 @@
             </div>
           </div>
           <div class="panel">
-            <h2>Deferred Screens</h2>
+            <h2>Workflow Status</h2>
             <div class="placeholder-list">
-              <div class="placeholder-card">Template Library placeholder</div>
-              <div class="placeholder-card">Mission Builder placeholder</div>
-              <div class="placeholder-card">Environment Builder placeholder</div>
-              <div class="placeholder-card">Tutorial / Help placeholder</div>
+              <div class="placeholder-card">Template Builder is live for scenario-local template editing.</div>
+              <div class="placeholder-card">Scenario Wizard builds quick-start baseline, lock/refire, and TEWA review cases.</div>
+              <div class="placeholder-card">Version / Limits screen now summarizes current gaps and near-term feature work.</div>
+              <div class="placeholder-card">Environment, terrain, and deep debrief analytics remain future workflow expansions.</div>
             </div>
           </div>
         </div>
@@ -601,6 +858,383 @@
           <div class="panel">
             <h2>Scenario Validation</h2>
             <div class="validation-summary" id="validation-summary"></div>
+          </div>
+          <div class="panel">
+            <h2>Scenario Intake</h2>
+            <div class="summary-grid" id="import-summary"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-wizard">
+      <div class="stack">
+        <div class="panel">
+          <h2>Scenario Wizard</h2>
+          <p class="panel-caption">
+            Build a runnable expert-review scenario quickly, then hand it off to the Template Builder or raw JSON export for refinement.
+          </p>
+          <div class="controls" style="margin-top: 12px;">
+            <div class="field">
+              <label for="wizard-preset">Starter Pattern</label>
+              <select id="wizard-preset">
+                <option value="baseline-single">Single-UAS Baseline</option>
+                <option value="lock-refire">Lock / Refire Two-Threat</option>
+                <option value="tewa-priority">TEWA Priority Review</option>
+              </select>
+            </div>
+            <button id="wizard-load-preset-btn">Load Preset</button>
+            <button id="wizard-preview-btn">Preview Wizard Scenario</button>
+            <button id="wizard-build-btn">Build Scenario From Wizard</button>
+          </div>
+        </div>
+
+        <div class="screen-grid">
+          <div class="stack">
+            <div class="panel">
+              <h3>1. Metadata</h3>
+              <div class="form-grid">
+                <div class="field-stack">
+                  <label for="wizard-scenario-name">Scenario Name</label>
+                  <input id="wizard-scenario-name" type="text">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-scenario-description">Description</label>
+                  <textarea id="wizard-scenario-description"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>2. Blue Site</h3>
+              <div class="form-grid">
+                <div class="field-stack">
+                  <label for="wizard-blue-name">Blue Site Name</label>
+                  <input id="wizard-blue-name" type="text">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-blue-x">Blue X</label>
+                  <input id="wizard-blue-x" type="number">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-blue-y">Blue Y</label>
+                  <input id="wizard-blue-y" type="number">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-blue-z">Blue Z</label>
+                  <input id="wizard-blue-z" type="number">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-sensor-range">Sensor Range (m)</label>
+                  <input id="wizard-sensor-range" type="number">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-effector-range">Effector Range (m)</label>
+                  <input id="wizard-effector-range" type="number">
+                </div>
+                <div class="field-stack">
+                  <label for="wizard-effector-ammo">Effector Ammo</label>
+                  <input id="wizard-effector-ammo" type="number">
+                </div>
+                <div class="field-stack inline-check">
+                  <input id="wizard-blue-ishq" type="checkbox">
+                  <label for="wizard-blue-ishq">Mark as HQ / defended primary asset</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>3. Red Threat Groups</h3>
+              <p class="panel-caption">
+                Each group owns its own Red template profile, instance count, and route pattern. Use multiple groups when threats should differ by type, route, or spacing.
+              </p>
+              <div class="controls" style="margin-top: 12px;">
+                <button id="wizard-add-threat-group-btn">Add Threat Group</button>
+              </div>
+              <div class="threat-group-list" id="wizard-threat-group-list"></div>
+            </div>
+
+            <div class="panel">
+              <h3>4. Environment</h3>
+              <div class="form-grid">
+                <div class="field-stack inline-check">
+                  <input id="wizard-ghost-enabled" type="checkbox">
+                  <label for="wizard-ghost-enabled">Enable ghost placeholder</label>
+                </div>
+                <div class="field-stack inline-check">
+                  <input id="wizard-clutter-enabled" type="checkbox">
+                  <label for="wizard-clutter-enabled">Enable clutter placeholder</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="panel">
+              <h3>Wizard Review</h3>
+              <div class="summary-grid" id="wizard-summary"></div>
+              <div id="wizard-reminder" style="margin-top: 12px;"></div>
+            </div>
+            <div class="panel">
+              <h3>What This Builds</h3>
+              <ul class="report-list">
+                <li><span>Output shape</span><strong>Current template + instance JSON</strong></li>
+                <li><span>Use case</span><strong>Quick-start scenarios for playtest and SME review</strong></li>
+                <li><span>Next step</span><strong>Refine templates or export normalized JSON</strong></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-templates">
+      <div class="stack">
+        <div class="panel">
+          <h2>Template Builder</h2>
+          <p class="panel-caption">
+            Edit the templates embedded in the active scenario. Advanced users can tune the full selected template JSON without touching the rest of the scenario payload.
+          </p>
+        </div>
+
+        <div class="editor-grid">
+          <div class="editor-sidebar">
+            <div class="panel">
+              <div class="controls">
+                <div class="field">
+                  <label for="template-search">Find Template</label>
+                  <input id="template-search" type="text" style="width: 180px;">
+                </div>
+                <div class="field">
+                  <label for="new-template-preset">New Template</label>
+                  <select id="new-template-preset">
+                    <option value="blue-site">Blue Site</option>
+                    <option value="red-uas">Red UAS</option>
+                    <option value="sensor-node">Sensor Node</option>
+                    <option value="effector-node">Effector Node</option>
+                    <option value="asset">Asset</option>
+                  </select>
+                </div>
+              </div>
+              <div class="controls">
+                <button id="create-template-btn">Add Template</button>
+              </div>
+              <div class="summary-grid" id="template-library-summary" style="margin-bottom: 12px;"></div>
+              <div class="template-list" id="template-list"></div>
+            </div>
+          </div>
+
+          <div class="split-stack">
+            <div class="panel">
+              <div class="controls">
+                <button id="save-template-form-btn">Save Common Fields</button>
+                <button id="duplicate-template-btn">Duplicate Template</button>
+                <button id="delete-template-btn">Delete Template</button>
+              </div>
+              <div class="summary-grid" id="template-usage-summary" style="margin-bottom: 12px;"></div>
+
+              <div class="builder-section">
+                <h3>Identity</h3>
+                <div class="form-grid">
+                  <div class="field-stack">
+                    <label for="template-id-input">Template ID</label>
+                    <input id="template-id-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-name-input">Template Name</label>
+                    <input id="template-name-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-category-input">Category</label>
+                    <input id="template-category-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-roles-input">Default Roles (comma separated)</label>
+                    <input id="template-roles-input" type="text">
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Health + Signature</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack">
+                    <label for="template-health-input">Max Health</label>
+                    <input id="template-health-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-asset-value-input">Asset Value</label>
+                    <input id="template-asset-value-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-resistance-input">Kinetic Resistance</label>
+                    <input id="template-resistance-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-signature-input">Radar Signature (dB)</label>
+                    <input id="template-signature-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-ishq-input" type="checkbox">
+                    <label for="template-ishq-input">HQ / primary defended asset</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Movement</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack inline-check">
+                    <input id="template-movement-enabled" type="checkbox">
+                    <label for="template-movement-enabled">Enable movement component</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-speed-input">Speed (m/s)</label>
+                    <input id="template-speed-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-step-input">Step (sec)</label>
+                    <input id="template-step-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-waypoint-tolerance-input">Waypoint Tolerance (m)</label>
+                    <input id="template-waypoint-tolerance-input" type="number">
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Primary Sensor</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack inline-check">
+                    <input id="template-sensor-enabled" type="checkbox">
+                    <label for="template-sensor-enabled">Enable first sensor</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-id-input">Sensor ID</label>
+                    <input id="template-sensor-id-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-name-input">Sensor Name</label>
+                    <input id="template-sensor-name-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-type-input">Sensor Type</label>
+                    <select id="template-sensor-type-input">
+                      <option value="Radar">Radar</option>
+                      <option value="EO_IR">EO / IR</option>
+                      <option value="RF_Passive">RF Passive</option>
+                      <option value="Acoustic">Acoustic</option>
+                      <option value="FPV">FPV</option>
+                    </select>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-range-input">Max Range (m)</label>
+                    <input id="template-sensor-range-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-heading-input">Heading (deg)</label>
+                    <input id="template-sensor-heading-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-hfov-input">Horizontal FOV (deg)</label>
+                    <input id="template-sensor-hfov-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-vfov-input">Vertical FOV (deg)</label>
+                    <input id="template-sensor-vfov-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-scan-input">Scan Interval (sec)</label>
+                    <input id="template-sensor-scan-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-threshold-input">Detection Threshold (dB)</label>
+                    <input id="template-sensor-threshold-input" type="number" step="0.1">
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Primary Effector + C2</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack inline-check">
+                    <input id="template-effector-enabled" type="checkbox">
+                    <label for="template-effector-enabled">Enable first effector</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-c2-enabled" type="checkbox">
+                    <label for="template-c2-enabled">Enable C2 component</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-id-input">Effector ID</label>
+                    <input id="template-effector-id-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-name-input">Effector Name</label>
+                    <input id="template-effector-name-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-type-input">Effector Type</label>
+                    <select id="template-effector-type-input">
+                      <option value="Kinetic">Kinetic</option>
+                      <option value="Jammer">Jammer</option>
+                      <option value="Laser">Laser</option>
+                      <option value="Interceptor">Interceptor</option>
+                    </select>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-range-input">Max Range (m)</label>
+                    <input id="template-effector-range-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-basepk-input">Base Pk</label>
+                    <input id="template-effector-basepk-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-basepe-input">Base Pe</label>
+                    <input id="template-effector-basepe-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-damage-input">Damage</label>
+                    <input id="template-effector-damage-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-ammo-input">Ammo Capacity</label>
+                    <input id="template-effector-ammo-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-slew-input">Slew / Delay (sec)</label>
+                    <input id="template-effector-slew-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-cooldown-input">Cooldown (sec)</label>
+                    <input id="template-effector-cooldown-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-speed-input">Projectile Speed (m/s)</label>
+                    <input id="template-effector-speed-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-c2-capacity-input">C2 Track Capacity</label>
+                    <input id="template-c2-capacity-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-c2-latency-input">C2 Latency (sec)</label>
+                    <input id="template-c2-latency-input" type="number" step="0.1">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>Advanced Template JSON</h3>
+              <p class="panel-caption">Use this for multiple sensors/effectors or any field not exposed in the common editor.</p>
+              <textarea id="template-json-editor" spellcheck="false"></textarea>
+              <div class="controls" style="margin-top: 12px;">
+                <button id="apply-template-json-btn">Apply Template JSON</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -627,6 +1261,7 @@
           <div class="badge"><span>Last seed</span><strong id="seed-text">-</strong></div>
           <div class="badge"><span>Scenario</span><strong id="scenario-text">Baseline Vertical Slice</strong></div>
         </div>
+        <div id="run-reminder"></div>
       </div>
 
       <div class="screen-grid" style="margin-top: 16px;">
@@ -696,6 +1331,39 @@
       </div>
     </section>
 
+    <section class="screen" id="screen-analysis">
+      <div class="stack">
+        <div class="panel">
+          <h2>Version / Limitations</h2>
+          <p class="panel-caption">
+            This screen tracks what is solid in the current browser build, what remains intentionally limited, and which expert-user features are next.
+          </p>
+        </div>
+        <div class="summary-grid">
+          <div class="timeline-card">
+            <h4>Current Version</h4>
+            <div class="summary-meta">Browser CsUAS Sim: builder-first SME workflow pass with Scenario Wizard, Template Builder, grouped validation, report playback, Monte Carlo CSV, and structured export previews.</div>
+          </div>
+          <div class="timeline-card">
+            <h4>Current Limitations</h4>
+            <div class="summary-meta">No full terrain or environment builder, no reusable template library, no dedicated event timeline, no failure-driver table, and no canvas overlays yet for effector fields of view or intent headings.</div>
+          </div>
+          <div class="timeline-card">
+            <h4>Coming Next</h4>
+            <div class="summary-meta">Top candidates are event timeline review, failure-driver analysis, FOV / intent map overlays, richer environment authoring, and reusable local template workflows.</div>
+          </div>
+          <div class="timeline-card">
+            <h4>Expert Workflow</h4>
+            <div class="summary-meta">Use Scenario Wizard for quick starts, Template Builder for embedded template tuning, Report Viewer for outcomes, and Raw Data / Export for normalized scenario sharing and deep debug payloads.</div>
+          </div>
+          <div class="timeline-card">
+            <h4>Model Constraints</h4>
+            <div class="summary-meta">This tranche does not add new simulation physics. Ghost/clutter remain placeholders, TEWA payload estimation remains heuristic, and validation quality checks are advisory unless they reflect hard structural failures.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="screen" id="screen-export">
       <div class="stack">
         <div class="panel">
@@ -705,9 +1373,28 @@
             <button id="export-log-btn">Export Event Log JSON</button>
             <button id="export-scenario-file-btn">Export Scenario JSON</button>
           </div>
-          <p style="margin: 0; color: var(--muted);">
-            Preview area shows the most recent export payload before download.
-          </p>
+          <div class="json-toolbar">
+            <div class="tab-strip">
+              <button class="tab-button active" data-export-tab="scenario" id="tab-scenario-btn">Scenario JSON</button>
+              <button class="tab-button" data-export-tab="report" id="tab-report-btn">Single Run Report</button>
+              <button class="tab-button" data-export-tab="eventLog" id="tab-eventlog-btn">Event Log</button>
+              <button class="tab-button" data-export-tab="monteCarlo" id="tab-montecarlo-btn">Monte Carlo CSV</button>
+            </div>
+            <div class="toolbar-row">
+              <div class="field">
+                <label for="scenario-export-source">Scenario Source</label>
+                <select id="scenario-export-source">
+                  <option value="normalized">Normalized runnable scenario</option>
+                  <option value="original">Original imported payload</option>
+                </select>
+              </div>
+              <label class="toggle-chip">
+                <input type="checkbox" id="export-pretty-toggle" checked>
+                <span>Pretty-print JSON</span>
+              </label>
+              <button id="copy-export-preview-btn">Copy Preview</button>
+            </div>
+          </div>
         </div>
         <div class="panel">
           <h2>Export Preview</h2>
@@ -912,6 +1599,31 @@
         };
       }
 
+      function pointToSegmentDistance2D(point, start, end) {
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
+        if (dx === 0 && dy === 0) {
+          return distance2D(point, start);
+        }
+        const t = clamp((((point.x - start.x) * dx) + ((point.y - start.y) * dy)) / ((dx * dx) + (dy * dy)), 0, 1);
+        const projected = {
+          x: start.x + (dx * t),
+          y: start.y + (dy * t)
+        };
+        return distance2D(point, projected);
+      }
+
+      function createValidationIssue(severity, message, recommendedAction, extras = {}) {
+        return {
+          severity,
+          message,
+          recommendedAction: recommendedAction || "",
+          targetScreen: extras.targetScreen || null,
+          targetId: extras.targetId || null,
+          targetLabel: extras.targetLabel || null
+        };
+      }
+
       function normalizeScenario(inputScenario) {
         const scenario = deepClone(inputScenario || {});
         scenario.metadata = scenario.metadata || {};
@@ -994,59 +1706,149 @@
       }
 
       function validateScenario(inputScenario) {
-        const errors = [];
-        const warnings = [];
+        const errorIssues = [];
+        const warningIssues = [];
+        const noteIssues = [];
         const scenario = normalizeScenario(inputScenario);
+        const addIssue = (severity, message, recommendedAction, extras = {}) => {
+          const issue = createValidationIssue(severity, message, recommendedAction, extras);
+          if (severity === "error") {
+            errorIssues.push(issue);
+          } else if (severity === "warning") {
+            warningIssues.push(issue);
+          } else {
+            noteIssues.push(issue);
+          }
+        };
 
         if (!scenario.metadata.name) {
-          errors.push("Scenario name is required.");
+          addIssue("error", "Scenario name is required.", "Add a descriptive scenario name in metadata.", { targetScreen: "wizard" });
         }
 
         if (!scenario.templates.length) {
-          errors.push("At least one template is required.");
+          addIssue("error", "At least one template is required.", "Create or import at least one template before running.", { targetScreen: "templates" });
         }
 
         if (!scenario.instances.length) {
-          errors.push("At least one instance is required.");
+          addIssue("error", "At least one instance is required.", "Use the Scenario Wizard or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
         }
 
         const templateIds = new Set();
+        const templateNameMap = new Map();
         scenario.templates.forEach((template) => {
           if (templateIds.has(template.id)) {
-            errors.push("Duplicate template id: " + template.id);
+            addIssue("error", "Duplicate template id: " + template.id, "Rename one of the duplicate templates so every template id is unique.", {
+              targetScreen: "templates",
+              targetId: template.id,
+              targetLabel: "Open template"
+            });
           }
           templateIds.add(template.id);
           if (!Array.isArray(template.defaultRoles)) {
-            errors.push("Template " + template.id + " must use roles as an array.");
+            addIssue("error", "Template " + template.id + " must use roles as an array.", "Replace any single role string with an array of roles.", {
+              targetScreen: "templates",
+              targetId: template.id,
+              targetLabel: "Open template"
+            });
           }
           if (!template.components.health || !Number.isFinite(template.components.health.maxHealth)) {
-            errors.push("Template " + template.id + " is missing valid health.maxHealth.");
+            addIssue("error", "Template " + template.id + " is missing valid health.maxHealth.", "Set a finite max health value for the template.", {
+              targetScreen: "templates",
+              targetId: template.id,
+              targetLabel: "Open template"
+            });
+          }
+
+          const normalizedTemplateName = String(template.name || "").trim().toLowerCase();
+          if (normalizedTemplateName) {
+            const templateNameCount = templateNameMap.get(normalizedTemplateName) || 0;
+            templateNameMap.set(normalizedTemplateName, templateNameCount + 1);
+          }
+
+          if ((template.components.sensors || []).length > 0) {
+            template.components.sensors.forEach((sensor) => {
+              if (!(sensor.maxRangeM > 0)) {
+                addIssue("warning", "Template " + template.id + " has a sensor with no usable range.", "Set sensor.maxRangeM above zero so detections are plausible.", {
+                  targetScreen: "templates",
+                  targetId: template.id,
+                  targetLabel: "Open template"
+                });
+              }
+            });
+          }
+
+          if ((template.components.effectors || []).length > 0) {
+            template.components.effectors.forEach((effector) => {
+              if ((effector.maxRangeM > 0) && !(effector.ammoCapacity > 0)) {
+                addIssue("warning", "Template " + template.id + " has an effector with range but no usable ammo.", "Increase ammoCapacity or remove the effector from the template.", {
+                  targetScreen: "templates",
+                  targetId: template.id,
+                  targetLabel: "Open template"
+                });
+              }
+              if (String(effector.type || "").toLowerCase() === "kinetic" && effector.maxRangeM > 0 && !(effector.projectileSpeedMps > 0)) {
+                addIssue("warning", "Template " + template.id + " has a kinetic effector without projectile speed.", "Set projectileSpeedMps so time-to-effect remains meaningful.", {
+                  targetScreen: "templates",
+                  targetId: template.id,
+                  targetLabel: "Open template"
+                });
+              }
+            });
+          }
+
+          if (template.components.c2 && !(template.components.sensors || []).length && !(template.components.effectors || []).length) {
+            addIssue("warning", "Template " + template.id + " has C2 but no local sensors or effectors.", "Confirm this is intentional, or add the sensing / firing components that support the node.", {
+              targetScreen: "templates",
+              targetId: template.id,
+              targetLabel: "Open template"
+            });
           }
         });
 
         const instanceIds = new Set();
+        const instanceNameMap = new Map();
         let blueCount = 0;
         let redCount = 0;
         let sensorCount = 0;
         let c2Count = 0;
+        let effectorCount = 0;
+        const blueAssets = [];
+        const blueSitesWithCoverage = new Set();
+        const redThreatRouteResults = [];
 
         scenario.instances.forEach((instance) => {
           if (instanceIds.has(instance.id)) {
-            errors.push("Duplicate instance id: " + instance.id);
+            addIssue("error", "Duplicate instance id: " + instance.id, "Rename one of the duplicate instances so every instance id is unique.", {
+              targetScreen: "wizard",
+              targetId: instance.id,
+              targetLabel: "Open wizard"
+            });
           }
           instanceIds.add(instance.id);
 
           if (!templateIds.has(instance.templateId)) {
-            errors.push("Instance " + instance.id + " references missing template " + instance.templateId + ".");
+            addIssue("error", "Instance " + instance.id + " references missing template " + instance.templateId + ".", "Update the instance templateId or recreate the missing template.", {
+              targetScreen: "templates",
+              targetId: instance.templateId,
+              targetLabel: "Open templates"
+            });
           }
 
           if (!Array.isArray(instance.roles)) {
-            errors.push("Instance " + instance.id + " must use roles as an array.");
+            addIssue("error", "Instance " + instance.id + " must use roles as an array.", "Convert any single role string to an array of roles.", {
+              targetScreen: "wizard",
+              targetId: instance.id,
+              targetLabel: "Open wizard"
+            });
           }
 
           ["posX", "posY", "posZ"].forEach((field) => {
             if (!Number.isFinite(instance[field])) {
-              errors.push("Instance " + instance.id + " has invalid " + field + ".");
+              addIssue("error", "Instance " + instance.id + " has invalid " + field + ".", "Replace invalid coordinates with finite numeric values.", {
+                targetScreen: "wizard",
+                targetId: instance.id,
+                targetLabel: "Open wizard"
+              });
             }
           });
 
@@ -1058,38 +1860,150 @@
 
           const template = scenario.templates.find((candidate) => candidate.id === instance.templateId);
           if (template) {
+            const normalizedInstanceName = String(instance.name || "").trim().toLowerCase();
+            if (normalizedInstanceName) {
+              const instanceNameCount = instanceNameMap.get(normalizedInstanceName) || 0;
+              instanceNameMap.set(normalizedInstanceName, instanceNameCount + 1);
+            }
             if ((template.components.sensors || []).length) {
               sensorCount += 1;
             }
+            if ((template.components.effectors || []).length) {
+              effectorCount += 1;
+            }
             if (template.components.c2) {
               c2Count += 1;
+            }
+            if (instance.side === "Blue") {
+              blueAssets.push({ instance, template });
+            }
+            if (instance.side === "Red" && !instance.missionWaypoints.length) {
+              addIssue("warning", "Red instance " + instance.id + " has no mission waypoints.", "Add at least one waypoint so the threat produces meaningful pathing and intent behavior.", {
+                targetScreen: "wizard",
+                targetId: instance.id,
+                targetLabel: "Open wizard"
+              });
             }
           }
         });
 
         if (blueCount === 0) {
-          errors.push("At least one Blue instance is required.");
+          addIssue("error", "At least one Blue instance is required.", "Add a Blue instance that can defend or represent a defended asset.", { targetScreen: "wizard" });
         }
         if (redCount === 0) {
-          errors.push("At least one Red instance is required.");
+          addIssue("error", "At least one Red instance is required.", "Add a Red threat instance so the scenario has something to evaluate.", { targetScreen: "wizard" });
         }
         if (sensorCount === 0) {
-          errors.push("At least one sensor-bearing object is required.");
+          addIssue("error", "At least one sensor-bearing object is required.", "Add a sensor to a Blue template or import a scenario with sensor coverage.", { targetScreen: "templates" });
         }
         if (c2Count === 0) {
-          warnings.push("No C2-capable object was found; engagements will not occur.");
+          addIssue("warning", "No C2-capable object was found; engagements will not occur.", "Add a C2 component to at least one Blue template if you expect autonomous tasking.", {
+            targetScreen: "templates",
+            targetLabel: "Open templates"
+          });
+        }
+        if (effectorCount === 0) {
+          addIssue("note", "No effector-bearing object was found.", "This is acceptable for detection-only reviews, but no threat will be defeated.", {
+            targetScreen: "templates",
+            targetLabel: "Open templates"
+          });
         }
         if (scenario.environment.placeholderGhostTrack.enabled) {
-          warnings.push("Ghost track placeholder is enabled; it is a track-only environment stub.");
+          addIssue("note", "Ghost track placeholder is enabled; it is a track-only environment stub.", "Use this for workflow testing, not as a physical object model.", {
+            targetScreen: "wizard",
+            targetLabel: "Open wizard"
+          });
         }
         if (scenario.environment.placeholderClutterField.enabled) {
-          warnings.push("Clutter placeholder is enabled; it is a visual/logging stub only.");
+          addIssue("note", "Clutter placeholder is enabled; it is a visual/logging stub only.", "Keep it on for UI review, but do not treat it as full clutter physics.", {
+            targetScreen: "wizard",
+            targetLabel: "Open wizard"
+          });
+        }
+
+        scenario.instances
+          .filter((instance) => instance.side === "Red")
+          .forEach((instance) => {
+            const start = { x: instance.posX, y: instance.posY };
+            const waypoints = instance.missionWaypoints.length ? instance.missionWaypoints : [{ x: instance.posX, y: instance.posY }];
+            let threatensBlueAsset = false;
+            let hasBlueCoverage = false;
+            let previous = start;
+            waypoints.forEach((waypoint) => {
+              const current = { x: waypoint.x, y: waypoint.y };
+              blueAssets.forEach(({ instance: blueInstance, template }) => {
+                const bluePoint = { x: blueInstance.posX, y: blueInstance.posY };
+                const pathDistance = pointToSegmentDistance2D(bluePoint, previous, current);
+                if (pathDistance <= scenario.config.projectedPathToleranceM) {
+                  threatensBlueAsset = true;
+                }
+                const bestCoverageRange = Math.max(
+                  ...[]
+                    .concat(template.components.sensors || [])
+                    .concat(template.components.effectors || [])
+                    .map((component) => Number(component.maxRangeM || 0)),
+                  0
+                );
+                if (pathDistance <= bestCoverageRange) {
+                  hasBlueCoverage = true;
+                  blueSitesWithCoverage.add(blueInstance.id);
+                }
+              });
+              previous = current;
+            });
+
+            redThreatRouteResults.push({ instanceId: instance.id, threatensBlueAsset, hasBlueCoverage });
+            if (!threatensBlueAsset) {
+              addIssue("warning", "Red instance " + instance.id + " does not currently threaten a Blue asset in XY pathing.", "Adjust its route or defended-asset placement if this run is meant to test TEWA and intent behavior.", {
+                targetScreen: "wizard",
+                targetId: instance.id,
+                targetLabel: "Open wizard"
+              });
+            }
+            if (!hasBlueCoverage) {
+              addIssue("warning", "Red instance " + instance.id + " has no meaningful Blue sensor or effector coverage along its route.", "Move the threat, extend coverage, or accept that this scenario is designed to show a coverage gap.", {
+                targetScreen: "wizard",
+                targetId: instance.id,
+                targetLabel: "Open wizard"
+              });
+            }
+          });
+
+        templateNameMap.forEach((count, name) => {
+          if (count > 1) {
+            addIssue("note", "Multiple templates share the name \"" + name + "\".", "Unique template names make report review and export sharing easier.", {
+              targetScreen: "templates",
+              targetLabel: "Open templates"
+            });
+          }
+        });
+
+        instanceNameMap.forEach((count, name) => {
+          if (count > 1) {
+            addIssue("note", "Multiple instances share the name \"" + name + "\".", "Unique instance names make event logs easier to interpret.", {
+              targetScreen: "wizard",
+              targetLabel: "Open wizard"
+            });
+          }
+        });
+
+        if (blueAssets.length <= 1) {
+          addIssue("note", "Only one Blue defended asset is present.", "That is fine for baseline runs, but TEWA prioritization is easier to evaluate with multiple defended assets.", {
+            targetScreen: "wizard",
+            targetLabel: "Open wizard"
+          });
         }
 
         return {
-          valid: errors.length === 0,
-          errors,
-          warnings,
+          valid: errorIssues.length === 0,
+          errors: errorIssues.map((issue) => issue.message),
+          warnings: warningIssues.map((issue) => issue.message),
+          notes: noteIssues.map((issue) => issue.message),
+          issues: {
+            errors: errorIssues,
+            warnings: warningIssues,
+            notes: noteIssues
+          },
           scenario
         };
       }
@@ -3351,6 +4265,22 @@
         || "scenario";
     }
 
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+
     function escapeHtml(text) {
       return String(text)
         .replace(/&/g, "&amp;")
@@ -3601,8 +4531,11 @@
       constructor() {
         this.screens = {
           dashboard: document.getElementById("screen-dashboard"),
+          wizard: document.getElementById("screen-wizard"),
+          templates: document.getElementById("screen-templates"),
           run: document.getElementById("screen-run"),
           report: document.getElementById("screen-report"),
+          analysis: document.getElementById("screen-analysis"),
           export: document.getElementById("screen-export")
         };
       }
@@ -3629,16 +4562,36 @@
           singleRun: null,
           monteCarloRows: [],
           playbackTimer: null,
-          monteCarloWorker: null
+          monteCarloWorker: null,
+          selectedTemplateId: null,
+          templateSearch: "",
+          exportTab: "scenario",
+          exportPrettyJson: true,
+          scenarioExportSource: "normalized",
+          originalScenarioPayloadText: "",
+          wizardThreatGroups: [],
+          nextWizardThreatGroupId: 1,
+          lastImportSummary: {
+            source: "Built-in baseline",
+            templateCount: 0,
+            instanceCount: 0,
+            normalizedChanged: false,
+            dirty: false
+          }
         };
         this.bindEvents();
         this.applyQueryParams();
+        this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
+        this.loadWizardPreset("baseline-single");
         this.updateScenarioLabel();
         this.syncPlaceholderControls();
         this.clearResults();
         this.refreshValidationSummary();
+        this.refreshImportSummary();
+        this.renderTemplateBuilder();
+        this.refreshWizardSummary();
         this.renderScenarioSnapshot();
-        this.setExportPreview(JSON.stringify(this.state.currentScenario, null, 2));
+        this.refreshExportPreview();
         this.handleAutorun();
       }
 
@@ -3665,6 +4618,48 @@
           this.importScenarioFile(event);
         });
 
+        document.getElementById("wizard-load-preset-btn").addEventListener("click", () => {
+          this.loadWizardPreset(document.getElementById("wizard-preset").value);
+          this.refreshWizardSummary();
+          this.setStatus("Wizard preset loaded");
+        });
+
+        document.getElementById("wizard-preview-btn").addEventListener("click", () => {
+          this.refreshWizardSummary();
+          this.setStatus("Wizard preview refreshed");
+        });
+
+        document.getElementById("wizard-build-btn").addEventListener("click", () => {
+          this.buildScenarioFromWizard();
+        });
+
+        document.getElementById("wizard-add-threat-group-btn").addEventListener("click", () => {
+          this.addWizardThreatGroup();
+        });
+
+        [
+          "wizard-scenario-name",
+          "wizard-scenario-description",
+          "wizard-blue-name",
+          "wizard-blue-x",
+          "wizard-blue-y",
+          "wizard-blue-z",
+          "wizard-sensor-range",
+          "wizard-effector-range",
+          "wizard-effector-ammo",
+          "wizard-blue-ishq",
+          "wizard-ghost-enabled",
+          "wizard-clutter-enabled",
+          "wizard-preset"
+        ].forEach((id) => {
+          document.getElementById(id).addEventListener("input", () => {
+            this.refreshWizardSummary();
+          });
+          document.getElementById(id).addEventListener("change", () => {
+            this.refreshWizardSummary();
+          });
+        });
+
         document.getElementById("export-scenario-btn").addEventListener("click", () => {
           this.exportCurrentScenario();
         });
@@ -3684,8 +4679,9 @@
           if (!this.state.singleRun) {
             return;
           }
+          this.state.exportTab = "report";
           const csv = this.kernel.rowsToCsv([this.kernel.createCsvRow(1, this.state.singleRun.report)]);
-          this.setExportPreview(csv);
+          this.refreshExportPreview();
           downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_single_run.csv", csv, "text/csv;charset=utf-8");
         });
 
@@ -3693,8 +4689,9 @@
           if (!this.state.monteCarloRows.length) {
             return;
           }
+          this.state.exportTab = "monteCarlo";
           const csv = this.kernel.rowsToCsv(this.state.monteCarloRows);
-          this.setExportPreview(csv);
+          this.refreshExportPreview();
           downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + "_monte_carlo.csv", csv, "text/csv;charset=utf-8");
         });
 
@@ -3703,14 +4700,68 @@
             return;
           }
           const json = JSON.stringify(this.state.singleRun.report.logs, null, 2);
-          this.setExportPreview(json);
+          this.state.exportTab = "eventLog";
+          this.refreshExportPreview();
           downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_event_log.json", json, "application/json;charset=utf-8");
+        });
+
+        document.querySelectorAll("[data-export-tab]").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.state.exportTab = button.dataset.exportTab;
+            this.refreshExportPreview();
+          });
+        });
+
+        document.getElementById("scenario-export-source").addEventListener("change", (event) => {
+          this.state.scenarioExportSource = event.target.value;
+          this.refreshExportPreview();
+        });
+
+        document.getElementById("export-pretty-toggle").addEventListener("change", (event) => {
+          this.state.exportPrettyJson = !!event.target.checked;
+          this.refreshExportPreview();
+        });
+
+        document.getElementById("copy-export-preview-btn").addEventListener("click", async () => {
+          try {
+            await copyTextToClipboard(document.getElementById("export-preview").value);
+            this.setStatus("Export preview copied");
+          } catch (error) {
+            this.setStatus("Copy failed");
+          }
+        });
+
+        document.getElementById("template-search").addEventListener("input", (event) => {
+          this.state.templateSearch = event.target.value || "";
+          this.renderTemplateBuilder();
+        });
+
+        document.getElementById("create-template-btn").addEventListener("click", () => {
+          this.createTemplateFromPreset(document.getElementById("new-template-preset").value);
+        });
+
+        document.getElementById("save-template-form-btn").addEventListener("click", () => {
+          this.saveSelectedTemplateForm();
+        });
+
+        document.getElementById("duplicate-template-btn").addEventListener("click", () => {
+          this.duplicateSelectedTemplate();
+        });
+
+        document.getElementById("delete-template-btn").addEventListener("click", () => {
+          this.deleteSelectedTemplate();
+        });
+
+        document.getElementById("apply-template-json-btn").addEventListener("click", () => {
+          this.applyTemplateJsonEditor();
         });
 
         document.getElementById("ghost-placeholder-toggle").addEventListener("change", (event) => {
           this.state.currentScenario.environment.placeholderGhostTrack.enabled = event.target.checked;
           this.syncPlaceholderCards();
           this.refreshValidationSummary();
+          this.refreshWizardSummary();
+          this.refreshExportPreview();
           this.renderScenarioSnapshot();
           this.setStatus("Ghost placeholder " + (event.target.checked ? "enabled" : "disabled"));
         });
@@ -3719,6 +4770,8 @@
           this.state.currentScenario.environment.placeholderClutterField.enabled = event.target.checked;
           this.syncPlaceholderCards();
           this.refreshValidationSummary();
+          this.refreshWizardSummary();
+          this.refreshExportPreview();
           this.renderScenarioSnapshot();
           this.setStatus("Clutter placeholder " + (event.target.checked ? "enabled" : "disabled"));
         });
@@ -3731,6 +4784,15 @@
           "load-scenario-btn",
           "export-scenario-btn",
           "reset-view-btn",
+          "wizard-load-preset-btn",
+          "wizard-preview-btn",
+          "wizard-build-btn",
+          "create-template-btn",
+          "save-template-form-btn",
+          "duplicate-template-btn",
+          "delete-template-btn",
+          "apply-template-json-btn",
+          "copy-export-preview-btn",
           "export-single-btn",
           "export-monte-carlo-btn",
           "export-log-btn",
@@ -3797,6 +4859,1033 @@
           : "Clutter placeholder inactive";
       }
 
+      buildUniqueId(baseId, existingIds) {
+        const safeBase = String(baseId || "Item").replace(/[^A-Za-z0-9_-]+/g, "-") || "Item";
+        let candidate = safeBase;
+        let index = 2;
+        while (existingIds.has(candidate)) {
+          candidate = safeBase + "-" + index;
+          index += 1;
+        }
+        return candidate;
+      }
+
+      getTemplateById(templateId) {
+        return this.state.currentScenario.templates.find((template) => template.id === templateId) || null;
+      }
+
+      ensureSelectedTemplate() {
+        const templates = this.state.currentScenario.templates;
+        if (!templates.length) {
+          this.state.selectedTemplateId = null;
+          return null;
+        }
+        const existing = this.getTemplateById(this.state.selectedTemplateId);
+        if (existing) {
+          return existing;
+        }
+        this.state.selectedTemplateId = templates[0].id;
+        return templates[0];
+      }
+
+      getTemplateUsage(templateId) {
+        return this.state.currentScenario.instances.filter((instance) => instance.templateId === templateId);
+      }
+
+      selectTemplate(templateId, screenId = null) {
+        if (!this.getTemplateById(templateId)) {
+          return;
+        }
+        this.state.selectedTemplateId = templateId;
+        this.renderTemplateBuilder();
+        if (screenId) {
+          this.uiManager.showScreen(screenId);
+        }
+      }
+
+      refreshImportSummary() {
+        const summary = this.state.lastImportSummary || {};
+        const container = document.getElementById("import-summary");
+        const cards = [
+          { label: "Source", value: summary.source || "Built-in baseline" },
+          { label: "Templates", value: this.state.currentScenario.templates.length },
+          { label: "Instances", value: this.state.currentScenario.instances.length },
+          { label: "Normalized", value: summary.normalizedChanged ? "Adjusted" : "No change" },
+          { label: "Dirty", value: summary.dirty ? "Edited in UI" : "Clean" }
+        ];
+        container.innerHTML = cards.map((card) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.15rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
+        )).join("");
+      }
+
+      updateScenarioState(statusText) {
+        this.state.currentScenario = this.kernel.normalizeScenario(this.state.currentScenario);
+        this.state.lastImportSummary = {
+          ...(this.state.lastImportSummary || {}),
+          templateCount: this.state.currentScenario.templates.length,
+          instanceCount: this.state.currentScenario.instances.length,
+          dirty: true
+        };
+        this.stopPlayback();
+        this.clearResults();
+        this.updateScenarioLabel();
+        this.syncPlaceholderControls();
+        this.ensureSelectedTemplate();
+        this.refreshValidationSummary();
+        this.refreshImportSummary();
+        this.renderTemplateBuilder();
+        this.refreshWizardSummary();
+        this.renderScenarioSnapshot();
+        this.refreshExportPreview();
+        if (statusText) {
+          this.setStatus(statusText);
+        }
+      }
+
+      buildTemplatePreset(preset) {
+        if (preset === "red-uas") {
+          return {
+            id: "Template-Red-UAS",
+            name: "Red UAS",
+            category: "UAS",
+            defaultRoles: ["UAS"],
+            components: {
+              health: { maxHealth: 90, assetValuePts: 8, isHQ: false },
+              resistance: { kineticResistance: 0.18 },
+              signature: { radarSignatureDb: -14 },
+              movement: { speedMps: 32, stepSec: 1, waypointToleranceM: 10 },
+              sensors: [],
+              effectors: []
+            }
+          };
+        }
+        if (preset === "sensor-node") {
+          return {
+            id: "Template-Blue-Sensor",
+            name: "Blue Sensor Node",
+            category: "Sensor",
+            defaultRoles: ["Sensor", "Asset"],
+            components: {
+              health: { maxHealth: 80, assetValuePts: 12, isHQ: false },
+              resistance: { kineticResistance: 0.1 },
+              signature: { radarSignatureDb: -6 },
+              sensors: [{
+                id: "Sensor-1",
+                name: "Wide-Area Radar",
+                type: "Radar",
+                maxRangeM: 550,
+                horizontalFovDeg: 360,
+                verticalFovDeg: 120,
+                headingDeg: 0,
+                transmitPowerDb: 53,
+                noiseFloorDb: -94,
+                noiseSigmaDb: 1.2,
+                detectionThresholdDb: 17,
+                scanIntervalSec: 1,
+                classification: { canClassify: true, latencySec: 0.25, accuracyBase: 0.82 },
+                identification: { canIdentify: true, latencySec: 0.35, accuracyBase: 0.74 }
+              }],
+              effectors: [],
+              c2: null
+            }
+          };
+        }
+        if (preset === "effector-node") {
+          return {
+            id: "Template-Blue-Effector",
+            name: "Blue Effector Node",
+            category: "Effector",
+            defaultRoles: ["Effector", "Asset", "C2"],
+            components: {
+              health: { maxHealth: 90, assetValuePts: 18, isHQ: false },
+              resistance: { kineticResistance: 0.12 },
+              signature: { radarSignatureDb: -4 },
+              sensors: [],
+              effectors: [{
+                id: "Effector-1",
+                name: "Kinetic Interceptor",
+                type: "Kinetic",
+                maxRangeM: 240,
+                basePk: 0.72,
+                basePe: 0,
+                damagePoints: 140,
+                ammoCapacity: 3,
+                slewRateSec: 0.2,
+                cooldownSec: 2,
+                projectileSpeedMps: 900
+              }],
+              c2: { trackCapacity: 6, processingLatencySec: 0.3 }
+            }
+          };
+        }
+        if (preset === "asset") {
+          return {
+            id: "Template-Blue-Asset",
+            name: "Blue Defended Asset",
+            category: "Asset",
+            defaultRoles: ["Asset"],
+            components: {
+              health: { maxHealth: 110, assetValuePts: 40, isHQ: false },
+              resistance: { kineticResistance: 0.08 },
+              signature: { radarSignatureDb: -8 },
+              sensors: [],
+              effectors: [],
+              c2: null
+            }
+          };
+        }
+        return {
+          id: "Template-Blue-Site",
+          name: "Blue Site",
+          category: "Defense",
+          defaultRoles: ["Asset", "Sensor", "Effector", "C2"],
+          components: {
+            health: { maxHealth: 120, assetValuePts: 100, isHQ: true },
+            resistance: { kineticResistance: 0.15 },
+            signature: { radarSignatureDb: -2 },
+            sensors: [{
+              id: "Sensor-1",
+              name: "EO / RF Sensor",
+              type: "EO_IR",
+              maxRangeM: 420,
+              horizontalFovDeg: 140,
+              verticalFovDeg: 90,
+              headingDeg: 180,
+              transmitPowerDb: 53,
+              noiseFloorDb: -94,
+              noiseSigmaDb: 1.2,
+              detectionThresholdDb: 17,
+              scanIntervalSec: 1,
+              classification: { canClassify: true, latencySec: 0.25, accuracyBase: 0.84 },
+              identification: { canIdentify: true, latencySec: 0.35, accuracyBase: 0.76 }
+            }],
+            effectors: [{
+              id: "Effector-1",
+              name: "Interceptor Launcher",
+              type: "Kinetic",
+              maxRangeM: 230,
+              basePk: 0.74,
+              basePe: 0,
+              damagePoints: 150,
+              ammoCapacity: 3,
+              slewRateSec: 0.2,
+              cooldownSec: 2,
+              projectileSpeedMps: 900
+            }],
+            c2: { trackCapacity: 8, processingLatencySec: 0.3 }
+          }
+        };
+      }
+
+      createTemplateFromPreset(preset) {
+        const template = this.kernel.deepClone(this.buildTemplatePreset(preset));
+        const existingIds = new Set(this.state.currentScenario.templates.map((item) => item.id));
+        template.id = this.buildUniqueId(template.id, existingIds);
+        template.name = template.name + " " + this.state.currentScenario.templates.length;
+        this.state.currentScenario.templates.push(template);
+        this.state.selectedTemplateId = template.id;
+        this.updateScenarioState("Added template " + template.name);
+        this.uiManager.showScreen("templates");
+      }
+
+      renderTemplateBuilder() {
+        const summary = document.getElementById("template-library-summary");
+        const list = document.getElementById("template-list");
+        const templates = this.state.currentScenario.templates;
+        const search = String(this.state.templateSearch || "").trim().toLowerCase();
+        const filtered = templates.filter((template) => {
+          const haystack = [
+            template.id,
+            template.name,
+            template.category,
+            ...(template.defaultRoles || [])
+          ].join(" ").toLowerCase();
+          return !search || haystack.includes(search);
+        });
+        if (filtered.length && !filtered.some((template) => template.id === this.state.selectedTemplateId)) {
+          this.state.selectedTemplateId = filtered[0].id;
+        }
+        const selected = this.ensureSelectedTemplate();
+        summary.innerHTML = [
+          { label: "Templates", value: templates.length },
+          { label: "Filtered", value: filtered.length },
+          { label: "In Use", value: templates.filter((template) => this.getTemplateUsage(template.id).length > 0).length }
+        ].map((card) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.05rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
+        )).join("");
+        list.innerHTML = filtered.length
+          ? filtered.map((template) => {
+              const usage = this.getTemplateUsage(template.id);
+              const hasSensor = (template.components.sensors || []).length > 0 ? "Sensor" : "No Sensor";
+              const hasEffector = (template.components.effectors || []).length > 0 ? "Effector" : "No Effector";
+              return (
+                "<div class=\"template-card" + (template.id === selected?.id ? " active" : "") + "\" data-template-id=\"" + escapeHtml(template.id) + "\">" +
+                  "<h4>" + escapeHtml(template.name) + "</h4>" +
+                  "<div class=\"template-meta\">" + escapeHtml(template.id) + "</div>" +
+                  "<div class=\"template-meta\">" + escapeHtml(template.category || "Generic") + " | " + escapeHtml((template.defaultRoles || []).join(", ") || "No roles") + "</div>" +
+                  "<div class=\"template-meta\">Used by " + usage.length + " instance(s) | " + hasSensor + " | " + hasEffector + "</div>" +
+                "</div>"
+              );
+            }).join("")
+          : "<div class=\"empty-state\">No templates match the current filter.</div>";
+        list.querySelectorAll("[data-template-id]").forEach((node) => {
+          node.addEventListener("click", () => {
+            this.selectTemplate(node.dataset.templateId);
+          });
+        });
+        this.populateTemplateEditor(selected);
+      }
+
+      populateTemplateEditor(template) {
+        const usageSummary = document.getElementById("template-usage-summary");
+        if (!template) {
+          usageSummary.innerHTML = "<div class=\"empty-state\">Select or create a template to edit it.</div>";
+          document.getElementById("template-json-editor").value = "";
+          return;
+        }
+        const usage = this.getTemplateUsage(template.id);
+        const sensor = (template.components.sensors || [])[0] || null;
+        const effector = (template.components.effectors || [])[0] || null;
+        const c2 = template.components.c2 || null;
+        usageSummary.innerHTML = [
+          { label: "Used by", value: usage.length ? usage.map((item) => item.name).join(", ") : "No instances yet" },
+          { label: "Extra components", value: Math.max((template.components.sensors || []).length - 1, 0) + " extra sensor(s), " + Math.max((template.components.effectors || []).length - 1, 0) + " extra effector(s)" },
+          { label: "Editor mode", value: "Common fields + selected-template JSON" }
+        ].map((card) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"summary-meta\" style=\"margin-top: 8px; color: var(--text);\">" + escapeHtml(String(card.value)) + "</div></div>"
+        )).join("");
+
+        document.getElementById("template-id-input").value = template.id;
+        document.getElementById("template-name-input").value = template.name || "";
+        document.getElementById("template-category-input").value = template.category || "";
+        document.getElementById("template-roles-input").value = (template.defaultRoles || []).join(", ");
+        document.getElementById("template-health-input").value = template.components.health?.maxHealth ?? 0;
+        document.getElementById("template-asset-value-input").value = template.components.health?.assetValuePts ?? 0;
+        document.getElementById("template-resistance-input").value = template.components.resistance?.kineticResistance ?? 0;
+        document.getElementById("template-signature-input").value = template.components.signature?.radarSignatureDb ?? 0;
+        document.getElementById("template-ishq-input").checked = !!template.components.health?.isHQ;
+        document.getElementById("template-movement-enabled").checked = !!template.components.movement;
+        document.getElementById("template-speed-input").value = template.components.movement?.speedMps ?? 0;
+        document.getElementById("template-step-input").value = template.components.movement?.stepSec ?? 1;
+        document.getElementById("template-waypoint-tolerance-input").value = template.components.movement?.waypointToleranceM ?? 10;
+        document.getElementById("template-sensor-enabled").checked = !!sensor;
+        document.getElementById("template-sensor-id-input").value = sensor?.id || "";
+        document.getElementById("template-sensor-name-input").value = sensor?.name || "";
+        document.getElementById("template-sensor-type-input").value = sensor?.type || "";
+        document.getElementById("template-sensor-range-input").value = sensor?.maxRangeM ?? 0;
+        document.getElementById("template-sensor-heading-input").value = sensor?.headingDeg ?? 0;
+        document.getElementById("template-sensor-hfov-input").value = sensor?.horizontalFovDeg ?? 360;
+        document.getElementById("template-sensor-vfov-input").value = sensor?.verticalFovDeg ?? 180;
+        document.getElementById("template-sensor-scan-input").value = sensor?.scanIntervalSec ?? 1;
+        document.getElementById("template-sensor-threshold-input").value = sensor?.detectionThresholdDb ?? 17;
+        document.getElementById("template-effector-enabled").checked = !!effector;
+        document.getElementById("template-effector-id-input").value = effector?.id || "";
+        document.getElementById("template-effector-name-input").value = effector?.name || "";
+        document.getElementById("template-effector-type-input").value = effector?.type || "";
+        document.getElementById("template-effector-range-input").value = effector?.maxRangeM ?? 0;
+        document.getElementById("template-effector-basepk-input").value = effector?.basePk ?? 0;
+        document.getElementById("template-effector-basepe-input").value = effector?.basePe ?? 0;
+        document.getElementById("template-effector-damage-input").value = effector?.damagePoints ?? 0;
+        document.getElementById("template-effector-ammo-input").value = effector?.ammoCapacity ?? 0;
+        document.getElementById("template-effector-slew-input").value = effector?.slewRateSec ?? 0.2;
+        document.getElementById("template-effector-cooldown-input").value = effector?.cooldownSec ?? 1.5;
+        document.getElementById("template-effector-speed-input").value = effector?.projectileSpeedMps ?? 0;
+        document.getElementById("template-c2-enabled").checked = !!c2;
+        document.getElementById("template-c2-capacity-input").value = c2?.trackCapacity ?? 0;
+        document.getElementById("template-c2-latency-input").value = c2?.processingLatencySec ?? 0.25;
+        document.getElementById("template-json-editor").value = JSON.stringify(template, null, 2);
+      }
+
+      saveSelectedTemplateForm() {
+        const template = this.ensureSelectedTemplate();
+        if (!template) {
+          return;
+        }
+        const oldTemplateId = template.id;
+        const allTemplateIds = new Set(this.state.currentScenario.templates.map((item) => item.id).filter((id) => id !== oldTemplateId));
+        const nextTemplateId = this.buildUniqueId(document.getElementById("template-id-input").value || oldTemplateId, allTemplateIds);
+        const roles = document.getElementById("template-roles-input").value
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        const firstSensor = (template.components.sensors || [])[0] || {};
+        const firstEffector = (template.components.effectors || [])[0] || {};
+        const firstC2 = template.components.c2 || {};
+        const extraSensors = (template.components.sensors || []).slice(1);
+        const extraEffectors = (template.components.effectors || []).slice(1);
+        const sensorEnabled = document.getElementById("template-sensor-enabled").checked;
+        const effectorEnabled = document.getElementById("template-effector-enabled").checked;
+        const c2Enabled = document.getElementById("template-c2-enabled").checked;
+        template.id = nextTemplateId;
+        template.name = document.getElementById("template-name-input").value.trim() || nextTemplateId;
+        template.category = document.getElementById("template-category-input").value.trim() || "Generic";
+        template.defaultRoles = roles;
+        template.components.health.maxHealth = Number(document.getElementById("template-health-input").value || 0);
+        template.components.health.assetValuePts = Number(document.getElementById("template-asset-value-input").value || 0);
+        template.components.health.isHQ = document.getElementById("template-ishq-input").checked;
+        template.components.resistance.kineticResistance = Number(document.getElementById("template-resistance-input").value || 0);
+        template.components.signature.radarSignatureDb = Number(document.getElementById("template-signature-input").value || 0);
+        template.components.movement = document.getElementById("template-movement-enabled").checked ? {
+          speedMps: Number(document.getElementById("template-speed-input").value || 0),
+          stepSec: Number(document.getElementById("template-step-input").value || 1),
+          waypointToleranceM: Number(document.getElementById("template-waypoint-tolerance-input").value || 10)
+        } : null;
+        template.components.sensors = sensorEnabled ? [{
+          id: document.getElementById("template-sensor-id-input").value.trim() || "Sensor-1",
+          name: document.getElementById("template-sensor-name-input").value.trim() || "Sensor",
+          type: document.getElementById("template-sensor-type-input").value.trim() || "Radar",
+          maxRangeM: Number(document.getElementById("template-sensor-range-input").value || 0),
+          headingDeg: Number(document.getElementById("template-sensor-heading-input").value || 0),
+          horizontalFovDeg: Number(document.getElementById("template-sensor-hfov-input").value || 360),
+          verticalFovDeg: Number(document.getElementById("template-sensor-vfov-input").value || 180),
+          transmitPowerDb: Number(firstSensor.transmitPowerDb ?? 53),
+          noiseFloorDb: Number(firstSensor.noiseFloorDb ?? -94),
+          noiseSigmaDb: Number(firstSensor.noiseSigmaDb ?? 1.2),
+          detectionThresholdDb: Number(document.getElementById("template-sensor-threshold-input").value || 17),
+          scanIntervalSec: Number(document.getElementById("template-sensor-scan-input").value || 1),
+          classification: this.kernel.deepClone(firstSensor.classification || { canClassify: true, latencySec: 0.25, accuracyBase: 0.8 }),
+          identification: this.kernel.deepClone(firstSensor.identification || { canIdentify: true, latencySec: 0.35, accuracyBase: 0.72 })
+        }].concat(extraSensors) : [];
+        template.components.effectors = effectorEnabled ? [{
+          id: document.getElementById("template-effector-id-input").value.trim() || "Effector-1",
+          name: document.getElementById("template-effector-name-input").value.trim() || "Effector",
+          type: document.getElementById("template-effector-type-input").value.trim() || "Kinetic",
+          maxRangeM: Number(document.getElementById("template-effector-range-input").value || 0),
+          basePk: Number(document.getElementById("template-effector-basepk-input").value || 0),
+          basePe: Number(document.getElementById("template-effector-basepe-input").value || 0),
+          damagePoints: Number(document.getElementById("template-effector-damage-input").value || 0),
+          ammoCapacity: Number(document.getElementById("template-effector-ammo-input").value || 0),
+          slewRateSec: Number(document.getElementById("template-effector-slew-input").value || 0.2),
+          cooldownSec: Number(document.getElementById("template-effector-cooldown-input").value || 1.5),
+          projectileSpeedMps: Number(document.getElementById("template-effector-speed-input").value || 0)
+        }].concat(extraEffectors) : [];
+        template.components.c2 = c2Enabled ? {
+          trackCapacity: Number(document.getElementById("template-c2-capacity-input").value || firstC2.trackCapacity || 0),
+          processingLatencySec: Number(document.getElementById("template-c2-latency-input").value || firstC2.processingLatencySec || 0.25)
+        } : null;
+        if (oldTemplateId !== nextTemplateId) {
+          this.state.currentScenario.instances.forEach((instance) => {
+            if (instance.templateId === oldTemplateId) {
+              instance.templateId = nextTemplateId;
+            }
+          });
+          this.state.selectedTemplateId = nextTemplateId;
+        }
+        this.updateScenarioState("Saved template " + template.name);
+        this.uiManager.showScreen("templates");
+      }
+
+      duplicateSelectedTemplate() {
+        const template = this.ensureSelectedTemplate();
+        if (!template) {
+          return;
+        }
+        const duplicate = this.kernel.deepClone(template);
+        const existingIds = new Set(this.state.currentScenario.templates.map((item) => item.id));
+        duplicate.id = this.buildUniqueId(template.id + "-Copy", existingIds);
+        duplicate.name = template.name + " Copy";
+        this.state.currentScenario.templates.push(duplicate);
+        this.state.selectedTemplateId = duplicate.id;
+        this.updateScenarioState("Duplicated template " + template.name);
+        this.uiManager.showScreen("templates");
+      }
+
+      deleteSelectedTemplate() {
+        const template = this.ensureSelectedTemplate();
+        if (!template) {
+          return;
+        }
+        const usage = this.getTemplateUsage(template.id);
+        if (usage.length) {
+          this.setStatus("Cannot delete a template that is still used by instances");
+          return;
+        }
+        this.state.currentScenario.templates = this.state.currentScenario.templates.filter((item) => item.id !== template.id);
+        this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
+        this.updateScenarioState("Deleted template " + template.name);
+        this.uiManager.showScreen("templates");
+      }
+
+      applyTemplateJsonEditor() {
+        const template = this.ensureSelectedTemplate();
+        if (!template) {
+          return;
+        }
+        try {
+          const parsed = JSON.parse(document.getElementById("template-json-editor").value);
+          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+            throw new Error("Template JSON must be an object.");
+          }
+          const oldTemplateId = template.id;
+          const index = this.state.currentScenario.templates.findIndex((item) => item.id === oldTemplateId);
+          if (index < 0) {
+            throw new Error("Selected template no longer exists.");
+          }
+          this.state.currentScenario.templates[index] = parsed;
+          this.state.currentScenario = this.kernel.normalizeScenario(this.state.currentScenario);
+          const replacement = this.state.currentScenario.templates[index];
+          if (replacement && oldTemplateId !== replacement.id) {
+            this.state.currentScenario.instances.forEach((instance) => {
+              if (instance.templateId === oldTemplateId) {
+                instance.templateId = replacement.id;
+              }
+            });
+            this.state.selectedTemplateId = replacement.id;
+          }
+          this.updateScenarioState("Applied advanced template JSON");
+          this.uiManager.showScreen("templates");
+        } catch (error) {
+          this.setStatus("Template JSON error: " + String(error && error.message ? error.message : error));
+        }
+      }
+
+      loadWizardPreset(preset) {
+        const presets = {
+          "baseline-single": {
+            scenarioName: "Wizard Baseline",
+            description: "Single-UAS baseline built from the quick-start wizard.",
+            blueName: "Blue Site 01",
+            blueX: 670,
+            blueY: 315,
+            blueZ: 20,
+            sensorRange: 420,
+            effectorRange: 230,
+            effectorAmmo: 3,
+            blueIsHQ: true,
+            threatGroups: [
+              {
+                templateName: "Red Recon Strike UAS",
+                instancePrefix: "Red UAS",
+                profile: "recon-strike",
+                count: 1,
+                speed: 35,
+                health: 90,
+                signature: -14,
+                routePattern: "direct",
+                startX: 90,
+                startY: 315,
+                startZ: 120,
+                endX: 980,
+                endY: 315,
+                endZ: 120,
+                startSpacingY: 0,
+                endSpacingY: 0
+              }
+            ],
+            ghost: false,
+            clutter: false
+          },
+          "lock-refire": {
+            scenarioName: "Wizard Lock Refire",
+            description: "Two threats to review locked engagements and autonomous refire behavior.",
+            blueName: "Blue Lock Site",
+            blueX: 650,
+            blueY: 315,
+            blueZ: 20,
+            sensorRange: 460,
+            effectorRange: 240,
+            effectorAmmo: 5,
+            blueIsHQ: true,
+            threatGroups: [
+              {
+                templateName: "Red Attack UAS",
+                instancePrefix: "Raid UAS",
+                profile: "attack",
+                count: 2,
+                speed: 34,
+                health: 95,
+                signature: -12,
+                routePattern: "staggered",
+                startX: 110,
+                startY: 315,
+                startZ: 120,
+                endX: 930,
+                endY: 315,
+                endZ: 120,
+                startSpacingY: 110,
+                endSpacingY: 40
+              }
+            ],
+            ghost: false,
+            clutter: false
+          },
+          "tewa-priority": {
+            scenarioName: "Wizard TEWA Priority",
+            description: "Two defended assets and mixed Red threats for TEWA priority review.",
+            blueName: "Blue HQ Node",
+            blueX: 700,
+            blueY: 275,
+            blueZ: 20,
+            sensorRange: 500,
+            effectorRange: 250,
+            effectorAmmo: 4,
+            blueIsHQ: true,
+            threatGroups: [
+              {
+                templateName: "Red Bomber UAS",
+                instancePrefix: "Bomber",
+                profile: "bomber",
+                count: 1,
+                speed: 38,
+                health: 120,
+                signature: -7,
+                routePattern: "direct",
+                startX: 70,
+                startY: 260,
+                startZ: 120,
+                endX: 940,
+                endY: 275,
+                endZ: 120,
+                startSpacingY: 0,
+                endSpacingY: 0
+              },
+              {
+                templateName: "Red ISR UAS",
+                instancePrefix: "ISR Decoy",
+                profile: "isr",
+                count: 1,
+                speed: 22,
+                health: 85,
+                signature: -18,
+                routePattern: "direct",
+                startX: 100,
+                startY: 385,
+                startZ: 120,
+                endX: 880,
+                endY: 420,
+                endZ: 120,
+                startSpacingY: 0,
+                endSpacingY: 0
+              }
+            ],
+            ghost: false,
+            clutter: false
+          }
+        };
+        const values = presets[preset] || presets["baseline-single"];
+        document.getElementById("wizard-preset").value = preset;
+        document.getElementById("wizard-scenario-name").value = values.scenarioName;
+        document.getElementById("wizard-scenario-description").value = values.description;
+        document.getElementById("wizard-blue-name").value = values.blueName;
+        document.getElementById("wizard-blue-x").value = values.blueX;
+        document.getElementById("wizard-blue-y").value = values.blueY;
+        document.getElementById("wizard-blue-z").value = values.blueZ;
+        document.getElementById("wizard-sensor-range").value = values.sensorRange;
+        document.getElementById("wizard-effector-range").value = values.effectorRange;
+        document.getElementById("wizard-effector-ammo").value = values.effectorAmmo;
+        document.getElementById("wizard-blue-ishq").checked = values.blueIsHQ;
+        this.state.wizardThreatGroups = (values.threatGroups || []).map((group) => this.createWizardThreatGroup(group));
+        this.renderWizardThreatGroups();
+        document.getElementById("wizard-ghost-enabled").checked = values.ghost;
+        document.getElementById("wizard-clutter-enabled").checked = values.clutter;
+      }
+
+      createWizardThreatGroup(overrides = {}) {
+        const group = {
+          localId: "threat-group-" + this.state.nextWizardThreatGroupId,
+          templateName: "Red UAS",
+          instancePrefix: "Red UAS",
+          profile: "recon-strike",
+          count: 1,
+          speed: 35,
+          health: 90,
+          signature: -14,
+          routePattern: "direct",
+          startX: 90,
+          startY: 315,
+          startZ: 120,
+          endX: 980,
+          endY: 315,
+          endZ: 120,
+          startSpacingY: 0,
+          endSpacingY: 0
+        };
+        this.state.nextWizardThreatGroupId += 1;
+        return {
+          ...group,
+          ...this.kernel.deepClone(overrides)
+        };
+      }
+
+      getWizardThreatProfileDefaults(profile) {
+        const defaults = {
+          "recon-strike": {
+            templateName: "Red Recon Strike UAS",
+            instancePrefix: "Red UAS",
+            speed: 35,
+            health: 90,
+            signature: -14
+          },
+          attack: {
+            templateName: "Red Attack UAS",
+            instancePrefix: "Attack UAS",
+            speed: 34,
+            health: 95,
+            signature: -12
+          },
+          bomber: {
+            templateName: "Red Bomber UAS",
+            instancePrefix: "Bomber",
+            speed: 38,
+            health: 120,
+            signature: -7
+          },
+          isr: {
+            templateName: "Red ISR UAS",
+            instancePrefix: "ISR UAS",
+            speed: 22,
+            health: 85,
+            signature: -18
+          }
+        };
+        return defaults[profile] || defaults["recon-strike"];
+      }
+
+      addWizardThreatGroup(overrides = {}) {
+        const group = this.createWizardThreatGroup(overrides);
+        this.state.wizardThreatGroups.push(group);
+        this.renderWizardThreatGroups();
+        this.refreshWizardSummary();
+        this.setStatus("Threat group added");
+      }
+
+      removeWizardThreatGroup(localId) {
+        if (this.state.wizardThreatGroups.length <= 1) {
+          this.setStatus("At least one threat group is required");
+          return;
+        }
+        this.state.wizardThreatGroups = this.state.wizardThreatGroups.filter((group) => group.localId !== localId);
+        this.renderWizardThreatGroups();
+        this.refreshWizardSummary();
+        this.setStatus("Threat group removed");
+      }
+
+      renderWizardThreatGroups() {
+        const container = document.getElementById("wizard-threat-group-list");
+        const groups = this.state.wizardThreatGroups;
+        if (!groups.length) {
+          container.innerHTML = "<div class=\"empty-state\">No threat groups yet. Add one to define a Red template, count, and route.</div>";
+          return;
+        }
+        container.innerHTML = groups.map((group, index) => (
+          "<div class=\"threat-group-card\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
+            "<div class=\"threat-group-header\">" +
+              "<div>" +
+                "<h4>Threat Group " + escapeHtml(String(index + 1)) + "</h4>" +
+                "<div class=\"threat-group-subtitle\">" + escapeHtml(group.templateName || "Red UAS") + " | " + escapeHtml(group.routePattern) + " pattern | " + escapeHtml(String(group.count)) + " instance(s)</div>" +
+              "</div>" +
+              "<button class=\"button-link wizard-remove-group-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\"" + (groups.length <= 1 ? " disabled" : "") + ">Remove Group</button>" +
+            "</div>" +
+            "<div class=\"form-grid tight\">" +
+              "<div class=\"field-stack\"><label>Template Name</label><input data-group-field=\"templateName\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"text\" value=\"" + escapeHtml(group.templateName) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Instance Prefix</label><input data-group-field=\"instancePrefix\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"text\" value=\"" + escapeHtml(group.instancePrefix) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Threat Profile</label><select data-group-field=\"profile\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
+                "<option value=\"recon-strike\"" + (group.profile === "recon-strike" ? " selected" : "") + ">Recon Strike</option>" +
+                "<option value=\"attack\"" + (group.profile === "attack" ? " selected" : "") + ">Attack</option>" +
+                "<option value=\"bomber\"" + (group.profile === "bomber" ? " selected" : "") + ">Bomber</option>" +
+                "<option value=\"isr\"" + (group.profile === "isr" ? " selected" : "") + ">ISR Decoy</option>" +
+              "</select></div>" +
+              "<div class=\"field-stack\"><label>Route Pattern</label><select data-group-field=\"routePattern\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
+                "<option value=\"direct\"" + (group.routePattern === "direct" ? " selected" : "") + ">Direct</option>" +
+                "<option value=\"staggered\"" + (group.routePattern === "staggered" ? " selected" : "") + ">Staggered Lanes</option>" +
+                "<option value=\"fan-in\"" + (group.routePattern === "fan-in" ? " selected" : "") + ">Fan In</option>" +
+              "</select></div>" +
+              "<div class=\"field-stack\"><label>Count</label><input data-group-field=\"count\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" min=\"1\" max=\"6\" value=\"" + escapeHtml(String(group.count)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Speed (m/s)</label><input data-group-field=\"speed\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.speed)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Health</label><input data-group-field=\"health\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.health)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Signature (dB)</label><input data-group-field=\"signature\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.signature)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Start X</label><input data-group-field=\"startX\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.startX)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Start Y</label><input data-group-field=\"startY\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.startY)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Start Z</label><input data-group-field=\"startZ\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.startZ)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>End X</label><input data-group-field=\"endX\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.endX)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>End Y</label><input data-group-field=\"endY\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.endY)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>End Z</label><input data-group-field=\"endZ\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.endZ)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Start Spacing Y</label><input data-group-field=\"startSpacingY\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.startSpacingY)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>End Spacing Y</label><input data-group-field=\"endSpacingY\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(group.endSpacingY)) + "\"></div>" +
+            "</div>" +
+          "</div>"
+        )).join("");
+
+        container.querySelectorAll("[data-group-field]").forEach((element) => {
+          element.addEventListener("input", () => {
+            this.updateWizardThreatGroupField(element.dataset.threatGroupId, element.dataset.groupField, element.value, { rerender: false });
+          });
+          element.addEventListener("change", () => {
+            this.updateWizardThreatGroupField(element.dataset.threatGroupId, element.dataset.groupField, element.value, { rerender: true });
+          });
+        });
+        container.querySelectorAll(".wizard-remove-group-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.removeWizardThreatGroup(button.dataset.threatGroupId);
+          });
+        });
+      }
+
+      updateWizardThreatGroupField(localId, field, value, options = {}) {
+        const group = this.state.wizardThreatGroups.find((item) => item.localId === localId);
+        if (!group) {
+          return;
+        }
+        const rerender = options.rerender !== false;
+        const numericFields = new Set(["count", "speed", "health", "signature", "startX", "startY", "startZ", "endX", "endY", "endZ", "startSpacingY", "endSpacingY"]);
+        if (field === "profile") {
+          group.profile = value;
+          const defaults = this.getWizardThreatProfileDefaults(value);
+          group.templateName = defaults.templateName;
+          group.instancePrefix = defaults.instancePrefix;
+          group.speed = defaults.speed;
+          group.health = defaults.health;
+          group.signature = defaults.signature;
+        } else if (numericFields.has(field)) {
+          group[field] = Number.isFinite(Number(value)) ? Number(value) : group[field];
+          if (field === "count") {
+            group.count = Math.max(1, Math.min(6, Math.floor(group.count)));
+          }
+        } else {
+          group[field] = value;
+        }
+        if (rerender) {
+          this.renderWizardThreatGroups();
+        }
+        this.refreshWizardSummary();
+      }
+
+      getWizardInputNumber(id, fallback = 0) {
+        const value = Number(document.getElementById(id).value);
+        return Number.isFinite(value) ? value : fallback;
+      }
+
+      isWizardBuildPending() {
+        try {
+          const wizardScenario = this.buildScenarioFromWizardInputs();
+          return JSON.stringify(wizardScenario) !== JSON.stringify(this.state.currentScenario);
+        } catch (error) {
+          return false;
+        }
+      }
+
+      updateWizardBuildReminder() {
+        const wizardContainer = document.getElementById("wizard-reminder");
+        const runContainer = document.getElementById("run-reminder");
+        const needsBuild = this.isWizardBuildPending();
+        const reminderHtml = needsBuild
+          ? "<div class=\"attention-card\"><strong>Wizard changes are not active yet.</strong> Click <strong>Build Scenario From Wizard</strong> before running if you want the current wizard values to become the live scenario.</div>"
+          : "<div class=\"summary-meta\">Wizard draft matches the active scenario.</div>";
+        wizardContainer.innerHTML = reminderHtml;
+        runContainer.innerHTML = needsBuild
+          ? "<div class=\"attention-card\"><strong>Reminder:</strong> if you edited the Scenario Wizard, click <strong>Build Scenario From Wizard</strong> first. Running now uses the current active scenario, not the unsaved wizard draft.</div>"
+          : "";
+      }
+
+      buildScenarioFromWizardInputs() {
+        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Wizard Scenario";
+        const description = document.getElementById("wizard-scenario-description").value.trim();
+        const blueName = document.getElementById("wizard-blue-name").value.trim() || "Blue Site";
+        const blueX = this.getWizardInputNumber("wizard-blue-x", 670);
+        const blueY = this.getWizardInputNumber("wizard-blue-y", 315);
+        const blueZ = this.getWizardInputNumber("wizard-blue-z", 20);
+        const blueTemplate = this.buildTemplatePreset("blue-site");
+        blueTemplate.name = blueName + " Template";
+        blueTemplate.components.health.isHQ = document.getElementById("wizard-blue-ishq").checked;
+        blueTemplate.components.sensors[0].maxRangeM = this.getWizardInputNumber("wizard-sensor-range", 420);
+        blueTemplate.components.effectors[0].maxRangeM = this.getWizardInputNumber("wizard-effector-range", 230);
+        blueTemplate.components.effectors[0].ammoCapacity = this.getWizardInputNumber("wizard-effector-ammo", 3);
+
+        const scenario = {
+          metadata: {
+            name: scenarioName,
+            description
+          },
+          config: {
+            maxTimeSec: 55,
+            trackStaleAfterSec: 4,
+            attackRunRangeM: 240,
+            projectedPathToleranceM: 50
+          },
+          environment: {
+            baseNoiseDb: 1.8,
+            placeholderGhostTrack: {
+              enabled: document.getElementById("wizard-ghost-enabled").checked,
+              spawnTimeSec: 7,
+              posX: 505,
+              posY: 182,
+              posZ: 110,
+              label: "Ghost Track Placeholder"
+            },
+            placeholderClutterField: {
+              enabled: document.getElementById("wizard-clutter-enabled").checked,
+              centerX: 410,
+              centerY: 430,
+              radiusM: 100,
+              label: "Clutter Placeholder"
+            }
+          },
+          templates: [
+            {
+              ...blueTemplate,
+              id: "Template-Blue-Site"
+            }
+          ],
+          instances: [
+            {
+              id: "Blue-Site-01",
+              templateId: "Template-Blue-Site",
+              name: blueName,
+              side: "Blue",
+              roles: ["Asset", "Sensor", "Effector", "C2"],
+              posX: blueX,
+              posY: blueY,
+              posZ: blueZ,
+              missionWaypoints: []
+            }
+          ]
+        };
+
+        if (!this.state.wizardThreatGroups.length) {
+          this.state.wizardThreatGroups = [this.createWizardThreatGroup()];
+        }
+        this.state.wizardThreatGroups.forEach((group, groupIndex) => {
+          const redTemplate = this.buildTemplatePreset("red-uas");
+          redTemplate.name = group.templateName || ("Red Group " + (groupIndex + 1));
+          redTemplate.components.health.maxHealth = Number(group.health || 90);
+          redTemplate.components.signature.radarSignatureDb = Number(group.signature || -14);
+          redTemplate.components.movement.speedMps = Number(group.speed || 35);
+          const templateId = "Template-Red-Group-" + String(groupIndex + 1).padStart(2, "0");
+          scenario.templates.push({
+            ...redTemplate,
+            id: templateId
+          });
+
+          const count = Math.max(1, Math.floor(Number(group.count || 1)));
+          const centerIndex = (count - 1) / 2;
+          for (let index = 0; index < count; index += 1) {
+            let startYOffset = 0;
+            let endYOffset = 0;
+            if (group.routePattern === "staggered") {
+              startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
+              endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0);
+            } else if (group.routePattern === "fan-in") {
+              startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
+              endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0) * 0.2;
+            }
+            scenario.instances.push({
+              id: "Red-G" + String(groupIndex + 1) + "-" + String(index + 1).padStart(2, "0"),
+              templateId,
+              name: (group.instancePrefix || ("Threat " + (groupIndex + 1))) + " " + (index + 1),
+              side: "Red",
+              roles: ["UAS"],
+              posX: Number(group.startX || 90),
+              posY: Number(group.startY || 315) + startYOffset,
+              posZ: Number(group.startZ || 120),
+              missionWaypoints: [
+                {
+                  x: Number(group.endX || 980),
+                  y: Number(group.endY || 315) + endYOffset,
+                  z: Number(group.endZ || 120)
+                }
+              ]
+            });
+          }
+        });
+
+        if (document.getElementById("wizard-preset").value === "tewa-priority") {
+          scenario.templates.push({
+            id: "Template-Blue-Asset",
+            name: "Blue Water Tank",
+            category: "Asset",
+            defaultRoles: ["Asset"],
+            components: {
+              health: { maxHealth: 110, assetValuePts: 24, isHQ: false },
+              resistance: { kineticResistance: 0.08 },
+              signature: { radarSignatureDb: -8 },
+              sensors: [],
+              effectors: [],
+              c2: null
+            }
+          });
+          scenario.instances.push({
+            id: "Blue-Asset-02",
+            templateId: "Template-Blue-Asset",
+            name: "Water Tank",
+            side: "Blue",
+            roles: ["Asset"],
+            posX: blueX - 20,
+            posY: blueY + 140,
+            posZ: 10,
+            missionWaypoints: []
+          });
+        }
+
+        return this.kernel.normalizeScenario(scenario);
+      }
+
+      refreshWizardSummary() {
+        const container = document.getElementById("wizard-summary");
+        try {
+          const scenario = this.buildScenarioFromWizardInputs();
+          const validation = this.kernel.validateScenario(scenario);
+          const blueCount = scenario.instances.filter((instance) => instance.side === "Blue").length;
+          const redCount = scenario.instances.filter((instance) => instance.side === "Red").length;
+          const cards = [
+            { label: "Templates", value: scenario.templates.length },
+            { label: "Threat Groups", value: this.state.wizardThreatGroups.length },
+            { label: "Blue / Red", value: blueCount + " / " + redCount },
+            { label: "Blockers", value: validation.issues.errors.length },
+            { label: "Warnings", value: validation.issues.warnings.length },
+            { label: "Notes", value: validation.issues.notes.length }
+          ];
+          container.innerHTML = cards.map((card) => (
+            "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.1rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
+          )).join("");
+          this.updateWizardBuildReminder();
+        } catch (error) {
+          container.innerHTML = "<div class=\"empty-state\">Wizard preview error: " + escapeHtml(String(error && error.message ? error.message : error)) + "</div>";
+          this.updateWizardBuildReminder();
+        }
+      }
+
+      buildScenarioFromWizard() {
+        try {
+          const scenario = this.buildScenarioFromWizardInputs();
+          this.state.currentScenario = scenario;
+          this.state.originalScenarioPayloadText = "";
+          this.state.scenarioExportSource = "normalized";
+          document.getElementById("scenario-export-source").value = "normalized";
+          this.state.lastImportSummary = {
+            source: "Scenario Wizard",
+            templateCount: scenario.templates.length,
+            instanceCount: scenario.instances.length,
+            normalizedChanged: false,
+            dirty: false
+          };
+          this.state.selectedTemplateId = scenario.templates[0]?.id || null;
+          this.stopPlayback();
+          this.clearResults();
+          this.updateScenarioLabel();
+          this.syncPlaceholderControls();
+          this.refreshValidationSummary();
+          this.refreshImportSummary();
+          this.renderTemplateBuilder();
+          this.refreshWizardSummary();
+          this.renderScenarioSnapshot();
+          this.refreshExportPreview();
+          this.uiManager.showScreen("templates");
+          this.setStatus("Wizard scenario built");
+        } catch (error) {
+          this.setStatus("Wizard build failed: " + String(error && error.message ? error.message : error));
+        }
+      }
+
+      openIssueTarget(screenId, targetId) {
+        if (screenId === "templates" && targetId) {
+          this.selectTemplate(targetId, "templates");
+          return;
+        }
+        if (screenId) {
+          this.uiManager.showScreen(screenId);
+        }
+      }
+
       getScenarioValidation() {
         return this.kernel.validateScenario(this.state.currentScenario);
       }
@@ -3804,32 +5893,57 @@
       refreshValidationSummary(importErrorMessage = "") {
         const summary = document.getElementById("validation-summary");
         const validation = this.getScenarioValidation();
-        const errors = validation.errors.slice();
-        const warnings = validation.warnings.slice();
+        const errors = validation.issues.errors.slice();
+        const warnings = validation.issues.warnings.slice();
+        const notes = validation.issues.notes.slice();
         if (importErrorMessage) {
-          errors.unshift(importErrorMessage);
+          errors.unshift({
+            severity: "error",
+            message: importErrorMessage,
+            recommendedAction: "Correct the import payload and try again.",
+            targetScreen: "export",
+            targetLabel: "Open export"
+          });
         }
 
         const statusClass = errors.length ? "validation-error" : (warnings.length ? "validation-warning" : "validation-ok");
         const statusText = errors.length ? "Validation blocked" : (warnings.length ? "Validation warnings" : "Validation passed");
+        const renderIssues = (issues, emptyText) => issues.length
+          ? ("<div class=\"issue-list\">" + issues.map((issue, index) => (
+              "<div class=\"issue-card " + escapeHtml(issue.severity) + "\">" +
+                "<div class=\"issue-severity\">" + escapeHtml(issue.severity) + "</div>" +
+                "<h4>" + escapeHtml(issue.message) + "</h4>" +
+                (issue.recommendedAction ? ("<div class=\"issue-meta\">" + escapeHtml(issue.recommendedAction) + "</div>") : "") +
+                ((issue.targetScreen || issue.targetId)
+                  ? ("<div class=\"actions\"><button class=\"button-link validation-jump-btn\" data-target-screen=\"" + escapeHtml(issue.targetScreen || "") + "\" data-target-id=\"" + escapeHtml(issue.targetId || "") + "\">" + escapeHtml(issue.targetLabel || "Open editor") + "</button></div>")
+                  : "") +
+              "</div>"
+            )).join("") + "</div>")
+          : "<div class=\"validation-ok\">" + escapeHtml(emptyText) + "</div>";
 
         summary.innerHTML =
           "<div class=\"validation-box\">" +
             "<h3 class=\"" + statusClass + "\">" + escapeHtml(statusText) + "</h3>" +
-            "<div style=\"color: var(--muted);\">Errors: " + errors.length + " | Warnings: " + warnings.length + "</div>" +
+            "<div style=\"color: var(--muted);\">Blockers: " + errors.length + " | Warnings: " + warnings.length + " | Notes: " + notes.length + "</div>" +
           "</div>" +
           "<div class=\"validation-box\">" +
-            "<h4 class=\"validation-error\">Errors</h4>" +
-            (errors.length
-              ? ("<ul class=\"validation-list\">" + errors.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") + "</ul>")
-              : "<div class=\"validation-ok\">No blocking errors.</div>") +
+            "<h4 class=\"validation-error\">Blockers</h4>" +
+            renderIssues(errors, "No blocking errors.") +
           "</div>" +
           "<div class=\"validation-box\">" +
             "<h4 class=\"validation-warning\">Warnings</h4>" +
-            (warnings.length
-              ? ("<ul class=\"validation-list\">" + warnings.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") + "</ul>")
-              : "<div class=\"validation-ok\">No warnings.</div>") +
+            renderIssues(warnings, "No heuristic warnings.") +
+          "</div>" +
+          "<div class=\"validation-box\">" +
+            "<h4 class=\"validation-ok\">Scenario Quality Notes</h4>" +
+            renderIssues(notes, "No additional notes.") +
           "</div>";
+
+        summary.querySelectorAll(".validation-jump-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.openIssueTarget(button.dataset.targetScreen || "", button.dataset.targetId || "");
+          });
+        });
 
         const statusNode = document.getElementById("status-text");
         statusNode.classList.remove("status-ok", "status-warning", "status-error");
@@ -3848,6 +5962,7 @@
         this.updateMonteCarloReport([]);
         this.setStatus("Ready");
         this.setPlaybackStatus("Idle");
+        this.refreshExportPreview();
       }
 
       renderScenarioSnapshot() {
@@ -3916,14 +6031,29 @@
           if (!normalized.metadata.name || normalized.metadata.name === "Baseline Vertical Slice") {
             normalized.metadata.name = file.name.replace(/\.json$/i, "");
           }
+          const normalizedChanged = JSON.stringify(parsed) !== JSON.stringify(normalized);
           this.state.currentScenario = normalized;
+          this.state.originalScenarioPayloadText = text;
+          this.state.scenarioExportSource = "normalized";
+          document.getElementById("scenario-export-source").value = "normalized";
+          this.state.lastImportSummary = {
+            source: file.name,
+            templateCount: normalized.templates.length,
+            instanceCount: normalized.instances.length,
+            normalizedChanged,
+            dirty: false
+          };
+          this.state.selectedTemplateId = normalized.templates[0]?.id || null;
           this.updateScenarioLabel();
           this.syncPlaceholderControls();
           this.stopPlayback();
           this.clearResults();
           this.refreshValidationSummary();
+          this.refreshImportSummary();
+          this.renderTemplateBuilder();
+          this.refreshWizardSummary();
           this.renderScenarioSnapshot();
-          this.setExportPreview(JSON.stringify(normalized, null, 2));
+          this.refreshExportPreview();
           this.setStatus(validation.valid
             ? ("Loaded scenario " + normalized.metadata.name)
             : ("Loaded scenario with validation issues: " + normalized.metadata.name));
@@ -3938,9 +6068,11 @@
       }
 
       exportCurrentScenario() {
-        const payload = JSON.stringify(this.state.currentScenario, null, 2);
-        this.setExportPreview(payload);
-        downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + "_scenario.json", payload, "application/json;charset=utf-8");
+        this.state.exportTab = "scenario";
+        this.refreshExportPreview();
+        const payload = document.getElementById("export-preview").value;
+        const suffix = this.state.scenarioExportSource === "original" && this.state.originalScenarioPayloadText ? "_original" : "_scenario";
+        downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + suffix + ".json", payload, "application/json;charset=utf-8");
       }
 
       async runSingleScenario() {
@@ -3967,7 +6099,7 @@
         this.updateLog(result.report.logs);
         this.updateSingleRunReport(result.report);
         this.playFrames(result.report.frames, result.report);
-        this.setExportPreview(JSON.stringify(result.report, null, 2));
+        this.refreshExportPreview();
         this.uiManager.showScreen("run");
         this.setStatus("Single scenario complete");
         this.setBusy(false);
@@ -3989,7 +6121,7 @@
         try {
           this.state.monteCarloRows = await this.runMonteCarloOffThread(iterations, baseSeed);
           this.updateMonteCarloReport(this.state.monteCarloRows);
-          this.setExportPreview(this.kernel.rowsToCsv(this.state.monteCarloRows));
+          this.refreshExportPreview();
           this.uiManager.showScreen("report");
           this.setStatus("Monte Carlo complete");
         } catch (error) {
@@ -4185,6 +6317,46 @@
         summaryContainer.innerHTML = summary.map((metric) => (
           "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
         )).join("");
+      }
+
+      refreshExportPreview() {
+        const tab = this.state.exportTab || "scenario";
+        const pretty = !!this.state.exportPrettyJson;
+        const sourceSelect = document.getElementById("scenario-export-source");
+        const source = this.state.scenarioExportSource === "original" && this.state.originalScenarioPayloadText ? "original" : "normalized";
+        this.state.scenarioExportSource = source;
+        sourceSelect.value = source;
+        sourceSelect.disabled = !this.state.originalScenarioPayloadText;
+        document.querySelectorAll("[data-export-tab]").forEach((button) => {
+          button.classList.toggle("active", button.dataset.exportTab === tab);
+        });
+
+        let preview = "";
+        if (tab === "report") {
+          preview = this.state.singleRun
+            ? JSON.stringify(this.state.singleRun.report, null, pretty ? 2 : 0)
+            : "Run a single scenario to populate the report payload.";
+        } else if (tab === "eventLog") {
+          preview = this.state.singleRun
+            ? JSON.stringify(this.state.singleRun.report.logs, null, pretty ? 2 : 0)
+            : "Run a single scenario to populate the event log JSON.";
+        } else if (tab === "monteCarlo") {
+          preview = this.state.monteCarloRows.length
+            ? this.kernel.rowsToCsv(this.state.monteCarloRows)
+            : "Run Monte Carlo to populate the aggregate CSV preview.";
+        } else {
+          if (source === "original" && this.state.originalScenarioPayloadText) {
+            try {
+              const parsedOriginal = JSON.parse(this.state.originalScenarioPayloadText);
+              preview = JSON.stringify(parsedOriginal, null, pretty ? 2 : 0);
+            } catch (error) {
+              preview = this.state.originalScenarioPayloadText;
+            }
+          } else {
+            preview = JSON.stringify(this.state.currentScenario, null, pretty ? 2 : 0);
+          }
+        }
+        this.setExportPreview(preview);
       }
 
       setExportPreview(text) {
