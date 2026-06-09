@@ -1,0 +1,261 @@
+{
+  "metadata": {
+    "name": "Playtest 04 - Dynamic Ammo CSV",
+    "description": "Two Blue effector templates should both fire so Monte Carlo CSV export shows dynamic ammo columns."
+  },
+  "config": {
+    "maxTimeSec": 55,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.7,
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    }
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Kinetic-North",
+      "name": "Blue Kinetic North",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": {
+          "maxHealth": 110,
+          "assetValuePts": 60,
+          "isHQ": true
+        },
+        "resistance": {
+          "kineticResistance": 0.14
+        },
+        "signature": {
+          "radarSignatureDb": -2
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-North-1",
+            "name": "North Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 550,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 53,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.1,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 0.5,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.2,
+              "accuracyBase": 0.85
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.8
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-North-1",
+            "name": "North Launcher",
+            "type": "Kinetic",
+            "maxRangeM": 190,
+            "basePk": 0.92,
+            "damagePoints": 120,
+            "ammoCapacity": 2,
+            "slewRateSec": 0.2,
+            "cooldownSec": 1.5,
+            "projectileSpeedMps": 900
+          }
+        ],
+        "c2": {
+          "trackCapacity": 8,
+          "processingLatencySec": 0.2
+        }
+      }
+    },
+    {
+      "id": "Template-Blue-Kinetic-South",
+      "name": "Blue Kinetic South",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": {
+          "maxHealth": 110,
+          "assetValuePts": 55,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.14
+        },
+        "signature": {
+          "radarSignatureDb": -2
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-South-1",
+            "name": "South Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 550,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 53,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.1,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 0.5,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.2,
+              "accuracyBase": 0.85
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.8
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-South-1",
+            "name": "South Launcher",
+            "type": "Kinetic",
+            "maxRangeM": 190,
+            "basePk": 0.92,
+            "damagePoints": 120,
+            "ammoCapacity": 2,
+            "slewRateSec": 0.2,
+            "cooldownSec": 1.5,
+            "projectileSpeedMps": 900
+          }
+        ],
+        "c2": {
+          "trackCapacity": 8,
+          "processingLatencySec": 0.2
+        }
+      }
+    },
+    {
+      "id": "Template-Red-North-Scout",
+      "name": "Red North Scout",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 70,
+          "assetValuePts": 6,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.14
+        },
+        "signature": {
+          "radarSignatureDb": -14
+        },
+        "movement": {
+          "speedMps": 18,
+          "stepSec": 1,
+          "waypointToleranceM": 10
+        }
+      }
+    },
+    {
+      "id": "Template-Red-South-Scout",
+      "name": "Red South Scout",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 70,
+          "assetValuePts": 6,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.14
+        },
+        "signature": {
+          "radarSignatureDb": -14
+        },
+        "movement": {
+          "speedMps": 18,
+          "stepSec": 1,
+          "waypointToleranceM": 10
+        }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-North-Site-01",
+      "templateId": "Template-Blue-Kinetic-North",
+      "name": "Blue North Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 520,
+      "posY": 220,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-South-Site-01",
+      "templateId": "Template-Blue-Kinetic-South",
+      "name": "Blue South Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 520,
+      "posY": 420,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-North-Scout-01",
+      "templateId": "Template-Red-North-Scout",
+      "name": "Red North Scout 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 100,
+      "posY": 220,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 900,
+          "y": 220,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "Red-South-Scout-01",
+      "templateId": "Template-Red-South-Scout",
+      "name": "Red South Scout 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 100,
+      "posY": 420,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 900,
+          "y": 420,
+          "z": 120
+        }
+      ]
+    }
+  ]
+}

@@ -732,6 +732,8 @@
       };
 
       const MIN_STATE_DELAY_SEC = 0.1;
+      const THREAT_SPEED_THRESHOLD_MPS = 5;
+      const THREAT_DISTANCE_EPSILON_M = 1;
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -760,6 +762,66 @@
         const dx = b.x - a.x;
         const dy = b.y - a.y;
         return Math.sqrt((dx * dx) + (dy * dy));
+      }
+
+      function subtractVectors(a, b) {
+        return {
+          x: (a.x || 0) - (b.x || 0),
+          y: (a.y || 0) - (b.y || 0),
+          z: (a.z || 0) - (b.z || 0)
+        };
+      }
+
+      function addVectors(a, b) {
+        return {
+          x: (a.x || 0) + (b.x || 0),
+          y: (a.y || 0) + (b.y || 0),
+          z: (a.z || 0) + (b.z || 0)
+        };
+      }
+
+      function scaleVector(vector, scalar) {
+        return {
+          x: (vector.x || 0) * scalar,
+          y: (vector.y || 0) * scalar,
+          z: (vector.z || 0) * scalar
+        };
+      }
+
+      function dotProduct(a, b) {
+        return ((a.x || 0) * (b.x || 0)) + ((a.y || 0) * (b.y || 0)) + ((a.z || 0) * (b.z || 0));
+      }
+
+      function magnitude3D(vector) {
+        return Math.sqrt(dotProduct(vector, vector));
+      }
+
+      function magnitude2D(vector) {
+        return Math.sqrt(((vector.x || 0) * (vector.x || 0)) + ((vector.y || 0) * (vector.y || 0)));
+      }
+
+      function normalizeVector(vector) {
+        const magnitude = magnitude3D(vector);
+        if (magnitude <= 1e-6) {
+          return null;
+        }
+        return scaleVector(vector, 1 / magnitude);
+      }
+
+      function normalizeVector2D(vector) {
+        const magnitude = magnitude2D(vector);
+        if (magnitude <= 1e-6) {
+          return null;
+        }
+        return {
+          x: (vector.x || 0) / magnitude,
+          y: (vector.y || 0) / magnitude,
+          z: 0
+        };
+      }
+
+      function dotProduct2D(a, b) {
+        return ((a.x || 0) * (b.x || 0)) + ((a.y || 0) * (b.y || 0));
       }
 
       function angleDeg(from, to) {
@@ -821,6 +883,12 @@
       }
 
       function normalizeEffector(effector, index) {
+        const projectileSpeedMps = Number(
+          effector.projectileSpeedMps
+          ?? effector.projectileSpeed_mps
+          ?? effector.kinetic?.projectileSpeed_mps
+          ?? 0
+        );
         return {
           id: effector.id || "Effector-" + (index + 1),
           name: effector.name || effector.type || ("Effector " + (index + 1)),
@@ -830,9 +898,9 @@
           basePe: Number(effector.basePe ?? 0),
           damagePoints: Number(effector.damagePoints ?? effector.payloadYield ?? 0),
           ammoCapacity: Number(effector.ammoCapacity ?? 1),
-          commandDelaySec: Number(effector.commandDelaySec ?? 0.2),
-          timeToEffectSec: Number(effector.timeToEffectSec ?? 0.6),
-          cooldownSec: Number(effector.cooldownSec ?? effector.cooldown_sec ?? 1.5)
+          slewRateSec: Number(effector.slewRateSec ?? effector.slewRate_sec ?? effector.commandDelaySec ?? 0.2),
+          cooldownSec: Number(effector.cooldownSec ?? effector.cooldown_sec ?? 1.5),
+          projectileSpeedMps: Number.isFinite(projectileSpeedMps) ? projectileSpeedMps : 0
         };
       }
 
@@ -845,6 +913,7 @@
         scenario.config.maxTimeSec = Number(scenario.config.maxTimeSec ?? 45);
         scenario.config.trackStaleAfterSec = Number(scenario.config.trackStaleAfterSec ?? 4);
         scenario.config.attackRunRangeM = Number(scenario.config.attackRunRangeM ?? 240);
+        scenario.config.projectedPathToleranceM = Number(scenario.config.projectedPathToleranceM ?? 50);
         scenario.environment = scenario.environment || {};
         scenario.environment.baseNoiseDb = Number(scenario.environment.baseNoiseDb ?? 1.8);
         scenario.environment.placeholderGhostTrack = scenario.environment.placeholderGhostTrack || {
@@ -872,7 +941,9 @@
             defaultRoles: normalizeRoles(template.defaultRoles, []),
             components: {
               health: {
-                maxHealth: Number(components.health?.maxHealth ?? 100)
+                maxHealth: Number(components.health?.maxHealth ?? 100),
+                assetValuePts: Number(components.health?.assetValuePts ?? components.health?.assetValue_pts ?? 1),
+                isHQ: Boolean(components.health?.isHQ)
               },
               resistance: {
                 kineticResistance: Number(components.resistance?.kineticResistance ?? 0.1)
@@ -1024,7 +1095,8 @@
           config: {
             maxTimeSec: 45,
             trackStaleAfterSec: 4,
-            attackRunRangeM: 240
+            attackRunRangeM: 240,
+            projectedPathToleranceM: 50
           },
           environment: {
             baseNoiseDb: 1.8,
@@ -1051,7 +1123,7 @@
               name: "Blue CUAS Site",
               defaultRoles: ["Asset", "Sensor", "Effector", "C2"],
               components: {
-                health: { maxHealth: 120 },
+                health: { maxHealth: 120, assetValuePts: 100, isHQ: true },
                 resistance: { kineticResistance: 0.15 },
                 signature: { radarSignatureDb: -2 },
                 sensors: [
@@ -1089,9 +1161,9 @@
                     basePk: 0.74,
                     damagePoints: 150,
                     ammoCapacity: 3,
-                    commandDelaySec: 0,
-                    timeToEffectSec: 0.6,
-                    cooldownSec: 2
+                    slewRateSec: 0.2,
+                    cooldownSec: 2,
+                    projectileSpeedMps: 900
                   }
                 ],
                 c2: {
@@ -1105,7 +1177,7 @@
               name: "Red Recon Strike UAS",
               defaultRoles: ["UAS"],
               components: {
-                health: { maxHealth: 90 },
+                health: { maxHealth: 90, assetValuePts: 8, isHQ: false },
                 resistance: { kineticResistance: 0.18 },
                 signature: { radarSignatureDb: -14 },
                 movement: {
@@ -1161,6 +1233,217 @@
         return (object.components.sensors || []).find((sensor) => sensor.id === sensorId) || null;
       }
 
+      function getBlueAssets(world) {
+        return world.objectIds
+          .map((id) => world.objects[id])
+          .filter((object) => object.side === "Blue" && !object.runtime.destroyed);
+      }
+
+      function getEffectorRuntimeState(object, effectorId) {
+        return object?.runtime?.effectorStates?.[effectorId] || null;
+      }
+
+      function clearEffectorAssignment(object, effectorId, world) {
+        const effectorState = getEffectorRuntimeState(object, effectorId);
+        if (!effectorState) {
+          return;
+        }
+        const lockedTrack = effectorState.lockedTrackId ? getTrack(world, effectorState.lockedTrackId) : null;
+        if (lockedTrack) {
+          lockedTrack.pendingEngagement = false;
+        }
+        effectorState.missionState = "Idle";
+        effectorState.lockedTrackId = null;
+        effectorState.lockedTargetId = null;
+      }
+
+      function getVelocityVector(track, target) {
+        const history = track?.history || [];
+        if (history.length >= 2) {
+          const previousEntry = history[history.length - 2];
+          const currentEntry = history[history.length - 1];
+          const deltaTimeSec = Math.max(0.001, (currentEntry.timeSec || 0) - (previousEntry.timeSec || 0));
+          return scaleVector(subtractVectors(currentEntry.position, previousEntry.position), 1 / deltaTimeSec);
+        }
+
+        const mission = target?.runtime?.mission;
+        const movement = target?.components?.movement;
+        if (target && movement && mission && mission.currentWaypointIndex < mission.waypoints.length) {
+          const waypoint = mission.waypoints[mission.currentWaypointIndex];
+          const direction = normalizeVector(subtractVectors(waypoint, target.runtime.position));
+          if (direction) {
+            return scaleVector(direction, movement.speedMps || 0);
+          }
+        }
+
+        return { x: 0, y: 0, z: 0 };
+      }
+
+      function estimateTrackPayloadScore(track, target) {
+        const speedMps = magnitude3D(getVelocityVector(track, target));
+        const signatureDb = target?.components?.signature?.radarSignatureDb ?? -18;
+        const sizeScore = clamp((signatureDb + 20) / 6, 0, 3);
+        const behaviorScore = track.intentStatus === "Attack Run"
+          ? 3
+          : (track.intentStatus === "Loiter" ? 1.25 : 0.5);
+        const speedScore = clamp(speedMps / 20, 0, 2);
+        return round(1 + sizeScore + behaviorScore + speedScore, 2);
+      }
+
+      function resolveProjectedAsset(world, originPosition, velocityVector, fallbackObject) {
+        const direction = normalizeVector2D(velocityVector);
+        const toleranceM = world.config.projectedPathToleranceM;
+        if (!direction) {
+          const fallbackDistanceM = fallbackObject ? distance2D(originPosition, fallbackObject.runtime.position) : Infinity;
+          return {
+            asset: fallbackObject || null,
+            directDistanceM: fallbackDistanceM,
+            directDistanceXYM: fallbackDistanceM,
+            pathOffsetM: Infinity,
+            pathOffsetXYM: Infinity,
+            intersectsPath: false
+          };
+        }
+
+        let bestCandidate = null;
+        getBlueAssets(world).forEach((asset) => {
+          const offset = subtractVectors(asset.runtime.position, originPosition);
+          const alongDistanceM = dotProduct2D(offset, direction);
+          if (alongDistanceM < 0) {
+            return;
+          }
+          const projectedPoint = {
+            x: originPosition.x + (direction.x * alongDistanceM),
+            y: originPosition.y + (direction.y * alongDistanceM),
+            z: originPosition.z || 0
+          };
+          const directDistanceXYM = distance2D(originPosition, asset.runtime.position);
+          const pathOffsetXYM = distance2D(asset.runtime.position, projectedPoint);
+          if (!bestCandidate || pathOffsetXYM < bestCandidate.pathOffsetXYM) {
+            bestCandidate = {
+              asset,
+              directDistanceM: directDistanceXYM,
+              directDistanceXYM,
+              pathOffsetM: pathOffsetXYM,
+              pathOffsetXYM,
+              intersectsPath: pathOffsetXYM <= toleranceM
+            };
+          }
+        });
+
+        if (bestCandidate && bestCandidate.intersectsPath) {
+          return bestCandidate;
+        }
+
+        const fallbackDistanceM = fallbackObject ? distance2D(originPosition, fallbackObject.runtime.position) : Infinity;
+        return {
+          asset: fallbackObject || null,
+          directDistanceM: fallbackDistanceM,
+          directDistanceXYM: fallbackDistanceM,
+          pathOffsetM: bestCandidate ? bestCandidate.pathOffsetXYM : Infinity,
+          pathOffsetXYM: bestCandidate ? bestCandidate.pathOffsetXYM : Infinity,
+          intersectsPath: false
+        };
+      }
+
+      function getTrackThreatState(track) {
+        if (!track.threatState) {
+          track.threatState = {
+            attackRunActive: false,
+            nonClosingCount: 0,
+            lastThreatAssetId: null,
+            lastThreatDistanceXYM: null
+          };
+        }
+        return track.threatState;
+      }
+
+      function updateTrackThreatAssessment(world, track, target) {
+        const threatState = getTrackThreatState(track);
+        const originPosition = track.position || target.runtime.position;
+        const velocityVector = getVelocityVector(track, target);
+        const speedMps = magnitude3D(velocityVector);
+        const currentProjectedAsset = resolveProjectedAsset(world, originPosition, velocityVector, null);
+        const currentProjectedAssetId = currentProjectedAsset.asset && currentProjectedAsset.intersectsPath
+          ? currentProjectedAsset.asset.id
+          : null;
+        const currentProjectedDistanceXYM = currentProjectedAssetId
+          ? currentProjectedAsset.directDistanceXYM
+          : null;
+        const sameThreatAsset = currentProjectedAssetId
+          && threatState.lastThreatAssetId === currentProjectedAssetId;
+        const increasingDistance = sameThreatAsset
+          && Number.isFinite(threatState.lastThreatDistanceXYM)
+          && Number.isFinite(currentProjectedDistanceXYM)
+          && currentProjectedDistanceXYM > (threatState.lastThreatDistanceXYM + THREAT_DISTANCE_EPSILON_M);
+        const lowSpeed = speedMps < THREAT_SPEED_THRESHOLD_MPS;
+        const currentlyClosing = Boolean(currentProjectedAssetId) && !lowSpeed && !increasingDistance;
+
+        let attackRunActive = false;
+        let nonClosingCount = 0;
+        let effectiveThreatAssetId = null;
+        let effectiveThreatDistanceXYM = null;
+        let threatReason = "no-threat-path";
+
+        if (currentlyClosing) {
+          attackRunActive = true;
+          nonClosingCount = 0;
+          effectiveThreatAssetId = currentProjectedAssetId;
+          effectiveThreatDistanceXYM = currentProjectedDistanceXYM;
+          threatReason = "closing";
+        } else if (threatState.attackRunActive) {
+          nonClosingCount = threatState.nonClosingCount + 1;
+          if (nonClosingCount < 2 && threatState.lastThreatAssetId) {
+            attackRunActive = true;
+            effectiveThreatAssetId = threatState.lastThreatAssetId;
+            effectiveThreatDistanceXYM = threatState.lastThreatDistanceXYM;
+            threatReason = lowSpeed
+              ? "low-speed-hysteresis"
+              : (increasingDistance ? "opening-range-hysteresis" : "path-break-hysteresis");
+          } else {
+            threatReason = lowSpeed
+              ? "threat-dropped-low-speed"
+              : (increasingDistance ? "threat-dropped-opening-range" : "threat-dropped-path-break");
+          }
+        } else if (lowSpeed) {
+          threatReason = "low-speed";
+        } else if (increasingDistance) {
+          threatReason = "opening-range";
+        }
+
+        if (currentlyClosing) {
+          threatState.lastThreatAssetId = currentProjectedAssetId;
+          threatState.lastThreatDistanceXYM = currentProjectedDistanceXYM;
+        } else if (!attackRunActive) {
+          threatState.lastThreatAssetId = null;
+          threatState.lastThreatDistanceXYM = null;
+        }
+
+        threatState.attackRunActive = attackRunActive;
+        threatState.nonClosingCount = attackRunActive ? nonClosingCount : 0;
+
+        track.currentSpeedMps = round(speedMps, 2);
+        track.currentProjectedAssetId = currentProjectedAssetId;
+        track.currentProjectedDistanceXYM = Number.isFinite(currentProjectedDistanceXYM) ? round(currentProjectedDistanceXYM, 2) : null;
+        track.projectedTargetId = effectiveThreatAssetId;
+        track.effectiveThreatDistanceXYM = Number.isFinite(effectiveThreatDistanceXYM) ? round(effectiveThreatDistanceXYM, 2) : null;
+        track.attackRunActive = attackRunActive;
+        track.threatNonClosingCount = nonClosingCount;
+        track.threatReason = threatReason;
+
+        return {
+          speedMps,
+          currentProjectedAsset,
+          currentProjectedAssetId,
+          currentProjectedDistanceXYM,
+          attackRunActive,
+          effectiveThreatAssetId,
+          effectiveThreatDistanceXYM,
+          threatReason,
+          nonClosingCount
+        };
+      }
+
       function snapshotWorld(world, timeSec, reason) {
         return {
           timeSec: round(timeSec, 2),
@@ -1206,6 +1489,15 @@
           .filter((object) => object.side === "Red");
         const destroyedRedObjects = redObjects.filter((object) => object.runtime.destroyed);
         const survivingBlueObjects = blueObjects.filter((object) => !object.runtime.destroyed);
+        const hqObjects = blueObjects.filter((object) => object.components.health.isHQ);
+        const totalBlueAssetValue = blueObjects.reduce((sum, object) => (
+          sum + Math.max(0, Number(object.components.health.assetValuePts || 0))
+        ), 0);
+        const remainingBlueAssetValue = blueObjects.reduce((sum, object) => {
+          const maxHealth = Math.max(1, Number(object.components.health.maxHealth || 1));
+          const healthFraction = clamp((object.runtime.health || 0) / maxHealth, 0, 1);
+          return sum + (healthFraction * Math.max(0, Number(object.components.health.assetValuePts || 0)));
+        }, 0);
         const primaryTrack = Object.values(world.tracks)
           .sort((left, right) => (right.lastUpdateTimeSec || 0) - (left.lastUpdateTimeSec || 0))[0] || null;
 
@@ -1227,6 +1519,9 @@
             firstDetectionRangeM: world.metrics.firstDetectionRangeM,
             killTimeSec: world.metrics.killTimeSec,
             blueAssetsSurvived: survivingBlueObjects.length,
+            hqSurvived: hqObjects.every((object) => !object.runtime.destroyed),
+            percentSurvived: blueObjects.length ? round(survivingBlueObjects.length / blueObjects.length, 4) : 0,
+            weightedSurvivalScore: totalBlueAssetValue > 0 ? round(remainingBlueAssetValue / totalBlueAssetValue, 4) : 0,
             threatsDestroyed: destroyedRedObjects.length,
             shotsFired: world.metrics.shotsFired,
             eventCount: world.logs.length,
@@ -1246,7 +1541,7 @@
       }
 
       function createCsvRow(iterationId, report) {
-        return {
+        const row = {
           Iteration_ID: iterationId,
           Scenario_Name: report.scenarioName,
           Seed: report.seed,
@@ -1263,6 +1558,9 @@
           First_Detection_Range_m: report.firstDetectionRangeM ?? "",
           Kill_Time_s: report.killTimeSec ?? "",
           Blue_Assets_Survived: report.blueAssetsSurvived,
+          HQ_Survived: report.hqSurvived ? 1 : 0,
+          Percent_Survived: report.percentSurvived,
+          Weighted_Survival_Score: report.weightedSurvivalScore,
           Threats_Destroyed: report.threatsDestroyed,
           Shots_Fired: report.shotsFired,
           Final_Target_Status: report.finalTargetStatus,
@@ -1270,16 +1568,30 @@
           Classification_Status: report.finalClassificationStatus,
           Identification_Status: report.finalIdentificationStatus,
           Intent_Status: report.finalIntentStatus,
-          Event_Count: report.eventCount,
-          Template_Blue_CUAS_Site_Ammo_Expended: report.ammoExpended["Template-Blue-CUAS-Site"] || 0
+          Event_Count: report.eventCount
         };
+
+        Object.keys(report.ammoExpended || {})
+          .sort()
+          .forEach((templateId) => {
+            row[templateId + "_Ammo_Expended"] = report.ammoExpended[templateId] || 0;
+          });
+
+        return row;
       }
 
       function rowsToCsv(rows) {
         if (!rows.length) {
           return "";
         }
-        const headers = Object.keys(rows[0]);
+        const headers = [];
+        rows.forEach((row) => {
+          Object.keys(row).forEach((header) => {
+            if (!headers.includes(header)) {
+              headers.push(header);
+            }
+          });
+        });
         const lines = [headers.join(",")];
         rows.forEach((row) => {
           const values = headers.map((header) => {
@@ -1435,6 +1747,12 @@
             }],
             pendingEngagement: false,
             agingToken: 0,
+            threatState: {
+              attackRunActive: false,
+              nonClosingCount: 0,
+              lastThreatAssetId: null,
+              lastThreatDistanceXYM: null
+            },
             position: {
               x: event.payload.posX,
               y: event.payload.posY,
@@ -1666,7 +1984,13 @@
               lastUpdateTimeSec: 0,
               history: [],
               pendingEngagement: false,
-              agingToken: 0
+              agingToken: 0,
+              threatState: {
+                attackRunActive: false,
+                nonClosingCount: 0,
+                lastThreatAssetId: null,
+                lastThreatDistanceXYM: null
+              }
             };
             world.tracks[trackId] = track;
             world.metrics.tracksCreated += 1;
@@ -1947,23 +2271,19 @@
             return;
           }
 
-          const history = track.history;
-          const previousEntry = history.length > 1 ? history[history.length - 2] : null;
-          const currentEntry = history.length ? history[history.length - 1] : null;
           let intentStatus = "Unknown";
           let confidence = clamp(0.42 + world.randomization.intentBias + services.rng.nextGaussian(0, 0.03), 0.1, 0.99);
 
           if (track.classificationStatus === "UAS") {
+            const threatAssessment = updateTrackThreatAssessment(world, track, target);
+
             intentStatus = "Transit";
-            if (previousEntry && currentEntry) {
-              const closingRangeM = previousEntry.rangeM - currentEntry.rangeM;
-              if (Math.abs(closingRangeM) < 8) {
-                intentStatus = "Loiter";
-                confidence += 0.12;
-              } else if (currentEntry.rangeM <= world.config.attackRunRangeM && closingRangeM > 0) {
-                intentStatus = "Attack Run";
-                confidence += 0.18;
-              }
+            if (threatAssessment.attackRunActive) {
+              intentStatus = "Attack Run";
+              confidence += 0.18;
+            } else if (threatAssessment.speedMps < THREAT_SPEED_THRESHOLD_MPS) {
+              intentStatus = "Loiter";
+              confidence += 0.12;
             }
           }
 
@@ -1979,7 +2299,12 @@
             {
               trackId: track.id,
               intent: intentStatus,
-              confidence: track.intentConfidence
+              confidence: track.intentConfidence,
+              projectedTargetId: track.projectedTargetId || null,
+              currentProjectedAssetId: track.currentProjectedAssetId || null,
+              currentSpeedMps: track.currentSpeedMps ?? null,
+              threatNonClosingCount: track.threatNonClosingCount ?? 0,
+              threatReason: track.threatReason || "none"
             }
           );
 
@@ -1997,120 +2322,184 @@
       }
 
       class C2System {
+        buildThreatPicture(world, c2Object) {
+          return Object.values(world.tracks)
+            .filter((track) => {
+              if (!track || track.status !== "Active" || track.trackType === "Ghost" || track.identificationStatus !== "Hostile") {
+                return false;
+              }
+              const target = getObject(world, track.realObjectId);
+              return Boolean(target && !target.runtime.destroyed);
+            })
+            .map((track) => {
+              const target = getObject(world, track.realObjectId);
+              const speedMps = Number(track.currentSpeedMps ?? magnitude3D(getVelocityVector(track, target)));
+              const projectedAsset = track.projectedTargetId
+                ? getObject(world, track.projectedTargetId)
+                : c2Object;
+              const payloadScore = estimateTrackPayloadScore(track, target);
+              const projectedAssetValue = projectedAsset
+                ? Number(projectedAsset.components.health.assetValuePts || 1)
+                : 1;
+              const ttiSec = speedMps > 0
+                ? Math.max(0.1, (track.effectiveThreatDistanceXYM ?? distance2D(track.position || target.runtime.position, projectedAsset.runtime.position)) / speedMps)
+                : Number.POSITIVE_INFINITY;
+              const threatScore = Number.isFinite(ttiSec)
+                ? round((payloadScore * projectedAssetValue) / ttiSec, 4)
+                : 0;
+
+              track.estimatedPayloadScore = payloadScore;
+              track.timeToImpactSec = Number.isFinite(ttiSec) ? round(ttiSec, 2) : null;
+              track.threatScore = threatScore;
+
+              return {
+                track,
+                target,
+                payloadScore,
+                projectedAsset,
+                ttiSec,
+                threatScore
+              };
+            })
+            .sort((left, right) => right.threatScore - left.threatScore);
+        }
+
         process(event, world, services) {
-          const track = getTrack(world, event.payload.trackId);
-          const target = track ? getObject(world, track.realObjectId) : null;
-          if (!track || track.status !== "Active" || track.pendingEngagement) {
-            return;
-          }
-
-          if (track.trackType === "Ghost") {
-            services.logger.record(
-              world,
-              event.time,
-              "c2",
-              "C2 held fire on " + track.id + " because it is a ghost placeholder",
-              { trackId: track.id, reason: "ghost-track-placeholder" }
-            );
-            return;
-          }
-
-          if (!target || target.runtime.destroyed) {
-            return;
-          }
-
           const c2Objects = world.objectIds
             .map((id) => world.objects[id])
             .filter((object) =>
-              object.side === track.owningSide
+              object.side === "Blue"
               && !object.runtime.destroyed
               && object.components.c2
               && (object.components.effectors || []).length
             );
 
           for (const c2Object of c2Objects) {
-            for (const effector of c2Object.components.effectors || []) {
-              const ammoRemaining = c2Object.runtime.ammo[effector.id];
-              const cooldownReady = event.time >= (c2Object.runtime.lastFireTimeSec[effector.id] || 0);
-              const rangeM = distance3D(c2Object.runtime.position, target.runtime.position);
-              if (ammoRemaining <= 0 || !cooldownReady || rangeM > effector.maxRangeM) {
+            const threatEntries = this.buildThreatPicture(world, c2Object);
+            for (const entry of threatEntries) {
+              const track = entry.track;
+              if (track.pendingEngagement) {
                 continue;
               }
 
-              if (track.identificationStatus !== "Hostile") {
+              for (const effector of c2Object.components.effectors || []) {
+                const effectorState = getEffectorRuntimeState(c2Object, effector.id);
+                const ammoRemaining = c2Object.runtime.ammo[effector.id];
+                const rangeM = distance3D(c2Object.runtime.position, entry.target.runtime.position);
+                if (!effectorState || effectorState.missionState !== "Idle" || ammoRemaining <= 0 || rangeM > effector.maxRangeM) {
+                  continue;
+                }
+
+                effectorState.missionState = "Engaging";
+                effectorState.lockedTrackId = track.id;
+                effectorState.lockedTargetId = entry.target.id;
+                track.pendingEngagement = true;
+                world.metrics.c2Decisions += 1;
+
                 services.logger.record(
                   world,
                   event.time,
                   "c2",
-                  c2Object.name + " held fire on " + track.id,
-                  { trackId: track.id, reason: "not-hostile" }
+                  c2Object.name + " ordered engagement against " + track.id,
+                  {
+                    trackId: track.id,
+                    effectorId: effector.id,
+                    targetId: entry.target.id,
+                    intent: track.intentStatus,
+                    threatScore: entry.threatScore,
+                    estimatedPayloadScore: entry.payloadScore,
+                    timeToImpactSec: Number.isFinite(entry.ttiSec) ? round(entry.ttiSec, 2) : null,
+                    projectedAssetId: entry.projectedAsset ? entry.projectedAsset.id : null,
+                    threatNonClosingCount: track.threatNonClosingCount ?? 0,
+                    threatReason: track.threatReason || "none"
+                  }
                 );
-                return;
+
+                services.events.scheduleDelay(event.time, effector.slewRateSec, {
+                  type: "effector.fire",
+                  priority: EVENT_PRIORITIES.effector,
+                  payload: {
+                    shooterId: c2Object.id,
+                    effectorId: effector.id,
+                    trackId: track.id,
+                    targetId: entry.target.id
+                  }
+                }, { enforceMinimumDelay: effector.slewRateSec <= 0 });
+                break;
               }
-
-              track.pendingEngagement = true;
-              world.metrics.c2Decisions += 1;
-              services.logger.record(
-                world,
-                event.time,
-                "c2",
-                c2Object.name + " ordered engagement against " + track.id,
-                {
-                  trackId: track.id,
-                  effectorId: effector.id,
-                  targetId: target.id,
-                  intent: track.intentStatus
-                }
-              );
-
-              services.events.scheduleDelay(event.time, c2Object.components.c2.processingLatencySec + effector.commandDelaySec, {
-                type: "effector.fire",
-                priority: EVENT_PRIORITIES.effector,
-                payload: {
-                  shooterId: c2Object.id,
-                  effectorId: effector.id,
-                  trackId: track.id,
-                  targetId: target.id
-                }
-              }, { enforceMinimumDelay: true });
-              return;
             }
           }
         }
       }
 
       class EffectSystem {
+        canContinueEngagement(world, shooter, effector, track, target) {
+          if (!shooter || !effector || !track || !target || target.runtime.destroyed || track.status !== "Active") {
+            return false;
+          }
+
+          const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
+          if (shooter.runtime.ammo[effector.id] <= 0 || rangeM > effector.maxRangeM) {
+            return false;
+          }
+
+          return true;
+        }
+
         fire(event, world, services) {
           const shooter = getObject(world, event.payload.shooterId);
           const target = getObject(world, event.payload.targetId);
           const track = getTrack(world, event.payload.trackId);
-          if (!shooter || !target || !track || target.runtime.destroyed) {
-            if (track) {
+          const effector = shooter
+            ? (shooter.components.effectors || []).find((candidate) => candidate.id === event.payload.effectorId)
+            : null;
+          if (!shooter || !target || !track || !effector) {
+            if (shooter) {
+              clearEffectorAssignment(shooter, event.payload.effectorId, world);
+            } else if (track) {
               track.pendingEngagement = false;
             }
             return;
           }
 
-          const effector = (shooter.components.effectors || []).find((candidate) => candidate.id === event.payload.effectorId);
-          if (!effector || shooter.runtime.ammo[effector.id] <= 0) {
-            track.pendingEngagement = false;
+          const effectorState = getEffectorRuntimeState(shooter, effector.id);
+          if (!effectorState || effectorState.missionState !== "Engaging" || effectorState.lockedTrackId !== track.id) {
+            return;
+          }
+
+          if (!this.canContinueEngagement(world, shooter, effector, track, target)) {
+            clearEffectorAssignment(shooter, effector.id, world);
+            services.logger.record(
+              world,
+              event.time,
+              "effector",
+              shooter.name + " released " + effector.name + " without firing",
+              {
+                trackId: track.id,
+                targetId: target.id,
+                reason: "target-invalid-or-out-of-range"
+              }
+            );
             return;
           }
 
           shooter.runtime.ammo[effector.id] -= 1;
-          shooter.runtime.lastFireTimeSec[effector.id] = round(event.time + effector.cooldownSec, 2);
+          shooter.runtime.lastFireTimeSec[effector.id] = round(event.time, 2);
           world.metrics.shotsFired += 1;
           world.metrics.ammoExpended[shooter.templateId] = (world.metrics.ammoExpended[shooter.templateId] || 0) + 1;
 
           const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
-          const rangeFactor = clamp(1 - ((rangeM / effector.maxRangeM) * 0.35), 0.35, 1);
+          const rangeFactor = effector.maxRangeM > 0
+            ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0, 1)
+            : 0;
           const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
           const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
           const effectivePk = clamp(
             (effector.basePk + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
-            0.05,
+            0,
             0.98
           );
+          const delaySec = effector.projectileSpeedMps > 0 ? (rangeM / effector.projectileSpeedMps) : 0;
 
           services.logger.record(
             world,
@@ -2121,11 +2510,13 @@
               trackId: track.id,
               targetId: target.id,
               effectivePk: round(effectivePk, 2),
-              rangeM: round(rangeM, 2)
+              rangeM: round(rangeM, 2),
+              projectileSpeedMps: effector.projectileSpeedMps,
+              timeOfFlightSec: round(delaySec, 3)
             }
           );
 
-          services.events.scheduleDelay(event.time, effector.timeToEffectSec, {
+          services.events.scheduleDelay(event.time, delaySec, {
             type: "effect.resolve",
             priority: EVENT_PRIORITIES.effect,
             payload: {
@@ -2135,7 +2526,18 @@
               damagePoints: effector.damagePoints,
               effectivePk
             }
-          }, { enforceMinimumDelay: true });
+          }, { enforceMinimumDelay: false });
+
+          services.events.scheduleDelay(event.time, effector.cooldownSec, {
+            type: "effector.reset",
+            priority: EVENT_PRIORITIES.effector,
+            payload: {
+              shooterId: shooter.id,
+              effectorId: effector.id,
+              trackId: track.id,
+              targetId: target.id
+            }
+          }, { enforceMinimumDelay: effector.cooldownSec <= 0 });
         }
 
         resolve(event, world, services) {
@@ -2170,6 +2572,53 @@
             }
           }, { enforceMinimumDelay: true });
         }
+
+        reset(event, world, services) {
+          const shooter = getObject(world, event.payload.shooterId);
+          const effector = shooter
+            ? (shooter.components.effectors || []).find((candidate) => candidate.id === event.payload.effectorId)
+            : null;
+          if (!shooter || !effector) {
+            return;
+          }
+
+          const effectorState = getEffectorRuntimeState(shooter, effector.id);
+          if (!effectorState || effectorState.missionState !== "Engaging") {
+            return;
+          }
+
+          const track = getTrack(world, effectorState.lockedTrackId || event.payload.trackId);
+          const target = getObject(world, effectorState.lockedTargetId || event.payload.targetId);
+          if (this.canContinueEngagement(world, shooter, effector, track, target)) {
+            services.events.schedule({
+              time: round(event.time, 3),
+              type: "effector.fire",
+              priority: EVENT_PRIORITIES.effector,
+              payload: {
+                shooterId: shooter.id,
+                effectorId: effector.id,
+                trackId: track.id,
+                targetId: target.id
+              }
+            });
+            return;
+          }
+
+          const releasedTrackId = effectorState.lockedTrackId;
+          const releasedTargetId = effectorState.lockedTargetId;
+          clearEffectorAssignment(shooter, effector.id, world);
+          services.logger.record(
+            world,
+            event.time,
+            "effector",
+            shooter.name + " reset " + effector.name + " to Idle",
+            {
+              trackId: releasedTrackId,
+              targetId: releasedTargetId,
+              reason: "cooldown-complete-or-target-invalid"
+            }
+          );
+        }
       }
 
       class DamageSystem {
@@ -2180,7 +2629,6 @@
             return;
           }
 
-          track.pendingEngagement = false;
           if (!event.payload.hit) {
             services.logger.record(
               world,
@@ -2198,6 +2646,7 @@
             target.runtime.destroyed = true;
             target.runtime.operationalStatus = "Destroyed";
             track.status = "Destroyed";
+            track.pendingEngagement = false;
             world.metrics.targetsDestroyed += 1;
             world.metrics.killTimeSec = round(event.time, 2);
             services.logger.record(
@@ -2339,6 +2788,9 @@
               case "effector.fire":
                 this.effectSystem.fire(event, runtime, services);
                 break;
+              case "effector.reset":
+                this.effectSystem.reset(event, runtime, services);
+                break;
               case "effect.resolve":
                 this.effectSystem.resolve(event, runtime, services);
                 break;
@@ -2391,6 +2843,7 @@
                 destroyed: false,
                 ammo: {},
                 lastFireTimeSec: {},
+                effectorStates: {},
                 mission: {
                   currentWaypointIndex: 0,
                   waypoints: deepClone(instance.missionWaypoints || [])
@@ -2401,6 +2854,11 @@
             (object.components.effectors || []).forEach((effector) => {
               object.runtime.ammo[effector.id] = effector.ammoCapacity;
               object.runtime.lastFireTimeSec[effector.id] = 0;
+              object.runtime.effectorStates[effector.id] = {
+                missionState: "Idle",
+                lockedTrackId: null,
+                lockedTargetId: null
+              };
             });
 
             objects[object.id] = object;
@@ -3186,6 +3644,8 @@
           { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "No" },
           { label: "Tracks Dropped", value: report.tracksDropped },
           { label: "Shots Fired", value: report.shotsFired },
+          { label: "HQ Survived", value: report.hqSurvived ? "Yes" : "No" },
+          { label: "Weighted Score", value: report.weightedSurvivalScore },
           { label: "Destroyed", value: report.targetDestroyed ? "Yes" : "No" },
           { label: "Kill Time", value: report.killTimeSec ?? "-" }
         ] : [
@@ -3195,6 +3655,8 @@
           { label: "Intent", value: "-" },
           { label: "Tracks Dropped", value: "-" },
           { label: "Shots Fired", value: "-" },
+          { label: "HQ Survived", value: "-" },
+          { label: "Weighted Score", value: "-" },
           { label: "Destroyed", value: "-" },
           { label: "Kill Time", value: "-" }
         ];
@@ -3230,6 +3692,7 @@
           { label: "Ghost Tracks", value: report.ghostTracksGenerated },
           { label: "Identification", value: report.identified ? report.finalIdentificationStatus : "None" },
           { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "None" },
+          { label: "HQ Survived", value: report.hqSurvived ? "Yes" : "No" },
           { label: "Outcome", value: report.targetDestroyed ? "Threat destroyed" : "Threat survived" }
         ];
         summaryContainer.innerHTML = summary.map((metric) => (
@@ -3250,6 +3713,8 @@
           ["Tracks dropped", report.tracksDropped],
           ["Kill time", report.killTimeSec ? report.killTimeSec + " s" : "No kill"],
           ["Blue assets survived", report.blueAssetsSurvived],
+          ["Percent survived", this.kernel.round((report.percentSurvived || 0) * 100, 2) + "%"],
+          ["Weighted survival score", report.weightedSurvivalScore],
           ["Threats destroyed", report.threatsDestroyed],
           ["Shots fired", report.shotsFired],
           ["Event count", report.eventCount],
@@ -3291,12 +3756,16 @@
         const dropRate = rows.filter((row) => Number(row.Tracks_Dropped) > 0).length / total;
         const ghostRate = rows.filter((row) => Number(row.Ghost_Tracks_Generated) > 0).length / total;
         const averageShots = rows.reduce((sum, row) => sum + Number(row.Shots_Fired || 0), 0) / total;
+        const hqSurvivalRate = rows.filter((row) => Number(row.HQ_Survived) === 1).length / total;
+        const averageWeightedSurvival = rows.reduce((sum, row) => sum + Number(row.Weighted_Survival_Score || 0), 0) / total;
 
         const summary = [
           { label: "Iterations", value: total },
           { label: "Detection rate", value: this.kernel.round(detectionRate * 100, 1) + "%" },
           { label: "Identification rate", value: this.kernel.round(identificationRate * 100, 1) + "%" },
           { label: "Kill rate", value: this.kernel.round(killRate * 100, 1) + "%" },
+          { label: "HQ survival", value: this.kernel.round(hqSurvivalRate * 100, 1) + "%" },
+          { label: "Avg weighted survival", value: this.kernel.round(averageWeightedSurvival, 3) },
           { label: "Ghost-track rate", value: this.kernel.round(ghostRate * 100, 1) + "%" },
           { label: "Drop rate", value: this.kernel.round(dropRate * 100, 1) + "%" },
           { label: "Avg shots", value: this.kernel.round(averageShots, 2) }

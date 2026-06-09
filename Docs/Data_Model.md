@@ -278,7 +278,8 @@ Defines survivability and value.
   "health": {
     "maxHealth": 100,
     "armorLevel": 1,
-    "assetValue_pts": 50
+    "assetValue_pts": 50,
+    "isHQ": false
   }
 }
 ```
@@ -288,6 +289,7 @@ Defines survivability and value.
 | `maxHealth` | Integer | Starting hit points. |
 | `armorLevel` | Integer | Damage reduction or armor abstraction. |
 | `assetValue_pts` | Integer | Weighted score value for survival analysis. |
+| `isHQ` | Boolean | Whether this Blue asset counts toward HQ survival reporting. |
 
 ---
 
@@ -818,6 +820,7 @@ Effectors generate physical or non-physical effects.
   "maxRange_m": 1500,
   "basePk": 0,
   "basePe": 0.7,
+  "slewRate_sec": 0.2,
   "cooldown_sec": 2,
   "effectDuration_sec": 10,
   "effectRadius_m": 200,
@@ -832,6 +835,7 @@ Effectors generate physical or non-physical effects.
 | `maxRange_m` | Float | Maximum range. |
 | `basePk` | Float | Baseline probability of kill. |
 | `basePe` | Float | Baseline probability of non-kinetic effect. |
+| `slewRate_sec` | Float | Slew / local fire-control delay before the first shot. |
 | `cooldown_sec` | Float | Time between uses. |
 | `effectDuration_sec` | Float | Duration of effect. |
 | `effectRadius_m` | Float | Area effect radius. |
@@ -874,6 +878,10 @@ AutoSuppressEmitters
 | Field | Type | Description |
 |---|---|---|
 | `projectileSpeed_mps` | Float | Projectile speed used for time-of-flight. |
+
+Runtime note:
+
+Per-effector mission state such as `Idle`, `Engaging`, locked target, and cooldown/reset timing should remain runtime state, not saved template state.
 
 ---
 
@@ -965,6 +973,8 @@ A track may point to a real object using `objectId`, or it may have `objectId: n
 | `isSpoofed` | Boolean | Track was intentionally spoofed. |
 | `lastUpdateTime` | Float | Last update time in seconds. |
 | `staleAfter_sec` | Float | Time until the track is stale. |
+
+C2 threat estimates such as projected target asset, time-to-impact, and estimated payload score are runtime assessments derived from track motion, size/signature clues, and behavior. They should not be authored as fixed Red UAS scenario fields.
 
 ### Track Type Enum
 

@@ -306,6 +306,7 @@ Consumes:
 - Track History
 - Motion Data
 - Mission Context
+- Blue asset locations
 
 Produces:
 
@@ -323,6 +324,10 @@ Examples:
 - Jamming
 - Attack Run
 - Terminal Dive
+
+Implementation note:
+
+Intent should be inferred from projected motion against defended Blue assets, not from simple radial closure to the observing sensor.
 
 ---
 
@@ -343,6 +348,8 @@ Processes:
 
 - Track prioritization
 - Threat ranking
+- Projected impact / defended-asset association
+- C2-side payload estimation from observed size and behavior
 - Resource allocation
 - Engagement decisions
 
@@ -358,6 +365,10 @@ Generated Events:
 - Warning Sent
 - Sensor Tasked
 - Effector Tasked
+
+Implementation note:
+
+C2 should rank active hostile tracks using a weighted TEWA score and commit only Idle effectors. Once committed, an effector remains locked until cooldown/reset logic releases it.
 
 ---
 
@@ -435,6 +446,9 @@ Processes:
 - Spoofing
 - Cyber
 - Directed Energy Effects
+- Kinetic fire scheduling
+- Projectile time-of-flight
+- Autonomous cooldown fire loops
 
 Produces:
 
@@ -448,6 +462,11 @@ Generated Events:
 - Sensor Blinded
 - Camera Dazzled
 - Network Jammed
+- Effector Reset
+
+Implementation note:
+
+Effect resolution should calculate time-of-flight from `projectileSpeed_mps`, preserve effector lock state through cooldown, and allow local autonomous refire when the locked target remains valid.
 
 ---
 
@@ -516,6 +535,8 @@ Produces:
 - Statistical distributions
 - Confidence intervals
 - Aggregate metrics
+
+Aggregate metrics should include dynamic per-template ammo expenditure plus weighted survival reporting such as HQ survival, percent survived, and weighted survival score.
 
 ---
 

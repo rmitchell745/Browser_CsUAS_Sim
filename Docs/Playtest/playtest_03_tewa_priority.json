@@ -1,0 +1,246 @@
+{
+  "metadata": {
+    "name": "Playtest 03 - TEWA Priority",
+    "description": "C2 should prioritize the heavier HQ-directed bomber over the lower-value ISR threat."
+  },
+  "config": {
+    "maxTimeSec": 60,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.7,
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    }
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-TEWA-Node",
+      "name": "Blue TEWA Node",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": {
+          "maxHealth": 110,
+          "assetValuePts": 40,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.15
+        },
+        "signature": {
+          "radarSignatureDb": -2
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-TEWA-1",
+            "name": "TEWA Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 800,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 54,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.1,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 0.5,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.2,
+              "accuracyBase": 0.88
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.82
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-TEWA-1",
+            "name": "TEWA Kinetic Interceptor",
+            "type": "Kinetic",
+            "maxRangeM": 260,
+            "basePk": 0.92,
+            "damagePoints": 140,
+            "ammoCapacity": 3,
+            "slewRateSec": 0.2,
+            "cooldownSec": 1.5,
+            "projectileSpeedMps": 900
+          }
+        ],
+        "c2": {
+          "trackCapacity": 12,
+          "processingLatencySec": 0.2
+        }
+      }
+    },
+    {
+      "id": "Template-Blue-HQ-Bunker",
+      "name": "Blue HQ Bunker",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": {
+          "maxHealth": 180,
+          "assetValuePts": 120,
+          "isHQ": true
+        },
+        "resistance": {
+          "kineticResistance": 0.2
+        },
+        "signature": {
+          "radarSignatureDb": -1
+        }
+      }
+    },
+    {
+      "id": "Template-Blue-Water-Tank",
+      "name": "Blue Water Tank",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": {
+          "maxHealth": 80,
+          "assetValuePts": 20,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.12
+        },
+        "signature": {
+          "radarSignatureDb": -5
+        }
+      }
+    },
+    {
+      "id": "Template-Red-Heavy-Bomber",
+      "name": "Red Heavy Bomber",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 100,
+          "assetValuePts": 12,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.18
+        },
+        "signature": {
+          "radarSignatureDb": -6
+        },
+        "movement": {
+          "speedMps": 26,
+          "stepSec": 0.5,
+          "waypointToleranceM": 10
+        }
+      }
+    },
+    {
+      "id": "Template-Red-Low-ISR",
+      "name": "Red Low ISR",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 70,
+          "assetValuePts": 6,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.14
+        },
+        "signature": {
+          "radarSignatureDb": -18
+        },
+        "movement": {
+          "speedMps": 14,
+          "stepSec": 0.5,
+          "waypointToleranceM": 10
+        }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-TEWA-Node-01",
+      "templateId": "Template-Blue-TEWA-Node",
+      "name": "Blue TEWA Node 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 550,
+      "posY": 320,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-HQ-Bunker-01",
+      "templateId": "Template-Blue-HQ-Bunker",
+      "name": "Blue HQ Bunker 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 720,
+      "posY": 220,
+      "posZ": 12,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Water-Tank-01",
+      "templateId": "Template-Blue-Water-Tank",
+      "name": "Blue Water Tank 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 720,
+      "posY": 420,
+      "posZ": 8,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Heavy-Bomber-01",
+      "templateId": "Template-Red-Heavy-Bomber",
+      "name": "Red Heavy Bomber 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 80,
+      "posY": 220,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 920,
+          "y": 220,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "Red-Low-ISR-01",
+      "templateId": "Template-Red-Low-ISR",
+      "name": "Red Low ISR 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 80,
+      "posY": 420,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 920,
+          "y": 420,
+          "z": 120
+        }
+      ]
+    }
+  ]
+}

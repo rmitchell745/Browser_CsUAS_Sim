@@ -10,10 +10,12 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Stabilize the updated browser-only vertical slice after the theme, placeholder, and validation pass:
+Verify the refactored browser-only vertical slice after the engagement, TEWA, and reporting pass:
 
-- complete a full browser verification pass outside the current sandbox limits
-- decide the next step for environment realism or UI polish
+- complete a broader browser verification pass beyond the local headless smoke test
+- validate the new XY-only TEWA and hysteresis behavior in a fuller interactive browser pass
+- refine the next assessment-state and logging tranche
+- decide whether the next step is interceptor-child modeling or deeper environment realism
 - keep the prototype explainable and local-only
 
 ---
@@ -31,14 +33,15 @@ The current working prototype now includes:
 - Detection candidate generation
 - Track creation and updates
 - Separate classification, identification, and intent stages
-- Simple C2 engagement decision
+- Vector-projection intent assessment
+- Weighted TEWA-based C2 engagement decision
 - Ghost-track placeholder and clutter overlay placeholders
-- Effector firing
+- Locked-target effector firing with autonomous cooldown fire loop
 - Damage resolution using Effective_Pk-style modifiers
 - Single-run report
 - Monte Carlo execution in an inline Web Worker with fallback
 - Results table
-- Flat CSV export
+- Dynamic CSV export with weighted survival metrics
 - Event log panel
 - Scenario validation dashboard
 
@@ -47,6 +50,8 @@ The current working prototype now includes:
 # Open Tasks
 
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
+- [ ] Refactor track assessment into a stateful model so classification, identification, and intent are refreshed only on meaningful triggers or staleness windows rather than every track update.
+- [ ] Preserve cycle-level logging or equivalent periodic assessment snapshots for debugging and analysis even after stateful assessment gating is added.
 - [ ] Refactor the `Interceptor Launcher` so it spawns a child interceptor sub-component / active map object, and ensure that interceptor appears in the map state and reporting outputs.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
@@ -91,6 +96,14 @@ The current working prototype now includes:
 - [x] Added ghost-track and clutter placeholders without building the full scenario editor UI.
 - [x] Added stronger scenario validation and user-facing import error reporting for malformed JSON inputs.
 - [x] Attempted browser-side verification using local headless Chromium invocations in the sandbox.
+- [x] Replaced static effector TOF with `projectileSpeed_mps`-based timing.
+- [x] Replaced linear range degradation with quadratic decay in kinetic Pk.
+- [x] Added effector mission-state locking and autonomous cooldown-based refire logic.
+- [x] Replaced closest-first engagement ordering with weighted TEWA based on C2-derived payload estimates and projected asset impact.
+- [x] Added HQ survival, percent survived, weighted survival score, and dynamic ammo CSV columns.
+- [x] Verified a headless local Playwright smoke run against `index.html` after the refactor.
+- [x] Refactored TEWA and intent projected-path calculations to use XY-only asset association.
+- [x] Implemented TEWA hysteresis so `Attack Run` / elevated threat status drops after 2 consecutive non-closing or low-speed updates.
 
 ---
 
@@ -123,6 +136,8 @@ Do not implement until after the first vertical slice works.
 - [ ] Chromium headless verification is blocked in this sandbox by repeated GPU-process startup failures and hangs, so a full browser pass still needs to be completed elsewhere.
 - [ ] Physical-track flow is implemented, but ghost tracks, spoofed tracks, and clutter generation remain placeholder-level only.
 - [ ] Need to ensure `roles` remains an array, not an enum, as new import/export paths are added.
+- [ ] TEWA payload assessment is still heuristic and intentionally explainable; it is not yet informed by richer size/classification observables or doctrine inputs.
+- [ ] Classification, identification, and intent currently rerun on essentially every track update; this is useful for traceability but not realistic steady-state behavior.
 
 ---
 
@@ -137,11 +152,18 @@ Do not implement until after the first vertical slice works.
 - Physical objects and tracks are separate concepts.
 - Detection creates detection candidates; `TrackSystem` owns track creation and updates.
 - Classification, identification, and intent now run as distinct systems in the event chain.
+- The next track-assessment refinement should make classification, identification, and intent stateful, with refresh gates driven by confidence changes, staleness, new sensors, or meaningful motion changes.
+- Intent now uses projected track motion against Blue assets rather than radial closure to the observing sensor.
+- TEWA and intent now use XY-only projected asset association for threating decisions, while full 3D geometry remains in place for detection, range, and projectile time-of-flight.
+- Threat-drop behavior now uses option 2: hysteresis. A hostile loses `Attack Run` / elevated TEWA status only after 2 consecutive updates showing low speed or increasing XY separation from the projected defended asset.
+- Even after stateful gating is added, the simulation should retain cycle-level logging or periodic assessment snapshots so debugging and playtest analysis remain explainable.
 - Red and Blue use the same object structure and runtime processing rules.
 - UI screens are managed by `UIManager`; core simulation logic lives in simulation and system classes.
 - Single-run playback reuses recorded snapshots after simulation completion so rendering does not drive outcomes.
 - Zero-delay follow-on state changes in the engagement chain enforce a minimum mechanical delay of `0.1` seconds.
 - Monte Carlo execution now runs in an inline Blob Web Worker and uses a main-thread fallback only when workers are unavailable.
+- C2 now ranks hostile tracks with a weighted TEWA heuristic and commits only Idle effectors.
+- Effectors now stay locked through cooldown and can continue firing locally without waiting for a fresh sensor cycle.
 - Scenario JSON import/export uses normalization around the current template + instance vertical-slice schema.
 - Environment placeholders currently use a minimal `EnvironmentSystem` that can spawn a track-only ghost placeholder and render a clutter overlay without full object generation.
 - Scenario validation now gates execution and surfaces blocking errors plus warnings directly in the dashboard UI.
@@ -154,15 +176,15 @@ Do not implement until after the first vertical slice works.
 Use this after each major prototype update.
 
 - [x] Inline JavaScript extracted from `index.html` passes `node --check`.
-- [ ] `index.html` opens in browser.
-- [ ] No JavaScript syntax errors in browser console.
+- [x] `index.html` opens in browser.
+- [x] No JavaScript syntax errors in browser console.
 - [ ] Canvas renders.
 - [ ] Blue object renders.
 - [ ] Red object renders.
 - [ ] Ghost placeholder toggle updates the dashboard and run-time behavior.
 - [ ] Clutter placeholder toggle updates the dashboard and map overlay.
 - [ ] Red UAS moves.
-- [ ] Single-run simulation completes.
+- [x] Single-run simulation completes.
 - [ ] Detection occurs.
 - [ ] Track is created.
 - [ ] Classification occurs.
@@ -171,7 +193,7 @@ Use this after each major prototype update.
 - [ ] C2 decision occurs.
 - [ ] Effector fires.
 - [ ] Damage resolves.
-- [ ] Event log updates.
+- [x] Event log updates.
 - [ ] Monte Carlo run completes.
 - [ ] Results table updates.
 - [ ] CSV export downloads.

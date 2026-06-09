@@ -1,0 +1,188 @@
+{
+  "metadata": {
+    "name": "Playtest 02 - Lock And Fire Loop",
+    "description": "Two competing Red UAS threats force one Blue effector to stay locked and autonomously refire."
+  },
+  "config": {
+    "maxTimeSec": 60,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.6,
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    }
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Lock-Test-Site",
+      "name": "Blue Lock Test Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": {
+          "maxHealth": 120,
+          "assetValuePts": 100,
+          "isHQ": true
+        },
+        "resistance": {
+          "kineticResistance": 0.15
+        },
+        "signature": {
+          "radarSignatureDb": -2
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Lock-1",
+            "name": "Lock Test Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 700,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 54,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.1,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 0.5,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.2,
+              "accuracyBase": 0.88
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.8
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Lock-1",
+            "name": "Autonomous Kinetic Gun",
+            "type": "Kinetic",
+            "maxRangeM": 450,
+            "basePk": 0.96,
+            "damagePoints": 40,
+            "ammoCapacity": 5,
+            "slewRateSec": 0.1,
+            "cooldownSec": 1,
+            "projectileSpeedMps": 900
+          }
+        ],
+        "c2": {
+          "trackCapacity": 10,
+          "processingLatencySec": 0.2
+        }
+      }
+    },
+    {
+      "id": "Template-Red-Raider-Heavy",
+      "name": "Red Raider Heavy",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 110,
+          "assetValuePts": 10,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.18
+        },
+        "signature": {
+          "radarSignatureDb": -10
+        },
+        "movement": {
+          "speedMps": 8,
+          "stepSec": 1,
+          "waypointToleranceM": 10
+        }
+      }
+    },
+    {
+      "id": "Template-Red-Raider-Light",
+      "name": "Red Raider Light",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 7,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.15
+        },
+        "signature": {
+          "radarSignatureDb": -13
+        },
+        "movement": {
+          "speedMps": 8,
+          "stepSec": 1,
+          "waypointToleranceM": 10
+        }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Lock-Site-01",
+      "templateId": "Template-Blue-Lock-Test-Site",
+      "name": "Blue Lock Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 480,
+      "posY": 320,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Raider-Alpha",
+      "templateId": "Template-Red-Raider-Heavy",
+      "name": "Red Raider Alpha",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 260,
+      "posY": 300,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 820,
+          "y": 300,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "Red-Raider-Beta",
+      "templateId": "Template-Red-Raider-Light",
+      "name": "Red Raider Beta",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 290,
+      "posY": 340,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 820,
+          "y": 340,
+          "z": 120
+        }
+      ]
+    }
+  ]
+}
