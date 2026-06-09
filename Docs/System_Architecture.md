@@ -225,6 +225,7 @@ Processes:
 - De-duplication
 - Aging
 - Staleness
+- Detection-candidate association into existing track state
 
 Produces:
 
@@ -235,6 +236,12 @@ Generated Events:
 - Track Created
 - Track Updated
 - Track Dropped
+
+Implementation notes:
+
+- Detection and track update are intentionally separate concepts. A sensor may generate a detection candidate every scan, while `TrackSystem` decides whether that observation creates a new track or refreshes an existing one.
+- `Track Updated` should be treated as a maintained belief refresh, not automatically as a new classification or identification event.
+- Future logging refinement should distinguish same-sensor refresh, new-sensor fusion, and major track-state changes for playtest review.
 
 ---
 
@@ -256,6 +263,12 @@ Produces:
 Generated Events:
 
 - Track Classified
+
+Implementation notes:
+
+- Classification is stateful in the current prototype and should not rerun on every track refresh.
+- Refresh gates should include new sensor contribution, detection-confidence or track-quality shifts, and stale timers.
+- When classification is retained, the system should preserve the prior belief and record a compact skip reason for debugging.
 
 Examples:
 
@@ -284,6 +297,11 @@ Produces:
 Generated Events:
 
 - Track Identified
+
+Implementation notes:
+
+- Identification is stateful and should refresh only when classification is strong enough and the current ID is stale, weak, or materially changed by new evidence.
+- Identification should not be recomputed simply because the track position refreshed.
 
 Examples:
 
@@ -329,6 +347,12 @@ Implementation note:
 
 Intent should be inferred from projected motion against defended Blue assets, not from simple radial closure to the observing sensor.
 
+Additional implementation notes:
+
+- The prototype uses XY-only projected-path association for defended-asset threating, while full 3D geometry remains in place for sensing, range, and time-of-flight.
+- Intent is stateful and should refresh only on meaningful motion change, projected-asset change, TEWA hysteresis change, or stale timer expiry.
+- `Attack Run` should persist through short ambiguity windows using hysteresis rather than collapsing on a single non-closing update.
+
 ---
 
 # 13. C2System
@@ -369,6 +393,12 @@ Generated Events:
 Implementation note:
 
 C2 should rank active hostile tracks using a weighted TEWA score and commit only Idle effectors. Once committed, an effector remains locked until cooldown/reset logic releases it.
+
+Additional implementation notes:
+
+- Projected defended-asset association should use XY pathing only.
+- Elevated threat state should use the same hysteresis continuity as intent so TEWA ordering does not collapse on a single noisy update.
+- Payload estimation is a C2-side heuristic derived from observable size/signature and behavior, not a scenario-authored Red field.
 
 ---
 
@@ -512,6 +542,11 @@ Produces:
 - Event logs
 - Timeline records
 - Metrics
+
+The current prototype keeps two complementary debug products:
+
+- a user-facing event log intended to stay readable during playtest
+- compact periodic `assessmentSnapshots` stored in the report payload so refresh vs skip behavior can still be inspected after stateful assessment gating is added
 
 Logging should never affect outcomes.
 

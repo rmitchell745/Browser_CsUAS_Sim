@@ -13,8 +13,8 @@ Codex must review this file at the start of every work session and update it bef
 Verify the refactored browser-only vertical slice after the engagement, TEWA, and reporting pass:
 
 - complete a broader browser verification pass beyond the local headless smoke test
-- validate the new XY-only TEWA and hysteresis behavior in a fuller interactive browser pass
-- refine the next assessment-state and logging tranche
+- validate the new XY-only TEWA, hysteresis, and stateful assessment behavior in a fuller interactive browser pass
+- tune the first-pass assessment refresh thresholds and snapshot review workflow based on playtest feedback
 - decide whether the next step is interceptor-child modeling or deeper environment realism
 - keep the prototype explainable and local-only
 
@@ -50,8 +50,9 @@ The current working prototype now includes:
 # Open Tasks
 
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
-- [ ] Refactor track assessment into a stateful model so classification, identification, and intent are refreshed only on meaningful triggers or staleness windows rather than every track update.
-- [ ] Preserve cycle-level logging or equivalent periodic assessment snapshots for debugging and analysis even after stateful assessment gating is added.
+- [ ] Review the new stateful assessment thresholds in live playtest and tighten any remaining over-refresh or under-refresh cases.
+- [ ] Decide whether assessment snapshots need a dedicated UI/export affordance beyond the current report JSON payload.
+- [ ] Differentiate `track update` logging so playtest review can distinguish same-sensor refresh, new-sensor fusion, and major track-state changes.
 - [ ] Refactor the `Interceptor Launcher` so it spawns a child interceptor sub-component / active map object, and ensure that interceptor appears in the map state and reporting outputs.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
@@ -104,6 +105,8 @@ The current working prototype now includes:
 - [x] Verified a headless local Playwright smoke run against `index.html` after the refactor.
 - [x] Refactored TEWA and intent projected-path calculations to use XY-only asset association.
 - [x] Implemented TEWA hysteresis so `Attack Run` / elevated threat status drops after 2 consecutive non-closing or low-speed updates.
+- [x] Refactored track assessment into a first-pass stateful model so classification, identification, and intent are refreshed only on meaningful triggers or staleness windows rather than every track update.
+- [x] Added compact periodic assessment snapshots to preserve per-cycle debugging and analysis after stateful assessment gating.
 
 ---
 
@@ -137,7 +140,8 @@ Do not implement until after the first vertical slice works.
 - [ ] Physical-track flow is implemented, but ghost tracks, spoofed tracks, and clutter generation remain placeholder-level only.
 - [ ] Need to ensure `roles` remains an array, not an enum, as new import/export paths are added.
 - [ ] TEWA payload assessment is still heuristic and intentionally explainable; it is not yet informed by richer size/classification observables or doctrine inputs.
-- [ ] Classification, identification, and intent currently rerun on essentially every track update; this is useful for traceability but not realistic steady-state behavior.
+- [ ] Stateful assessment now uses fixed first-pass thresholds; those thresholds still need live browser tuning to avoid edge-case over-refresh or under-refresh behavior.
+- [ ] Assessment snapshots are currently available in the single-run report JSON, but not yet through a dedicated UI surface or separate export control.
 
 ---
 
@@ -152,11 +156,11 @@ Do not implement until after the first vertical slice works.
 - Physical objects and tracks are separate concepts.
 - Detection creates detection candidates; `TrackSystem` owns track creation and updates.
 - Classification, identification, and intent now run as distinct systems in the event chain.
-- The next track-assessment refinement should make classification, identification, and intent stateful, with refresh gates driven by confidence changes, staleness, new sensors, or meaningful motion changes.
+- Track assessment now uses stateful gating with fixed first-pass refresh thresholds driven by confidence changes, staleness, new sensors, and meaningful motion changes.
 - Intent now uses projected track motion against Blue assets rather than radial closure to the observing sensor.
 - TEWA and intent now use XY-only projected asset association for threating decisions, while full 3D geometry remains in place for detection, range, and projectile time-of-flight.
 - Threat-drop behavior now uses option 2: hysteresis. A hostile loses `Attack Run` / elevated TEWA status only after 2 consecutive updates showing low speed or increasing XY separation from the projected defended asset.
-- Even after stateful gating is added, the simulation should retain cycle-level logging or periodic assessment snapshots so debugging and playtest analysis remain explainable.
+- The simulation now retains compact periodic assessment snapshots in the report payload so debugging and playtest analysis remain explainable even when the event log is quieter.
 - Red and Blue use the same object structure and runtime processing rules.
 - UI screens are managed by `UIManager`; core simulation logic lives in simulation and system classes.
 - Single-run playback reuses recorded snapshots after simulation completion so rendering does not drive outcomes.

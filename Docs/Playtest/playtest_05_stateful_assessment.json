@@ -1,0 +1,153 @@
+{
+  "metadata": {
+    "name": "Playtest 05 - Stateful Assessment Hold",
+    "description": "Stable single-track assessment pass to verify classification, identification, and intent are retained between meaningful refresh triggers."
+  },
+  "config": {
+    "maxTimeSec": 16,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.8,
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    }
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-CUAS-Site",
+      "name": "Blue HQ CUAS Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": {
+          "maxHealth": 120,
+          "assetValuePts": 100,
+          "isHQ": true
+        },
+        "resistance": {
+          "kineticResistance": 0.15
+        },
+        "signature": {
+          "radarSignatureDb": -2
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-EO-RF-1",
+            "name": "Blue EO/RF Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 500,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 53,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.2,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.2,
+              "accuracyBase": 0.84
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.2,
+              "accuracyBase": 0.76
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Kinetic-1",
+            "name": "Kinetic Interceptor",
+            "type": "Kinetic",
+            "maxRangeM": 260,
+            "basePk": 0.9,
+            "damagePoints": 150,
+            "ammoCapacity": 0,
+            "slewRateSec": 0.2,
+            "cooldownSec": 2,
+            "projectileSpeedMps": 900
+          }
+        ],
+        "c2": {
+          "trackCapacity": 8,
+          "processingLatencySec": 0.3
+        }
+      }
+    },
+    {
+      "id": "Template-Red-UAS-Generic",
+      "name": "Red Strike UAS",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 8,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.18
+        },
+        "signature": {
+          "radarSignatureDb": -12
+        },
+        "movement": {
+          "speedMps": 30,
+          "stepSec": 0.5,
+          "waypointToleranceM": 10
+        }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Site-01",
+      "templateId": "Template-Blue-CUAS-Site",
+      "name": "Blue HQ Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 670,
+      "posY": 315,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-UAS-01",
+      "templateId": "Template-Red-UAS-Generic",
+      "name": "Red UAS 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 90,
+      "posY": 315,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 980,
+          "y": 315,
+          "z": 120
+        },
+        {
+          "x": 1100,
+          "y": 315,
+          "z": 120
+        }
+      ]
+    }
+  ]
+}

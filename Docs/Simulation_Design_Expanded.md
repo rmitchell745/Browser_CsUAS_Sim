@@ -281,6 +281,18 @@ Detection occurs when:
 
 Signal_Strength > Noise_Floor + Threshold
 
+## Detection Candidate To Track Update
+
+Detection does not create a finished track by itself.
+
+The current prototype uses this sequence:
+
+1. sensor generates a detection candidate
+2. tracker correlates that observation
+3. tracker either creates a new track or updates an existing one
+
+Repeated `track update` behavior is therefore correct even when the same sensor keeps seeing the same target. Sensor fusion is the special case where multiple sensors contribute to the same maintained track.
+
 # 9. Classification Modeling
 
 Classification answers:
@@ -306,6 +318,14 @@ Classification may generate:
 - False Positives
 - False Negatives
 
+Classification is a stateful belief, not a mandatory every-scan recomputation.
+
+The prototype now refreshes classification only on meaningful triggers such as:
+
+- new sensor contribution
+- confidence or track-quality shift
+- stale timer expiry
+
 # 10. Identification Modeling
 
 Identification answers:
@@ -321,6 +341,15 @@ Possible states:
 - Suspect
 
 Identification occurs after classification.
+
+Identification is also stateful.
+
+It should refresh less often than track maintenance and should be driven by:
+
+- strong enough classification
+- new sensor evidence
+- stale timer expiry
+- material confidence changes while the track remains `Unknown` or `Suspect`
 
 # 11. Intent Assessment
 
@@ -340,6 +369,17 @@ Possible intents:
 Intent is inferred from behavior.
 
 Intent is never directly known.
+
+In the current prototype, intent uses projected motion against defended Blue assets in the XY plane only.
+
+`Attack Run` is assessed when the projected XY path intersects a defended-asset corridor and the hostile is still closing.
+
+Threat drop is intentionally hysteretic:
+
+- one low-speed or opening-range update does not immediately clear elevated threat state
+- `Attack Run` / elevated TEWA threat drops only after 2 consecutive non-closing or low-speed updates
+
+Intent is also stateful and retained between scans unless motion, projected target, hysteresis state, or staleness conditions justify a refresh.
 
 # 12. Ghost Tracks and False Alarms
 
@@ -555,6 +595,14 @@ Metrics include:
 - Spoofed Tracks
 - EW Effectiveness
 - Sensor Utilization
+
+For the browser prototype, reporting should also preserve explainability artifacts, not just top-line outcomes.
+
+Important runtime outputs now include:
+
+- dynamic per-template ammo expenditure columns in Monte Carlo CSV
+- HQ survival, percent survived, and weighted survival score
+- compact `assessmentSnapshots` in single-run report JSON so state-retained classification, identification, and intent behavior can still be audited even when the event log is quieter
 - C2 Workload
 
 # 21. Validation Philosophy

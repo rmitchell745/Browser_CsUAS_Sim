@@ -533,27 +533,27 @@ Doctrine should influence target selection, timing, coordination, and risk toler
 
 The Run Scenario UI controls execution.
 
-Functions:
+Current prototype functions:
 
 - Load Scenario
 - Review Scenario Summary
-- Adjust Execution Parameters
 - Set number of Monte Carlo iterations
-- Set variance parameters
-- Execute Scenario
-- Cancel execution if supported
+- Execute single scenario
+- Execute Monte Carlo
+- Toggle ghost and clutter placeholders
+- Review validation status
 - Download raw outputs
 
-Execution parameters may include:
+Not yet implemented in the current prototype:
 
-- Number of iterations
-- Noise variance
-- Weather variance
-- Clutter density variance
-- Classification accuracy variance
-- Identification accuracy variance
-- EW effectiveness variance
-- Human latency variance
+- Noise variance controls
+- Weather variance controls
+- Clutter density variance controls
+- Classification accuracy variance controls
+- Identification accuracy variance controls
+- EW effectiveness variance controls
+- Human latency variance controls
+- Cancel execution
 
 The Run Scenario UI sends a compiled Scenario JSON to the Web Worker.
 
@@ -588,29 +588,32 @@ The UI should support progress updates when feasible.
 
 The Report Viewer visualizes completed runs.
 
-Primary views:
+Current prototype views:
 
-- Most Likely Scenario
-- Most Dangerous Scenario
-- Summary Statistics
-- Event Timeline
-- Track Timeline
-- Engagement Timeline
-- Heat Map View
-- Raw Data Export
+- single-run summary metrics
+- single-run detail list
+- event log
+- replay frames on the canvas
+- Monte Carlo aggregate table
+- raw export preview
 
 The report viewer should replay stored logs rather than rerunning the simulation.
+
+Assessment snapshots currently live in the single-run report JSON payload and are not yet exposed as a dedicated UI panel.
 
 ---
 
 # 19. Playback UI
 
-Playback should use returned logs to drive visualization.
+Playback should use returned world frames to drive visualization, not rerun the simulation.
 
 Controls:
 
 - Play
 - Pause
+
+Future controls not yet implemented:
+
 - Step Forward
 - Step Backward
 - Jump to Event
@@ -664,6 +667,14 @@ Minimum outputs may include:
 - Red_Jam_Attempts
 - Red_Jam_Successes
 
+Current prototype outputs also include:
+
+- `HQ_Survived`
+- `Percent_Survived`
+- `Weighted_Survival_Score`
+- one ammo expenditure column per Blue effector template present in the run
+- single-run report JSON with `logs`, `frames`, `tracks`, and `assessmentSnapshots`
+
 For every unique effector template in the roster, generate a dedicated ammo expenditure column.
 
 Example:
@@ -680,15 +691,14 @@ Template_Jammer_Ammo_Expended
 
 The UI should validate scenarios before execution.
 
-Validation checks may include:
+Current prototype validation checks focus on:
 
-- Missing templates
-- Empty rosters
-- Missing mission placement
-- Objects outside terrain bounds
-- Sensors without networks when required
-- Effectors without ammo or energy
-- Power consumers without power source
+- malformed JSON imports
+- missing or invalid scenario sections
+- template-instance mismatches
+- basic object placement and component consistency
+
+Broader power, terrain, and network validation remains future work.
 - C2 networks with no subscribed systems
 - Red force with no mission
 - Blue force with no defended assets

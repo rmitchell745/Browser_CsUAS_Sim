@@ -916,6 +916,8 @@ Effector Component
 
 Interceptor kinematics should come from the Movement Component, not from a nested interceptor-only schema.
 
+When the future `Interceptor Launcher` spawns a child interceptor, that child should exist as a separate runtime object with its own movement, health, and reporting lifecycle. The runtime child should preserve linkage back to its launcher and source effector through fields such as `parentLauncherId` and `sourceEffectorId`, rather than being modeled as an invisible abstract shot.
+
 ---
 
 # 10. Track Architecture
@@ -924,7 +926,11 @@ Tracks represent sensor/C2 beliefs.
 
 Tracks are not the same as physical objects.
 
-A track may point to a real object using `objectId`, or it may have `objectId: null` for ghost and spoofed tracks.
+A track may point to a real object using `realObjectId`, or it may have `realObjectId: null` for ghost and spoofed tracks.
+
+In the current browser prototype, tracks are runtime objects only. Scenario JSON authors do not define them directly.
+
+The authored scenario defines physical objects, sensors, effectors, and missions. Detection candidates then create or refresh runtime track beliefs during execution.
 
 ---
 
@@ -932,31 +938,31 @@ A track may point to a real object using `objectId`, or it may have `objectId: n
 
 ```json
 {
-  "trackId": "Track-001",
-  "objectId": "Inst-Red-UAS-01",
+  "id": "Track-001",
+  "realObjectId": "Inst-Red-UAS-01",
   "trackType": "Real",
   "owningSide": "Blue",
   "perceivedSide": "Unknown",
   "sourceSensorIds": ["Inst-Blue-Radar-01"],
   "detectionConfidence": 0.8,
-  "classificationStatus": "Unknown",
+  "classificationStatus": "Unknown Air Object",
   "classificationConfidence": 0.0,
   "identificationStatus": "Unknown",
   "identificationConfidence": 0.0,
   "intentStatus": "Unknown",
   "intentConfidence": 0.0,
   "trackQuality": 0.75,
-  "isGhost": false,
-  "isSpoofed": false,
-  "lastUpdateTime": 12.5,
-  "staleAfter_sec": 5.0
+  "status": "Active",
+  "lastUpdateTimeSec": 12.5,
+  "staleAfterSec": 5.0,
+  "pendingEngagement": false
 }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| `trackId` | String | Unique track identifier. |
-| `objectId` | String/null | Physical object represented by track, if any. |
+| `id` | String | Unique track identifier. |
+| `realObjectId` | String/null | Physical object represented by track, if any. |
 | `trackType` | Enum | Real, Ghost, Spoof, Decoy, or Clutter. |
 | `owningSide` | Enum | Side that owns the track. |
 | `perceivedSide` | Enum | Current perceived affiliation. |
@@ -969,12 +975,32 @@ A track may point to a real object using `objectId`, or it may have `objectId: n
 | `intentStatus` | Enum | What the object is believed to be doing. |
 | `intentConfidence` | Float | Confidence in intent. |
 | `trackQuality` | Float | Overall track quality. |
-| `isGhost` | Boolean | Track has no physical object. |
-| `isSpoofed` | Boolean | Track was intentionally spoofed. |
-| `lastUpdateTime` | Float | Last update time in seconds. |
-| `staleAfter_sec` | Float | Time until the track is stale. |
+| `status` | Enum | Active or Dropped. |
+| `lastUpdateTimeSec` | Float | Last update time in seconds. |
+| `staleAfterSec` | Float | Time until the track is stale. |
+| `pendingEngagement` | Boolean | C2 has already committed an effector to this track. |
+
+### Runtime-Only Track Fields
+
+The prototype also stores runtime-only track fields that should not be authored in scenario JSON:
+
+- `position`, `rangeM`, and `history`
+- `currentSpeedMps` and `currentHeadingUnitXY`
+- `currentProjectedAssetId`, `projectedTargetId`, and `effectiveThreatDistanceXYM`
+- `estimatedPayloadScore`, `timeToImpactSec`, and `threatScore`
+- `threatState` for TEWA hysteresis continuity
+- `assessmentState` for stateful classification, identification, and intent refresh gating
 
 C2 threat estimates such as projected target asset, time-to-impact, and estimated payload score are runtime assessments derived from track motion, size/signature clues, and behavior. They should not be authored as fixed Red UAS scenario fields.
+
+The current browser prototype uses a stateful assessment model:
+
+- detection candidates may update an existing track many times
+- classification refreshes only on meaningful triggers or staleness
+- identification refreshes only when classification or confidence conditions justify it
+- intent refreshes only on meaningful motion, projected-target, hysteresis, or staleness changes
+
+Compact per-cycle assessment snapshots are retained in report output for debugging, even when the user-facing event log is quieter.
 
 ### Track Type Enum
 
@@ -996,7 +1022,7 @@ Balloon
 GroundClutter
 Decoy
 Missile
-UnknownAirObject
+Unknown Air Object
 ```
 
 ### Identification Status Enum
@@ -1017,8 +1043,8 @@ Transit
 Loiter
 Recon
 Jamming
-AttackRun
-TerminalDive
+Attack Run
+Terminal Dive
 ```
 
 ---

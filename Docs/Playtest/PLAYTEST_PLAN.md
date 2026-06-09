@@ -16,6 +16,7 @@ Use these files with `Load Scenario JSON`, then run:
 2. `playtest_02_lock_and_fire_loop.json`
 3. `playtest_03_tewa_priority.json`
 4. `playtest_04_dynamic_csv_multi_effector.json`
+5. `playtest_05_stateful_assessment.json`
 
 ## Scenario 1: Baseline Single Kill Chain
 
@@ -112,8 +113,34 @@ Pass criteria:
 - Both ammo columns are present.
 - Values are numeric and non-empty for runs where each site fires.
 
+## Scenario 5: Stateful Assessment Hold
+
+File:
+`playtest_05_stateful_assessment.json`
+
+Purpose:
+- Verify classification, identification, and intent no longer rerun on every scan during a stable single-track hold.
+- Verify compact assessment snapshots preserve per-cycle refresh/skip visibility for debugging.
+
+Single-run expectations:
+- The Red UAS remains continuously tracked.
+- Event log still shows the initial detect -> classify -> identify -> intent chain, but it should be less chatty afterward.
+- The Blue site does not fire because the effector ammo is intentionally `0`.
+- The single-run report JSON should include `assessmentSnapshots`.
+- Within those snapshots, classification and identification should show a mix of `refreshed` then `skipped` actions.
+- Intent should hold steady as `Attack Run` between refreshes until a stale refresh or a meaningful motion/threat change occurs.
+
+Monte Carlo suggestion:
+- Skip Monte Carlo for this scenario unless you are specifically checking for deterministic gating behavior across seeds.
+
+Pass criteria:
+- Track maintenance continues while at least some classification, identification, and intent cycles are marked `skipped`.
+- No runtime errors occur when `assessmentSnapshots` grows during the run.
+- The retained intent does not prevent TEWA or C2 from keeping current threat geometry in the report data.
+
 ## Notes For Review
 
 - The TEWA payload estimate is heuristic by design. Review it from the event log, not as ground truth.
 - `Ghost` and `Clutter` placeholders are not part of this playtest set because the current work focused on engagement, prioritization, and reporting.
 - If a scenario behaves unexpectedly, export the event log JSON immediately after the run so the exact event ordering is preserved.
+- The event log is now intentionally quieter than the raw assessment cadence. Use the report JSON `assessmentSnapshots` payload when you need the retained per-cycle refresh/skip picture.

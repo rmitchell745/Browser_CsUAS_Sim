@@ -734,6 +734,14 @@
       const MIN_STATE_DELAY_SEC = 0.1;
       const THREAT_SPEED_THRESHOLD_MPS = 5;
       const THREAT_DISTANCE_EPSILON_M = 1;
+      const CLASSIFICATION_STALE_SEC = 12;
+      const IDENTIFICATION_STALE_SEC = 15;
+      const INTENT_STALE_SEC = 6;
+      const CLASSIFICATION_CONFIDENCE_DELTA = 0.12;
+      const IDENTIFICATION_CONFIDENCE_DELTA = 0.1;
+      const TRACK_QUALITY_DELTA = 0.1;
+      const INTENT_SPEED_DELTA_MPS = 3;
+      const INTENT_HEADING_DELTA_DEG = 18;
 
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
@@ -1257,6 +1265,206 @@
         effectorState.lockedTargetId = null;
       }
 
+      function createAssessmentStageState() {
+        return {
+          lastRefreshTimeSec: null,
+          lastDecisionTimeSec: null,
+          lastReason: "never",
+          refreshCount: 0,
+          skipCount: 0
+        };
+      }
+
+      function createTrackAssessmentState() {
+        return {
+          nextCycleId: 0,
+          currentCycleId: null,
+          cycles: {},
+          classification: {
+            ...createAssessmentStageState(),
+            lastDetectionConfidence: null,
+            lastTrackQuality: null,
+            lastSourceSensorCount: 0,
+            lastStatus: "Unknown Air Object"
+          },
+          identification: {
+            ...createAssessmentStageState(),
+            lastTrackQuality: null,
+            lastSourceSensorCount: 0,
+            lastStatus: "Unknown",
+            lastClassificationStatus: "Unknown Air Object",
+            lastClassificationConfidence: 0
+          },
+          intent: {
+            ...createAssessmentStageState(),
+            lastSpeedMps: null,
+            lastHeadingUnitXY: null,
+            lastProjectedAssetId: null,
+            lastProjectedDistanceXYM: null,
+            lastAttackRunActive: false,
+            lastThreatReason: "none",
+            lastNonClosingCount: 0
+          }
+        };
+      }
+
+      function getTrackAssessmentState(track) {
+        if (!track.assessmentState) {
+          track.assessmentState = createTrackAssessmentState();
+        }
+        return track.assessmentState;
+      }
+
+      function startAssessmentCycle(track, timeSec, context = {}) {
+        const assessmentState = getTrackAssessmentState(track);
+        const cycleId = assessmentState.nextCycleId + 1;
+        assessmentState.nextCycleId = cycleId;
+        assessmentState.currentCycleId = cycleId;
+        assessmentState.cycles[cycleId] = {
+          id: cycleId,
+          timeSec: round(timeSec, 2),
+          observerId: context.observerId || null,
+          sensorId: context.sensorId || null,
+          sourceSensorCount: Number(context.sourceSensorCount || 0),
+          newSensorContribution: !!context.newSensorContribution,
+          classification: { action: "pending", reason: "pending" },
+          identification: { action: "pending", reason: "pending" },
+          intent: { action: "pending", reason: "pending" }
+        };
+        return assessmentState.cycles[cycleId];
+      }
+
+      function getAssessmentCycle(track, cycleId = null) {
+        const assessmentState = getTrackAssessmentState(track);
+        const resolvedCycleId = cycleId == null ? assessmentState.currentCycleId : cycleId;
+        return Number.isFinite(resolvedCycleId) ? (assessmentState.cycles[resolvedCycleId] || null) : null;
+      }
+
+      function pruneAssessmentCycles(track, keepCycleId = null) {
+        const assessmentState = getTrackAssessmentState(track);
+        const retainedIds = Object.keys(assessmentState.cycles)
+          .map((value) => Number(value))
+          .filter((value) => Number.isFinite(value))
+          .sort((left, right) => left - right);
+        while (retainedIds.length > 6) {
+          const oldestId = retainedIds.shift();
+          if (oldestId === assessmentState.currentCycleId || oldestId === keepCycleId) {
+            retainedIds.push(oldestId);
+            retainedIds.sort((left, right) => left - right);
+            break;
+          }
+          delete assessmentState.cycles[oldestId];
+        }
+      }
+
+      function recordAssessmentDecision(track, stageName, action, reason, timeSec, cycleId = null) {
+        const assessmentState = getTrackAssessmentState(track);
+        const stageState = assessmentState[stageName];
+        stageState.lastDecisionTimeSec = round(timeSec, 2);
+        stageState.lastReason = reason;
+        if (action === "refreshed") {
+          stageState.refreshCount += 1;
+        } else {
+          stageState.skipCount += 1;
+        }
+
+        const cycle = getAssessmentCycle(track, cycleId);
+        if (cycle) {
+          cycle[stageName] = { action, reason };
+        }
+      }
+
+      function commitClassificationAssessment(track, timeSec) {
+        const stageState = getTrackAssessmentState(track).classification;
+        stageState.lastRefreshTimeSec = round(timeSec, 2);
+        stageState.lastDetectionConfidence = track.detectionConfidence;
+        stageState.lastTrackQuality = track.trackQuality;
+        stageState.lastSourceSensorCount = track.sourceSensorIds.length;
+        stageState.lastStatus = track.classificationStatus;
+      }
+
+      function commitIdentificationAssessment(track, timeSec) {
+        const stageState = getTrackAssessmentState(track).identification;
+        stageState.lastRefreshTimeSec = round(timeSec, 2);
+        stageState.lastTrackQuality = track.trackQuality;
+        stageState.lastSourceSensorCount = track.sourceSensorIds.length;
+        stageState.lastStatus = track.identificationStatus;
+        stageState.lastClassificationStatus = track.classificationStatus;
+        stageState.lastClassificationConfidence = track.classificationConfidence;
+      }
+
+      function commitIntentAssessment(track, assessmentResult, timeSec) {
+        const stageState = getTrackAssessmentState(track).intent;
+        stageState.lastRefreshTimeSec = round(timeSec, 2);
+        stageState.lastSpeedMps = round(assessmentResult.speedMps, 2);
+        stageState.lastHeadingUnitXY = assessmentResult.headingUnitXY
+          ? {
+            x: round(assessmentResult.headingUnitXY.x, 4),
+            y: round(assessmentResult.headingUnitXY.y, 4),
+            z: 0
+          }
+          : null;
+        stageState.lastProjectedAssetId = assessmentResult.effectiveThreatAssetId || null;
+        stageState.lastProjectedDistanceXYM = Number.isFinite(assessmentResult.effectiveThreatDistanceXYM)
+          ? round(assessmentResult.effectiveThreatDistanceXYM, 2)
+          : null;
+        stageState.lastAttackRunActive = !!assessmentResult.attackRunActive;
+        stageState.lastThreatReason = assessmentResult.threatReason || "none";
+        stageState.lastNonClosingCount = assessmentResult.nonClosingCount ?? 0;
+      }
+
+      function headingChangeDegrees(previousHeading, currentHeading) {
+        if (!previousHeading && !currentHeading) {
+          return 0;
+        }
+        if (!previousHeading || !currentHeading) {
+          return 180;
+        }
+        const cosine = clamp(dotProduct2D(previousHeading, currentHeading), -1, 1);
+        return Math.acos(cosine) * (180 / Math.PI);
+      }
+
+      function recordAssessmentSnapshot(world, track, timeSec, cycleId = null) {
+        const cycle = getAssessmentCycle(track, cycleId);
+        const assessmentState = getTrackAssessmentState(track);
+        world.assessmentSnapshots.push({
+          timeSec: round(timeSec, 2),
+          trackId: track.id,
+          cycleId: cycle ? cycle.id : null,
+          sourceSensorCount: track.sourceSensorIds.length,
+          sourceSensorIds: deepClone(track.sourceSensorIds),
+          classificationStatus: track.classificationStatus,
+          identificationStatus: track.identificationStatus,
+          intentStatus: track.intentStatus,
+          projectedTargetId: track.projectedTargetId || null,
+          currentProjectedAssetId: track.currentProjectedAssetId || null,
+          currentSpeedMps: track.currentSpeedMps ?? null,
+          threatScore: track.threatScore ?? null,
+          threatNonClosingCount: track.threatNonClosingCount ?? 0,
+          threatReason: track.threatReason || "none",
+          stages: {
+            classification: deepClone(cycle?.classification || { action: "unknown", reason: "no-cycle" }),
+            identification: deepClone(cycle?.identification || { action: "unknown", reason: "no-cycle" }),
+            intent: deepClone(cycle?.intent || { action: "unknown", reason: "no-cycle" })
+          },
+          stageCounts: {
+            classification: {
+              refreshes: assessmentState.classification.refreshCount,
+              skips: assessmentState.classification.skipCount
+            },
+            identification: {
+              refreshes: assessmentState.identification.refreshCount,
+              skips: assessmentState.identification.skipCount
+            },
+            intent: {
+              refreshes: assessmentState.intent.refreshCount,
+              skips: assessmentState.intent.skipCount
+            }
+          }
+        });
+        pruneAssessmentCycles(track, cycle ? cycle.id : null);
+      }
+
       function getVelocityVector(track, target) {
         const history = track?.history || [];
         if (history.length >= 2) {
@@ -1358,11 +1566,14 @@
         return track.threatState;
       }
 
-      function updateTrackThreatAssessment(world, track, target) {
+      function updateTrackThreatAssessment(world, track, target, options = {}) {
+        const commitState = options.commitState !== false;
+        const updateTrackFields = options.updateTrackFields !== false;
         const threatState = getTrackThreatState(track);
         const originPosition = track.position || target.runtime.position;
         const velocityVector = getVelocityVector(track, target);
         const speedMps = magnitude3D(velocityVector);
+        const headingUnitXY = normalizeVector2D(velocityVector);
         const currentProjectedAsset = resolveProjectedAsset(world, originPosition, velocityVector, null);
         const currentProjectedAssetId = currentProjectedAsset.asset && currentProjectedAsset.intersectsPath
           ? currentProjectedAsset.asset.id
@@ -1411,28 +1622,40 @@
           threatReason = "opening-range";
         }
 
-        if (currentlyClosing) {
-          threatState.lastThreatAssetId = currentProjectedAssetId;
-          threatState.lastThreatDistanceXYM = currentProjectedDistanceXYM;
-        } else if (!attackRunActive) {
-          threatState.lastThreatAssetId = null;
-          threatState.lastThreatDistanceXYM = null;
+        if (commitState) {
+          if (currentlyClosing) {
+            threatState.lastThreatAssetId = currentProjectedAssetId;
+            threatState.lastThreatDistanceXYM = currentProjectedDistanceXYM;
+          } else if (!attackRunActive) {
+            threatState.lastThreatAssetId = null;
+            threatState.lastThreatDistanceXYM = null;
+          }
+
+          threatState.attackRunActive = attackRunActive;
+          threatState.nonClosingCount = attackRunActive ? nonClosingCount : 0;
         }
 
-        threatState.attackRunActive = attackRunActive;
-        threatState.nonClosingCount = attackRunActive ? nonClosingCount : 0;
-
-        track.currentSpeedMps = round(speedMps, 2);
-        track.currentProjectedAssetId = currentProjectedAssetId;
-        track.currentProjectedDistanceXYM = Number.isFinite(currentProjectedDistanceXYM) ? round(currentProjectedDistanceXYM, 2) : null;
-        track.projectedTargetId = effectiveThreatAssetId;
-        track.effectiveThreatDistanceXYM = Number.isFinite(effectiveThreatDistanceXYM) ? round(effectiveThreatDistanceXYM, 2) : null;
-        track.attackRunActive = attackRunActive;
-        track.threatNonClosingCount = nonClosingCount;
-        track.threatReason = threatReason;
+        if (updateTrackFields) {
+          track.currentSpeedMps = round(speedMps, 2);
+          track.currentHeadingUnitXY = headingUnitXY
+            ? {
+              x: round(headingUnitXY.x, 4),
+              y: round(headingUnitXY.y, 4),
+              z: 0
+            }
+            : null;
+          track.currentProjectedAssetId = currentProjectedAssetId;
+          track.currentProjectedDistanceXYM = Number.isFinite(currentProjectedDistanceXYM) ? round(currentProjectedDistanceXYM, 2) : null;
+          track.projectedTargetId = effectiveThreatAssetId;
+          track.effectiveThreatDistanceXYM = Number.isFinite(effectiveThreatDistanceXYM) ? round(effectiveThreatDistanceXYM, 2) : null;
+          track.attackRunActive = attackRunActive;
+          track.threatNonClosingCount = nonClosingCount;
+          track.threatReason = threatReason;
+        }
 
         return {
           speedMps,
+          headingUnitXY,
           currentProjectedAsset,
           currentProjectedAssetId,
           currentProjectedDistanceXYM,
@@ -1525,6 +1748,7 @@
             threatsDestroyed: destroyedRedObjects.length,
             shotsFired: world.metrics.shotsFired,
             eventCount: world.logs.length,
+            assessmentSnapshotCount: world.assessmentSnapshots.length,
             ammoExpended: deepClone(world.metrics.ammoExpended),
             finalTargetStatus: destroyedRedObjects.length > 0
               ? "Destroyed"
@@ -1534,6 +1758,7 @@
             finalIdentificationStatus: primaryTrack ? primaryTrack.identificationStatus : "None",
             finalIntentStatus: primaryTrack ? primaryTrack.intentStatus : "None",
             logs: deepClone(world.logs),
+            assessmentSnapshots: deepClone(world.assessmentSnapshots),
             frames: deepClone(world.frames),
             tracks: deepClone(world.tracks)
           }
@@ -1985,6 +2210,7 @@
               history: [],
               pendingEngagement: false,
               agingToken: 0,
+              assessmentState: createTrackAssessmentState(),
               threatState: {
                 attackRunActive: false,
                 nonClosingCount: 0,
@@ -2011,7 +2237,8 @@
             );
           }
 
-          if (!track.sourceSensorIds.includes(sensor.id)) {
+          const newSensorContribution = !track.sourceSensorIds.includes(sensor.id);
+          if (newSensorContribution) {
             track.sourceSensorIds.push(sensor.id);
           }
           track.lastUpdateTimeSec = round(event.time, 2);
@@ -2026,6 +2253,13 @@
             position: deepClone(target.runtime.position)
           });
 
+          const cycle = startAssessmentCycle(track, event.time, {
+            observerId: observer.id,
+            sensorId: sensor.id,
+            sourceSensorCount: track.sourceSensorIds.length,
+            newSensorContribution
+          });
+
           this.scheduleTrackAging(track, event.time, services.events);
           services.captureFrame(world, event.time, "track");
 
@@ -2036,7 +2270,8 @@
               trackId: track.id,
               observerId: observer.id,
               sensorId: sensor.id,
-              baseConfidence: event.payload.confidence
+              baseConfidence: event.payload.confidence,
+              cycleId: cycle.id
             }
           }, { enforceMinimumDelay: sensor.classification.latencySec <= 0 });
         }
@@ -2069,7 +2304,49 @@
           const track = getTrack(world, event.payload.trackId);
           const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
           const target = track ? getObject(world, track.realObjectId) : null;
-          if (!track || track.status !== "Active" || !sensor) {
+          const assessmentState = track ? getTrackAssessmentState(track) : null;
+          if (!track || track.status !== "Active" || !sensor || !assessmentState) {
+            return;
+          }
+
+          const cycle = getAssessmentCycle(track, event.payload.cycleId);
+          if (!cycle) {
+            return;
+          }
+
+          const stageState = assessmentState.classification;
+          let shouldRefresh = false;
+          let reason = "retained";
+          if (!Number.isFinite(stageState.lastRefreshTimeSec)) {
+            shouldRefresh = true;
+            reason = "initial";
+          } else if (cycle.newSensorContribution) {
+            shouldRefresh = true;
+            reason = "new-sensor";
+          } else if (Math.abs(track.detectionConfidence - (stageState.lastDetectionConfidence ?? track.detectionConfidence)) >= CLASSIFICATION_CONFIDENCE_DELTA) {
+            shouldRefresh = true;
+            reason = "detection-confidence-shift";
+          } else if (Math.abs(track.trackQuality - (stageState.lastTrackQuality ?? track.trackQuality)) >= TRACK_QUALITY_DELTA) {
+            shouldRefresh = true;
+            reason = "track-quality-shift";
+          } else if ((event.time - stageState.lastRefreshTimeSec) >= CLASSIFICATION_STALE_SEC) {
+            shouldRefresh = true;
+            reason = "stale";
+          }
+
+          if (!shouldRefresh) {
+            recordAssessmentDecision(track, "classification", "skipped", reason, event.time, cycle.id);
+            const skipDelaySec = sensor.identification.canIdentify ? sensor.identification.latencySec : 0;
+            services.events.scheduleDelay(event.time, skipDelaySec, {
+              type: "identification.process",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                trackId: track.id,
+                observerId: event.payload.observerId,
+                sensorId: sensor.id,
+                cycleId: cycle.id
+              }
+            }, { enforceMinimumDelay: skipDelaySec <= 0 });
             return;
           }
 
@@ -2077,6 +2354,8 @@
             track.classificationStatus = "Unknown Air Object";
             track.classificationConfidence = 0.2;
             world.metrics.classifications += 1;
+            recordAssessmentDecision(track, "classification", "refreshed", reason, event.time, cycle.id);
+            commitClassificationAssessment(track, event.time);
             services.logger.record(
               world,
               event.time,
@@ -2094,7 +2373,8 @@
               payload: {
                 trackId: track.id,
                 observerId: event.payload.observerId,
-                sensorId: sensor.id
+                sensorId: sensor.id,
+                cycleId: cycle.id
               }
             }, { enforceMinimumDelay: true });
             return;
@@ -2118,6 +2398,8 @@
             : "Unknown Air Object";
           track.classificationConfidence = round(confidence, 2);
           world.metrics.classifications += 1;
+          recordAssessmentDecision(track, "classification", "refreshed", reason, event.time, cycle.id);
+          commitClassificationAssessment(track, event.time);
 
           services.logger.record(
             world,
@@ -2140,7 +2422,8 @@
             payload: {
               trackId: track.id,
               observerId: event.payload.observerId,
-              sensorId: sensor.id
+              sensorId: sensor.id,
+              cycleId: cycle.id
             }
           }, { enforceMinimumDelay: delaySec <= 0 });
         }
@@ -2152,7 +2435,58 @@
           const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
           const observer = getObject(world, event.payload.observerId);
           const target = track ? getObject(world, track.realObjectId) : null;
-          if (!track || track.status !== "Active" || !sensor || !observer) {
+          const assessmentState = track ? getTrackAssessmentState(track) : null;
+          if (!track || track.status !== "Active" || !sensor || !observer || !assessmentState) {
+            return;
+          }
+
+          const cycle = getAssessmentCycle(track, event.payload.cycleId);
+          if (!cycle) {
+            return;
+          }
+
+          const stageState = assessmentState.identification;
+          let shouldRefresh = false;
+          let reason = "retained";
+          if (track.classificationStatus === "Unknown Air Object") {
+            reason = "classification-unknown";
+          } else if (track.classificationConfidence < 0.45) {
+            reason = "classification-weak";
+          } else if (!Number.isFinite(stageState.lastRefreshTimeSec)) {
+            shouldRefresh = true;
+            reason = "initial";
+          } else if (cycle.classification.action === "refreshed") {
+            shouldRefresh = true;
+            reason = "classification-updated";
+          } else if (cycle.newSensorContribution) {
+            shouldRefresh = true;
+            reason = "new-sensor";
+          } else if ((event.time - stageState.lastRefreshTimeSec) >= IDENTIFICATION_STALE_SEC) {
+            shouldRefresh = true;
+            reason = "stale";
+          } else if (
+            (track.identificationStatus === "Unknown" || track.identificationStatus === "Suspect")
+            && (
+              Math.abs(track.trackQuality - (stageState.lastTrackQuality ?? track.trackQuality)) >= TRACK_QUALITY_DELTA
+              || Math.abs(track.classificationConfidence - (stageState.lastClassificationConfidence ?? track.classificationConfidence)) >= IDENTIFICATION_CONFIDENCE_DELTA
+            )
+          ) {
+            shouldRefresh = true;
+            reason = track.identificationStatus === "Unknown"
+              ? "unknown-confidence-shift"
+              : "suspect-confidence-shift";
+          }
+
+          if (!shouldRefresh) {
+            recordAssessmentDecision(track, "identification", "skipped", reason, event.time, cycle.id);
+            services.events.scheduleDelay(event.time, 0.2, {
+              type: "intent.process",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                trackId: track.id,
+                cycleId: cycle.id
+              }
+            }, { enforceMinimumDelay: true });
             return;
           }
 
@@ -2160,6 +2494,8 @@
             track.identificationStatus = "Unknown";
             track.identificationConfidence = 0.08;
             world.metrics.identifications += 1;
+            recordAssessmentDecision(track, "identification", "refreshed", reason, event.time, cycle.id);
+            commitIdentificationAssessment(track, event.time);
             services.logger.record(
               world,
               event.time,
@@ -2175,7 +2511,8 @@
               type: "intent.process",
               priority: EVENT_PRIORITIES.track,
               payload: {
-                trackId: track.id
+                trackId: track.id,
+                cycleId: cycle.id
               }
             }, { enforceMinimumDelay: true });
             return;
@@ -2207,6 +2544,8 @@
           track.identificationConfidence = round(confidence, 2);
           track.perceivedSide = identificationStatus;
           world.metrics.identifications += 1;
+          recordAssessmentDecision(track, "identification", "refreshed", reason, event.time, cycle.id);
+          commitIdentificationAssessment(track, event.time);
 
           services.logger.record(
             world,
@@ -2226,7 +2565,8 @@
             type: "intent.process",
             priority: EVENT_PRIORITIES.track,
             payload: {
-              trackId: track.id
+              trackId: track.id,
+              cycleId: cycle.id
             }
           }, { enforceMinimumDelay: true });
         }
@@ -2236,14 +2576,23 @@
         process(event, world, services) {
           const track = getTrack(world, event.payload.trackId);
           const target = track ? getObject(world, track.realObjectId) : null;
-          if (!track || track.status !== "Active") {
+          const assessmentState = track ? getTrackAssessmentState(track) : null;
+          if (!track || track.status !== "Active" || !assessmentState) {
             return;
           }
+
+          const cycle = getAssessmentCycle(track, event.payload.cycleId);
+          if (!cycle) {
+            return;
+          }
+
+          const stageState = assessmentState.intent;
 
           if (track.trackType === "Ghost") {
             track.intentStatus = "Unknown";
             track.intentConfidence = 0.1;
             world.metrics.intentsAssessed += 1;
+            recordAssessmentDecision(track, "intent", "refreshed", "ghost-track", event.time, cycle.id);
             services.logger.record(
               world,
               event.time,
@@ -2261,7 +2610,8 @@
               type: "c2.decide",
               priority: EVENT_PRIORITIES.c2,
               payload: {
-                trackId: track.id
+                trackId: track.id,
+                cycleId: cycle.id
               }
             });
             return;
@@ -2271,51 +2621,102 @@
             return;
           }
 
-          let intentStatus = "Unknown";
-          let confidence = clamp(0.42 + world.randomization.intentBias + services.rng.nextGaussian(0, 0.03), 0.1, 0.99);
+          const previewAssessment = updateTrackThreatAssessment(world, track, target, {
+            commitState: false,
+            updateTrackFields: false
+          });
+          track.currentSpeedMps = round(previewAssessment.speedMps, 2);
+          track.currentHeadingUnitXY = previewAssessment.headingUnitXY
+            ? {
+              x: round(previewAssessment.headingUnitXY.x, 4),
+              y: round(previewAssessment.headingUnitXY.y, 4),
+              z: 0
+            }
+            : null;
+          track.currentProjectedAssetId = previewAssessment.currentProjectedAssetId || null;
+          track.currentProjectedDistanceXYM = Number.isFinite(previewAssessment.currentProjectedDistanceXYM)
+            ? round(previewAssessment.currentProjectedDistanceXYM, 2)
+            : null;
+          const speedDelta = Math.abs(previewAssessment.speedMps - (stageState.lastSpeedMps ?? previewAssessment.speedMps));
+          const headingDeltaDeg = headingChangeDegrees(stageState.lastHeadingUnitXY, previewAssessment.headingUnitXY);
 
-          if (track.classificationStatus === "UAS") {
+          let shouldRefresh = false;
+          let reason = "retained";
+          if (!Number.isFinite(stageState.lastRefreshTimeSec)) {
+            shouldRefresh = true;
+            reason = "initial";
+          } else if ((event.time - stageState.lastRefreshTimeSec) >= INTENT_STALE_SEC) {
+            shouldRefresh = true;
+            reason = "stale";
+          } else if ((stageState.lastProjectedAssetId || null) !== (previewAssessment.effectiveThreatAssetId || null)) {
+            shouldRefresh = true;
+            reason = "projected-asset-change";
+          } else if (stageState.lastAttackRunActive !== previewAssessment.attackRunActive) {
+            shouldRefresh = true;
+            reason = "attack-run-change";
+          } else if ((stageState.lastNonClosingCount ?? 0) !== (previewAssessment.nonClosingCount ?? 0)) {
+            shouldRefresh = true;
+            reason = "hysteresis-change";
+          } else if (speedDelta >= INTENT_SPEED_DELTA_MPS) {
+            shouldRefresh = true;
+            reason = "speed-change";
+          } else if (headingDeltaDeg >= INTENT_HEADING_DELTA_DEG) {
+            shouldRefresh = true;
+            reason = "heading-change";
+          }
+
+          if (shouldRefresh) {
+            let intentStatus = "Unknown";
+            let confidence = clamp(0.42 + world.randomization.intentBias + services.rng.nextGaussian(0, 0.03), 0.1, 0.99);
             const threatAssessment = updateTrackThreatAssessment(world, track, target);
 
             intentStatus = "Transit";
-            if (threatAssessment.attackRunActive) {
+            if (track.classificationStatus !== "UAS") {
+              intentStatus = "Unknown";
+            } else if (threatAssessment.attackRunActive) {
               intentStatus = "Attack Run";
               confidence += 0.18;
             } else if (threatAssessment.speedMps < THREAT_SPEED_THRESHOLD_MPS) {
               intentStatus = "Loiter";
               confidence += 0.12;
             }
+
+            track.intentStatus = intentStatus;
+            track.intentConfidence = round(clamp(confidence, 0.05, 0.99), 2);
+            world.metrics.intentsAssessed += 1;
+            recordAssessmentDecision(track, "intent", "refreshed", reason, event.time, cycle.id);
+            commitIntentAssessment(track, threatAssessment, event.time);
+
+            services.logger.record(
+              world,
+              event.time,
+              "intent",
+              track.id + " assessed intent " + intentStatus,
+              {
+                trackId: track.id,
+                intent: intentStatus,
+                confidence: track.intentConfidence,
+                projectedTargetId: track.projectedTargetId || null,
+                currentProjectedAssetId: track.currentProjectedAssetId || null,
+                currentSpeedMps: track.currentSpeedMps ?? null,
+                threatNonClosingCount: track.threatNonClosingCount ?? 0,
+                threatReason: track.threatReason || "none",
+                assessmentReason: reason
+              }
+            );
+
+            services.captureFrame(world, event.time, "intent");
+          } else {
+            recordAssessmentDecision(track, "intent", "skipped", reason, event.time, cycle.id);
           }
-
-          track.intentStatus = intentStatus;
-          track.intentConfidence = round(clamp(confidence, 0.05, 0.99), 2);
-          world.metrics.intentsAssessed += 1;
-
-          services.logger.record(
-            world,
-            event.time,
-            "intent",
-            track.id + " assessed intent " + intentStatus,
-            {
-              trackId: track.id,
-              intent: intentStatus,
-              confidence: track.intentConfidence,
-              projectedTargetId: track.projectedTargetId || null,
-              currentProjectedAssetId: track.currentProjectedAssetId || null,
-              currentSpeedMps: track.currentSpeedMps ?? null,
-              threatNonClosingCount: track.threatNonClosingCount ?? 0,
-              threatReason: track.threatReason || "none"
-            }
-          );
-
-          services.captureFrame(world, event.time, "intent");
 
           services.events.schedule({
             time: event.time,
             type: "c2.decide",
             priority: EVENT_PRIORITIES.c2,
             payload: {
-              trackId: track.id
+              trackId: track.id,
+              cycleId: cycle.id
             }
           });
         }
@@ -2341,14 +2742,18 @@
               const projectedAssetValue = projectedAsset
                 ? Number(projectedAsset.components.health.assetValuePts || 1)
                 : 1;
+              const currentThreatDistanceXYM = projectedAsset
+                ? distance2D(track.position || target.runtime.position, projectedAsset.runtime.position)
+                : (track.effectiveThreatDistanceXYM ?? Infinity);
               const ttiSec = speedMps > 0
-                ? Math.max(0.1, (track.effectiveThreatDistanceXYM ?? distance2D(track.position || target.runtime.position, projectedAsset.runtime.position)) / speedMps)
+                ? Math.max(0.1, currentThreatDistanceXYM / speedMps)
                 : Number.POSITIVE_INFINITY;
               const threatScore = Number.isFinite(ttiSec)
                 ? round((payloadScore * projectedAssetValue) / ttiSec, 4)
                 : 0;
 
               track.estimatedPayloadScore = payloadScore;
+              track.currentSpeedMps = round(speedMps, 2);
               track.timeToImpactSec = Number.isFinite(ttiSec) ? round(ttiSec, 2) : null;
               track.threatScore = threatScore;
 
@@ -2428,6 +2833,11 @@
                 break;
               }
             }
+          }
+
+          const snapshotTrack = event.payload.trackId ? getTrack(world, event.payload.trackId) : null;
+          if (snapshotTrack && snapshotTrack.status === "Active") {
+            recordAssessmentSnapshot(world, snapshotTrack, event.time, event.payload.cycleId);
           }
         }
       }
@@ -2872,6 +3282,7 @@
             tracks: {},
             nextTrackId: 1,
             logs: [],
+            assessmentSnapshots: [],
             frames: [],
             config: deepClone(scenario.config),
             environment: deepClone(scenario.environment),
@@ -3718,6 +4129,7 @@
           ["Threats destroyed", report.threatsDestroyed],
           ["Shots fired", report.shotsFired],
           ["Event count", report.eventCount],
+          ["Assessment snapshots", report.assessmentSnapshotCount || 0],
           ["Final target status", report.finalTargetStatus]
         ];
         detailsContainer.innerHTML = details.map(([label, value]) => (
