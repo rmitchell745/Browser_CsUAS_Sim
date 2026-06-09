@@ -4,7 +4,7 @@
   <!-- Ryan D Mitchell -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Browser CsUAS Sim</title>
+  <title>Browser CsUAS Sim v2.00</title>
   <style>
     :root {
       --bg-top: #080212;
@@ -777,7 +777,7 @@
   <div class="app-shell">
     <header class="hero">
       <div>
-        <h1>Browser CsUAS Sim</h1>
+        <h1>Browser CsUAS Sim v2.00</h1>
         <p>
           Single-file browser prototype for a component-system discrete event simulation.
           The current slice runs one hardcoded Red UAS against one Blue sensor / effector site,
@@ -1342,15 +1342,19 @@
         <div class="summary-grid">
           <div class="timeline-card">
             <h4>Current Version</h4>
-            <div class="summary-meta">Browser CsUAS Sim: builder-first SME workflow pass with Scenario Wizard, Template Builder, grouped validation, report playback, Monte Carlo CSV, and structured export previews.</div>
+            <div class="summary-meta">Browser CsUAS Sim v2.00: builder-first SME workflow pass with Scenario Wizard, Template Builder, grouped validation, report playback, Monte Carlo CSV, structured export previews, and grouped Red threat authoring.</div>
+          </div>
+          <div class="timeline-card">
+            <h4>Current Physics / Models</h4>
+            <div class="summary-meta">Implemented today: waypoint movement, sensor range/FOV/signal-threshold detection, track create/update with aging, stateful classification/identification/intent, XY-only TEWA threating with hysteresis drop, locked-effector refire, projectile-speed time-to-effect, quadratic range-based kinetic Pk decay, damage / health resolution, and Monte Carlo aggregate reporting.</div>
           </div>
           <div class="timeline-card">
             <h4>Current Limitations</h4>
-            <div class="summary-meta">No full terrain or environment builder, no reusable template library, no dedicated event timeline, no failure-driver table, and no canvas overlays yet for effector fields of view or intent headings.</div>
+            <div class="summary-meta">Not implemented yet: full terrain effects, terrain masking, weather effects, full clutter physics, spoofing workflows, jammer-vs-network modeling, reusable local template library, dedicated event timeline, failure-driver table, heat maps, and canvas overlays for effector fields of view or intent headings.</div>
           </div>
           <div class="timeline-card">
             <h4>Coming Next</h4>
-            <div class="summary-meta">Top candidates are event timeline review, failure-driver analysis, FOV / intent map overlays, richer environment authoring, and reusable local template workflows.</div>
+            <div class="summary-meta">Planned / likely next: event timeline review, top failure-driver analysis, FOV and intent-heading overlays on the map, richer environment authoring, reusable local template workflows, and interceptor child-object modeling for launcher effects.</div>
           </div>
           <div class="timeline-card">
             <h4>Expert Workflow</h4>
@@ -1358,7 +1362,7 @@
           </div>
           <div class="timeline-card">
             <h4>Model Constraints</h4>
-            <div class="summary-meta">This tranche does not add new simulation physics. Ghost/clutter remain placeholders, TEWA payload estimation remains heuristic, and validation quality checks are advisory unless they reflect hard structural failures.</div>
+            <div class="summary-meta">Deliberate constraints in v2.00: ghost/clutter remain placeholders, TEWA payload estimation remains heuristic, validation quality checks are advisory unless structurally blocking, and the wizard/builder focus on fast authoring rather than full mission/doctrine/environment fidelity.</div>
           </div>
         </div>
       </div>
