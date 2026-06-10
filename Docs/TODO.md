@@ -10,12 +10,13 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Exploit the new builder-first expert workflow before adding deeper debrief analytics:
+Stabilize the new child-interceptor / terrain / EW tranche and verify the hidden side-level infrastructure model in-browser:
 
-- conduct a fuller interactive browser pass against the new Scenario Wizard, Template Builder, and validation jump-links
-- review whether the first Template Builder common-field editor needs more exposed sensor / effector parameters before a separate library workflow
-- choose the next debrief-focused UX tranche: Event Timeline View, Top Failure Drivers analysis, or canvas overlays for effector FOV / intent headings
-- decide whether JSON export needs a dedicated single-run CSV preview tab in addition to the current report / event log / Monte Carlo preview tabs
+- conduct a fuller interactive browser pass against child interceptor launch / pursuit / resolve behavior on the live map
+- tune Blue sensor cueing behavior so it feels credible in playtest and does not over-task idle sensors
+- tune Red C2-directed, autonomous-fallback, and heuristic-fallback movement behavior against more than the baseline scenarios
+- verify first-pass terrain authoring, terrain LOS blocking, and terrain route-collision fallback behavior in the `Scenario Editor`
+- verify EW jamming and hidden side-level network degradation effects through the debrief and logs
 - keep the prototype explainable and local-only
 
 ---
@@ -51,11 +52,12 @@ The current working prototype now includes:
 
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
 - [ ] Review the new stateful assessment thresholds in live playtest and tighten any remaining over-refresh or under-refresh cases.
-- [ ] Build the Event Timeline View so SMEs can scrub key events without relying only on the flat log or raw JSON.
-- [ ] Add Top Failure Drivers analysis for Monte Carlo review, with a compact expert-facing ranking before any heavier heat-map work.
-- [ ] Add canvas overlays for effector coverage / fields of view and UAS intent headings during scenario review and playback.
-- [ ] Differentiate `track update` logging so playtest review can distinguish same-sensor refresh, new-sensor fusion, and major track-state changes.
-- [ ] Refactor the `Interceptor Launcher` so it spawns a child interceptor sub-component / active map object, and ensure that interceptor appears in the map state and reporting outputs.
+- [ ] Complete a full interactive browser verification pass on the new tactical workstation layout, including side-tray launchers, drawer transparency/readability, zoom/pan, and background-image scaling.
+- [ ] Verify the three-tier authoring workflow in-browser: `Template Wizard` -> `Rosters / Infrastructure` -> `Scenario Editor`.
+- [ ] Tune the first-pass Blue sensor-cueing loop so ISR tasking closes assessment gaps without repeatedly cueing the same track.
+- [ ] Tune Red `missionProfile` heuristics (`Geographic`, `SpecificAsset`, `MaxDamage`) plus Red C2/fallback transitions with additional playtest scenarios.
+- [ ] Verify first-pass terrain polygons against LOS masking, noise penalties, and route-collision fallback edge cases.
+- [ ] Tune first-pass EW jamming strengths / durations so network degradation is visible but not overwhelming in baseline playtests.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
 ---
@@ -115,6 +117,34 @@ The current working prototype now includes:
 - [x] Upgraded validation into grouped blockers, warnings, and scenario-quality notes with recommended fixes and editor jump-links.
 - [x] Improved JSON import/export usability with preview tabs, pretty-print toggle, copy-to-clipboard, and normalized-vs-original scenario export selection.
 - [x] Reserved a Timeline / Analysis screen so the next UX tranche can land without refactoring the screen manager again.
+- [x] Refactored optical sensors (`EO_IR`, `FPV`) so they use LOS + range with quadratic confidence decay instead of radar-style dB logic.
+- [x] Added dynamic FPV heading alignment to platform movement updates.
+- [x] Expanded classification / identification so opposite-side Blue assets can be treated as hostile ground targets when confidence supports it.
+- [x] Added a first-pass Blue ISR sensor-cueing loop for classification / identification gaps.
+- [x] Added authored Red `missionProfile` support with `Geographic`, `SpecificAsset`, and `MaxDamage` behaviors.
+- [x] Added pursuit / attack-run movement overrides so locked or heuristic-targeted movers can leave static waypoint behavior.
+- [x] Added side-aware event logging and split Blue / Red operational feeds.
+- [x] Replaced the old screen stack with a tactical workstation shell centered on the live map.
+- [x] Moved scenario, template, report, analysis, and export workflows into right-side drawer panels.
+- [x] Added map background upload, map-width scaling, and zoom / pan controls.
+- [x] Added Event Timeline and Top Failure Drivers analysis surfaces.
+- [x] Added canvas overlays for effector coverage / fields of view and UAS intent headings.
+- [x] Differentiated `track update` logging so playtest review can distinguish same-sensor refresh, new-sensor fusion, and major track-state changes.
+- [x] Added standalone selected-template import / export inside the template workflow.
+- [x] Refined the workstation into a clearer three-tier flow with `Scenario Editor`, `Template Wizard`, and `Rosters / Networks / Power`.
+- [x] Removed the old rotating side-panel labels and widened / increased transparency of the right-side drawers.
+- [x] Added click-to-select quick object editing for geographic placement plus network / power assignment from the Scenario Editor.
+- [x] Refactored the `Interceptor Launcher` so it spawns a child interceptor runtime object that appears on the map and in reports.
+- [x] Added first-pass terrain objects with map drawing, terrain rendering, LOS blocking, noise penalties, and route/interceptor collision behavior.
+- [x] Hid explicit network / power editing and replaced it with implicit per-side runtime C2 network and power-grid models.
+- [x] Added first-pass EW / jammer effect resolution that degrades per-side hidden network state and RF sensing conditions.
+- [x] Added Red C2-directed strike assignment with autonomous and heuristic fallback states when linkage is lost or unavailable.
+- [x] Fixed deterministic `playtest_01_baseline_single_kill_chain` so the fixed-seed baseline kill chain completes again with child interceptors.
+- [x] Fixed deterministic `playtest_02_lock_and_fire_loop` so a single effector stays committed through cooldown instead of alternating targets mid-lock.
+- [x] Added focused feature playtests for terrain LOS, terrain noise, EW network degradation, child-interceptor timeout, and Red fallback behavior.
+- [x] Added OWA terminal impact resolution with payload-driven Blue asset damage and attacker self-expending behavior.
+- [x] Added a focused OWA playtest scenario plus report fields for successful strikes and Blue asset damage.
+- [x] Updated the browser smoke checks for the current tactical workstation shell and validated app load + single-run completion with a direct Playwright script.
 
 ---
 
@@ -150,7 +180,13 @@ Do not implement until after the first vertical slice works.
 - [ ] TEWA payload assessment is still heuristic and intentionally explainable; it is not yet informed by richer size/classification observables or doctrine inputs.
 - [ ] Stateful assessment now uses fixed first-pass thresholds; those thresholds still need live browser tuning to avoid edge-case over-refresh or under-refresh behavior.
 - [ ] Assessment snapshots remain available through single-run report JSON, but still need a dedicated debrief surface.
-- [ ] The first Template Builder exposes common fields plus selected-template JSON, but it does not yet provide a reusable local template library workflow.
+- [ ] The current Template Wizard exposes helper placeholders plus common fields and selected-template JSON, but it does not yet provide a reusable local template library workflow.
+- [ ] The new Blue sensor-cueing behavior is first-pass only and still needs live-playtest tuning for over-cue / under-cue edge cases.
+- [ ] Red mission-profile attack-run behavior is still simple and now mixes C2-directed, autonomous, and heuristic fallback states without doctrine-rich terminal tactics yet.
+- [ ] Hidden side-level network / power behavior is now modeled in runtime, but it is still single-network / single-grid per side with no user-facing topology editing.
+- [ ] Terrain authoring is first-pass polygon capture only; there is still no rerouting, pathfinding, or richer terrain library workflow.
+- [ ] EW currently covers jamming / network degradation only; spoofing, track injection, cyber, and richer band modeling remain deferred.
+- [x] A deterministic playtest sweep with seed `12345` now passes the key checks for `playtest_01` through `playtest_11`.
 
 ---
 
@@ -171,7 +207,7 @@ Do not implement until after the first vertical slice works.
 - Threat-drop behavior now uses option 2: hysteresis. A hostile loses `Attack Run` / elevated TEWA status only after 2 consecutive updates showing low speed or increasing XY separation from the projected defended asset.
 - The simulation now retains compact periodic assessment snapshots in the report payload so debugging and playtest analysis remain explainable even when the event log is quieter.
 - Red and Blue use the same object structure and runtime processing rules.
-- UI screens are managed by `UIManager`; core simulation logic lives in simulation and system classes.
+- UI now uses a tactical workstation shell with drawer-based `Scenario Editor`, `Template Wizard`, `Rosters / Networks / Power`, `Debrief`, and `Export` panels while core simulation logic still lives in simulation and system classes.
 - Single-run playback reuses recorded snapshots after simulation completion so rendering does not drive outcomes.
 - Zero-delay follow-on state changes in the engagement chain enforce a minimum mechanical delay of `0.1` seconds.
 - Monte Carlo execution now runs in an inline Blob Web Worker and uses a main-thread fallback only when workers are unavailable.
@@ -180,7 +216,13 @@ Do not implement until after the first vertical slice works.
 - Scenario JSON import/export uses normalization around the current template + instance vertical-slice schema.
 - Environment placeholders currently use a minimal `EnvironmentSystem` that can spawn a track-only ghost placeholder and render a clutter overlay without full object generation.
 - Scenario validation now gates execution and surfaces blocking errors plus warnings directly in the dashboard UI.
-- The current `Interceptor Launcher` is still resolved abstractly; future work should model a spawned interceptor child object as an active entity in the simulation and reports.
+- Kinetic interceptor launchers now spawn child runtime objects that pursue targets on the map and resolve or abort through their own movement lifecycle.
+- Terrain now uses first-pass polygon objects for LOS blocking, RF/noise penalties, and route/interceptor collision checks.
+- Network and power are now modeled as hidden single infrastructure objects per side rather than editable scenario topology.
+- EW currently applies jammer-driven sensor noise and hidden network degradation through the `EffectSystem`.
+- Optical sensors now use LOS + range-only confidence decay, while radar-like sensors retain the existing signal / noise branch.
+- Blue C2 can now cue idle Blue sensors toward tracks with unresolved classification / identification gaps before effector assignment.
+- Red mission profiles can now transition a mover among C2-directed, autonomous-fallback, and heuristic-fallback behavior depending on linkage and local conditions.
 
 ---
 
@@ -223,7 +265,7 @@ Read AGENTS.md, TODO.md, README.md, and the root design docs.
 
 Perform a browser verification pass for the current prototype on a machine where Chromium can run reliably, then address any UI or runtime defects found.
 
-If the verification pass is clean, choose the next focused step: improve environment realism beyond placeholders, or refactor the `Interceptor Launcher` into a spawned child interceptor object that appears on the map and in reports.
+If the verification pass is clean, choose the next focused step: tune terrain / EW / Red fallback behavior in playtest, or deepen the hidden infrastructure model beyond one network and one power grid per side.
 
 Keep the app browser-only, vanilla HTML, CSS, and JavaScript only, and do not build the full scenario editor yet.
 ```

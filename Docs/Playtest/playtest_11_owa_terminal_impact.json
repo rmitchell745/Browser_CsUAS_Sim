@@ -1,0 +1,116 @@
+{
+  "metadata": {
+    "name": "Playtest 11 - OWA Terminal Impact",
+    "description": "A Red one-way attack drone reaches a defended Blue HQ, applies terminal impact damage, and self-destructs on strike."
+  },
+  "config": {
+    "maxTimeSec": 30,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.6
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-OWA-Sensor",
+      "name": "Blue OWA Sensor Site",
+      "defaultRoles": ["Asset", "Sensor", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 40, "isHQ": false },
+        "resistance": { "kineticResistance": 0.12 },
+        "signature": { "radarSignatureDb": -3 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-OWA-EO-1",
+            "name": "Blue OWA EO Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 700,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 52,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.2, "accuracyBase": 0.86 },
+            "identification": { "canIdentify": true, "latencySec": 0.25, "accuracyBase": 0.78 }
+          }
+        ],
+        "c2": { "trackCapacity": 6, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Blue-OWA-HQ",
+      "name": "Blue OWA HQ",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": { "maxHealth": 140, "assetValuePts": 120, "isHQ": true },
+        "resistance": { "kineticResistance": 0.18 },
+        "signature": { "radarSignatureDb": -1 }
+      }
+    },
+    {
+      "id": "Template-Red-OWA-UAS",
+      "name": "Red OWA Drone",
+      "defaultRoles": ["UAS"],
+      "missionProfile": {
+        "type": "SpecificAsset",
+        "targetTemplateId": "Template-Blue-OWA-HQ"
+      },
+      "components": {
+        "health": { "maxHealth": 85, "assetValuePts": 8, "isHQ": false },
+        "resistance": { "kineticResistance": 0.15 },
+        "signature": { "radarSignatureDb": -14 },
+        "payload": {
+          "impactDamagePoints": 180,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesNetwork": false,
+          "requiresPower": false,
+          "requiresC2": false,
+          "canOperateAutonomously": true
+        },
+        "movement": { "speedMps": 26, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-OWA-Sensor-01",
+      "templateId": "Template-Blue-OWA-Sensor",
+      "name": "Blue OWA Sensor 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "C2"],
+      "posX": 620,
+      "posY": 280,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-OWA-HQ-01",
+      "templateId": "Template-Blue-OWA-HQ",
+      "name": "Blue OWA HQ 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 780,
+      "posY": 280,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-OWA-UAS-01",
+      "templateId": "Template-Red-OWA-UAS",
+      "name": "Red OWA UAS 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 180,
+      "posY": 280,
+      "posZ": 120,
+      "missionWaypoints": []
+    }
+  ]
+}

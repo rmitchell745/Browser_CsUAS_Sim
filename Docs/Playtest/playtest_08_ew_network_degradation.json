@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "name": "Playtest 08 - EW Network Degradation",
+    "description": "A Blue EW site repeatedly jams a Red node and drives visible hidden-network jam and restore events."
+  },
+  "config": {
+    "maxTimeSec": 24,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.8
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-EW-Site",
+      "name": "Blue EW Test Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 70, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -1 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-EW-RF-1",
+            "name": "Blue EW RF Sensor",
+            "type": "RF",
+            "maxRangeM": 650,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 48,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.9,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.2, "accuracyBase": 0.88 },
+            "identification": { "canIdentify": true, "latencySec": 0.25, "accuracyBase": 0.82 }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-EW-1",
+            "name": "Blue Stand-In Jammer",
+            "type": "EW",
+            "maxRangeM": 520,
+            "basePe": 0.92,
+            "damagePoints": 0,
+            "ammoCapacity": 2,
+            "slewRateSec": 0.1,
+            "cooldownSec": 4,
+            "projectileSpeedMps": 0,
+            "effectDurationSec": 8,
+            "jamStrengthDb": 14,
+            "affectedDomains": ["Network", "C2", "Sensor"]
+          }
+        ],
+        "c2": { "trackCapacity": 8, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Red-EW-Target-UAS",
+      "name": "Red EW Target UAS",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 8, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1, "networkResistance": 0 },
+        "signature": { "radarSignatureDb": -10 },
+        "movement": { "speedMps": 16, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-EW-Site-01",
+      "templateId": "Template-Blue-EW-Site",
+      "name": "Blue EW Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 640,
+      "posY": 310,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-EW-Target-01",
+      "templateId": "Template-Red-EW-Target-UAS",
+      "name": "Red EW Target 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 260,
+      "posY": 310,
+      "posZ": 120,
+      "missionWaypoints": [
+        { "x": 980, "y": 310, "z": 120 }
+      ]
+    }
+  ]
+}

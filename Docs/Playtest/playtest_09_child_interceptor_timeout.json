@@ -1,0 +1,99 @@
+{
+  "metadata": {
+    "name": "Playtest 09 - Child Interceptor Timeout",
+    "description": "A slow, short-lived interceptor spawns, pursues, and times out before reaching the Red UAS."
+  },
+  "config": {
+    "maxTimeSec": 24,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.5
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Timeout-Site",
+      "name": "Blue Timeout Test Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 60, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -2 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Timeout-EO",
+            "name": "Blue Timeout EO Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 500,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 50,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.2, "accuracyBase": 0.86 },
+            "identification": { "canIdentify": true, "latencySec": 0.2, "accuracyBase": 0.78 }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Timeout-Kinetic",
+            "name": "Short-Burn Interceptor",
+            "type": "Kinetic",
+            "maxRangeM": 280,
+            "basePk": 0.9,
+            "damagePoints": 150,
+            "ammoCapacity": 1,
+            "slewRateSec": 0.2,
+            "cooldownSec": 2,
+            "projectileSpeedMps": 60,
+            "maxFlightTimeSec": 1,
+            "terminalRadiusM": 10
+          }
+        ],
+        "c2": { "trackCapacity": 6, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Red-Fast-UAS",
+      "name": "Red Fast Escape UAS",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 8, "isHQ": false },
+        "resistance": { "kineticResistance": 0.18 },
+        "signature": { "radarSignatureDb": -13 },
+        "movement": { "speedMps": 45, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Timeout-Site-01",
+      "templateId": "Template-Blue-Timeout-Site",
+      "name": "Blue Timeout Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 700,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Fast-UAS-01",
+      "templateId": "Template-Red-Fast-UAS",
+      "name": "Red Fast UAS 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 140,
+      "posY": 300,
+      "posZ": 120,
+      "missionWaypoints": [
+        { "x": 980, "y": 300, "z": 120 }
+      ]
+    }
+  ]
+}

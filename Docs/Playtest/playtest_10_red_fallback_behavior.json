@@ -1,0 +1,201 @@
+{
+  "metadata": {
+    "name": "Playtest 10 - Red Fallback Behavior",
+    "description": "Blue EW jamming forces two Red C2-dependent strikers to split into autonomous and heuristic fallback modes."
+  },
+  "config": {
+    "maxTimeSec": 28,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.6
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Fallback-EW-Site",
+      "name": "Blue Fallback EW Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 70, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -1 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Fallback-RF-1",
+            "name": "Blue Fallback RF Sensor",
+            "type": "RF",
+            "maxRangeM": 650,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 46,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.9,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1.2,
+            "classification": { "canClassify": true, "latencySec": 0.5, "accuracyBase": 0.86 },
+            "identification": { "canIdentify": true, "latencySec": 0.5, "accuracyBase": 0.78 }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Fallback-EW-1",
+            "name": "Fallback Jammer",
+            "type": "EW",
+            "maxRangeM": 900,
+            "basePe": 1,
+            "damagePoints": 0,
+            "ammoCapacity": 2,
+            "slewRateSec": 0.1,
+            "cooldownSec": 4,
+            "projectileSpeedMps": 0,
+            "effectDurationSec": 12,
+            "jamStrengthDb": 14,
+            "affectedDomains": ["Network", "C2", "Sensor"]
+          }
+        ],
+        "c2": { "trackCapacity": 8, "processingLatencySec": 0.4 }
+      }
+    },
+    {
+      "id": "Template-Blue-Fallback-HQ",
+      "name": "Blue Fallback HQ",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": { "maxHealth": 140, "assetValuePts": 120, "isHQ": true },
+        "resistance": { "kineticResistance": 0.2 },
+        "signature": { "radarSignatureDb": -1 }
+      }
+    },
+    {
+      "id": "Template-Red-Fallback-C2",
+      "name": "Red Fallback C2 Node",
+      "defaultRoles": ["Asset", "Sensor", "C2"],
+      "components": {
+        "health": { "maxHealth": 110, "assetValuePts": 40, "isHQ": false },
+        "resistance": { "kineticResistance": 0.12, "networkResistance": 0 },
+        "signature": { "radarSignatureDb": -3 },
+        "sensors": [
+          {
+            "id": "Sensor-Red-Fallback-RF-1",
+            "name": "Red Fallback RF Sensor",
+            "type": "RF",
+            "maxRangeM": 800,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 52,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.8,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 0.5,
+            "classification": { "canClassify": true, "latencySec": 0.1, "accuracyBase": 0.92 },
+            "identification": { "canIdentify": true, "latencySec": 0.1, "accuracyBase": 0.88 }
+          }
+        ],
+        "c2": { "trackCapacity": 10, "processingLatencySec": 0.1 }
+      }
+    },
+    {
+      "id": "Template-Red-Autonomy-Striker",
+      "name": "Red Autonomy-Capable Striker",
+      "defaultRoles": ["UAS"],
+      "missionProfile": {
+        "type": "SpecificAsset",
+        "targetTemplateId": "Template-Blue-Fallback-HQ"
+      },
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 9, "isHQ": false },
+        "resistance": { "kineticResistance": 0.15, "networkResistance": 0 },
+        "signature": { "radarSignatureDb": -10 },
+        "capability": {
+          "usesNetwork": true,
+          "requiresPower": true,
+          "requiresC2": true,
+          "canOperateAutonomously": true
+        },
+        "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    },
+    {
+      "id": "Template-Red-Heuristic-Striker",
+      "name": "Red Heuristic-Only Striker",
+      "defaultRoles": ["UAS"],
+      "missionProfile": {
+        "type": "MaxDamage",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 9, "isHQ": false },
+        "resistance": { "kineticResistance": 0.15, "networkResistance": 0 },
+        "signature": { "radarSignatureDb": -11 },
+        "capability": {
+          "usesNetwork": true,
+          "requiresPower": true,
+          "requiresC2": true,
+          "canOperateAutonomously": false
+        },
+        "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Fallback-EW-Site-01",
+      "templateId": "Template-Blue-Fallback-EW-Site",
+      "name": "Blue Fallback EW Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 650,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Fallback-HQ-01",
+      "templateId": "Template-Blue-Fallback-HQ",
+      "name": "Blue Fallback HQ 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 790,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Fallback-C2-01",
+      "templateId": "Template-Red-Fallback-C2",
+      "name": "Red Fallback C2 01",
+      "side": "Red",
+      "roles": ["Asset", "Sensor", "C2"],
+      "posX": 260,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Autonomy-Striker-01",
+      "templateId": "Template-Red-Autonomy-Striker",
+      "name": "Red Autonomy Striker 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 300,
+      "posY": 270,
+      "posZ": 120,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Heuristic-Striker-01",
+      "templateId": "Template-Red-Heuristic-Striker",
+      "name": "Red Heuristic Striker 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 300,
+      "posY": 330,
+      "posZ": 120,
+      "missionWaypoints": []
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "name": "Playtest 07 - Terrain Noise Penalty",
+    "description": "A noise terrain polygon degrades RF sensing so first detection is delayed until geometry improves through the clutter field."
+  },
+  "config": {
+    "maxTimeSec": 38,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 2
+  },
+  "terrainObjects": [
+    {
+      "id": "Terrain-Noise-Clutter",
+      "label": "Industrial RF Clutter",
+      "interferenceType": "Noise",
+      "clutterPenaltyDb": 22,
+      "heightZ": 180,
+      "areaPolygon": [
+        { "x": 260, "y": 235 },
+        { "x": 540, "y": 235 },
+        { "x": 540, "y": 365 },
+        { "x": 260, "y": 365 }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "Template-Blue-RF-Noise-Site",
+      "name": "Blue RF Noise Test Site",
+      "defaultRoles": ["Asset", "Sensor", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 80, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -2 },
+        "capability": {
+          "usesRF": true,
+          "usesNetwork": true,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-RF-Noise-1",
+            "name": "Marginal RF Sensor",
+            "type": "RF",
+            "maxRangeM": 700,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 12,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.7,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.2, "accuracyBase": 0.84 },
+            "identification": { "canIdentify": true, "latencySec": 0.25, "accuracyBase": 0.74 }
+          }
+        ],
+        "c2": { "trackCapacity": 6, "processingLatencySec": 0.25 }
+      }
+    },
+    {
+      "id": "Template-Red-Noise-UAS",
+      "name": "Red Noise Runner",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 8, "isHQ": false },
+        "resistance": { "kineticResistance": 0.16 },
+        "signature": { "radarSignatureDb": -22 },
+        "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-RF-Noise-Site-01",
+      "templateId": "Template-Blue-RF-Noise-Site",
+      "name": "Blue RF Noise Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "C2"],
+      "posX": 660,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Noise-UAS-01",
+      "templateId": "Template-Red-Noise-UAS",
+      "name": "Red Noise UAS 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 100,
+      "posY": 300,
+      "posZ": 110,
+      "missionWaypoints": [
+        { "x": 980, "y": 300, "z": 110 }
+      ]
+    }
+  ]
+}
