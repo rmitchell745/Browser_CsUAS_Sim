@@ -671,6 +671,11 @@
       background: rgba(255, 255, 255, 0.04);
     }
 
+    .threat-group-card.active {
+      border-color: rgba(80, 216, 255, 0.68);
+      box-shadow: 0 0 18px rgba(80, 216, 255, 0.14);
+    }
+
     .threat-group-card h4 {
       margin: 0;
     }
@@ -750,9 +755,225 @@
       color: var(--warning);
     }
 
+    .command-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 16px 0 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: var(--panel-soft);
+      box-shadow: var(--shadow);
+    }
+
+    .command-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .workspace-screen {
+      display: block;
+    }
+
+    .workspace-layout {
+      display: grid;
+      gap: 16px;
+    }
+
+    .workspace-main {
+      display: grid;
+      gap: 16px;
+    }
+
+    .map-panel {
+      min-height: 68vh;
+    }
+
+    .canvas-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+
+    .ops-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .feed-panel {
+      display: grid;
+      gap: 12px;
+      min-height: 260px;
+    }
+
+    .feed-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .feed-header span {
+      color: var(--muted);
+      font-size: 0.84rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .feed-count {
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .log-feed.blue-feed .log-entry {
+      border-left: 3px solid rgba(80, 216, 255, 0.45);
+      padding-left: 10px;
+    }
+
+    .log-feed.red-feed .log-entry {
+      border-left: 3px solid rgba(255, 95, 146, 0.45);
+      padding-left: 10px;
+    }
+
+    .log-entry .tag {
+      display: inline-flex;
+      margin-left: 8px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--muted);
+    }
+
+    .analysis-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-list {
+      display: grid;
+      gap: 10px;
+      max-height: 320px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .timeline-card small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+    }
+
+    .workspace-sidebar {
+      position: fixed;
+      top: 118px;
+      right: 20px;
+      bottom: 20px;
+      width: min(820px, calc(100vw - 72px));
+      overflow: auto;
+      z-index: 30;
+      transform: translateX(112%);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+
+    .workspace-sidebar.sidebar-active {
+      display: block;
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .workspace-sidebar .screen-grid,
+    .workspace-sidebar .editor-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .workspace-sidebar .panel,
+    .workspace-sidebar.screen {
+      background: rgba(12, 11, 34, 0.24);
+      backdrop-filter: blur(22px) saturate(142%);
+    }
+
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .sidebar-header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .sidebar-close {
+      flex: 0 0 auto;
+    }
+
+    .sidebar-screen {
+      padding: 18px;
+    }
+
+    #screen-dashboard,
+    .nav-strip {
+      display: none !important;
+    }
+
+    .side-tray {
+      position: fixed;
+      top: 184px;
+      left: 12px;
+      z-index: 28;
+      display: grid;
+      gap: 10px;
+    }
+
+    .tray-button {
+      writing-mode: horizontal-tb;
+      transform: none;
+      border-radius: 14px 18px 18px 14px;
+      padding: 12px 16px;
+      min-height: 0;
+      min-width: 132px;
+      text-align: left;
+      background:
+        linear-gradient(180deg, rgba(19, 17, 55, 0.74), rgba(10, 22, 44, 0.56)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.12), transparent 60%);
+    }
+
+    .tray-button.active {
+      border-color: rgba(80, 216, 255, 0.72);
+      box-shadow: 0 0 22px rgba(80, 216, 255, 0.18);
+    }
+
+    .selection-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(80, 216, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+    }
+
     @media (max-width: 1080px) {
       .screen-grid,
-      .editor-grid {
+      .editor-grid,
+      .ops-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -787,9 +1008,29 @@
       </div>
     </header>
 
+    <section class="command-bar">
+      <div class="command-group">
+        <button id="new-scenario-btn">New Scenario</button>
+        <button id="load-scenario-header-btn">Load Scenario</button>
+        <button id="save-scenario-btn">Save Scenario</button>
+      </div>
+      <div class="command-group">
+        <div class="selection-chip" id="map-selection-chip">No map selection</div>
+        <button id="run-monte-carlo-header-btn">Run Monte Carlo</button>
+      </div>
+    </section>
+
+    <div class="side-tray">
+      <button class="tray-button" id="open-scenario-sidebar-btn">Scenario Editor</button>
+      <button class="tray-button" id="open-template-sidebar-btn">Template Wizard</button>
+      <button class="tray-button" id="open-roster-sidebar-btn">Rosters</button>
+      <button class="tray-button" id="open-analysis-sidebar-btn">Debrief</button>
+      <button class="tray-button" id="open-export-sidebar-btn">Export</button>
+    </div>
+
     <nav class="nav-strip">
       <button class="nav-button active" data-screen="dashboard">Scenario Dashboard</button>
-      <button class="nav-button" data-screen="wizard">Scenario Wizard</button>
+      <button class="nav-button" data-screen="wizard">Scenario Editor</button>
       <button class="nav-button" data-screen="templates">Template Builder</button>
       <button class="nav-button" data-screen="run">Run Scenario</button>
       <button class="nav-button" data-screen="report">Report Viewer</button>
@@ -833,7 +1074,7 @@
             <h2>Workflow Status</h2>
             <div class="placeholder-list">
               <div class="placeholder-card">Template Builder is live for scenario-local template editing.</div>
-              <div class="placeholder-card">Scenario Wizard builds quick-start baseline, lock/refire, and TEWA review cases.</div>
+              <div class="placeholder-card">Scenario Editor now drives scratch-first layout, with optional starter patterns for quick setup.</div>
               <div class="placeholder-card">Version / Limits screen now summarizes current gaps and near-term feature work.</div>
               <div class="placeholder-card">Environment, terrain, and deep debrief analytics remain future workflow expansions.</div>
             </div>
@@ -867,25 +1108,31 @@
       </div>
     </section>
 
-    <section class="screen" id="screen-wizard">
+    <section class="screen workspace-sidebar" id="screen-wizard">
       <div class="stack">
         <div class="panel">
-          <h2>Scenario Wizard</h2>
-          <p class="panel-caption">
-            Build a runnable expert-review scenario quickly, then hand it off to the Template Builder or raw JSON export for refinement.
-          </p>
+          <div class="sidebar-header">
+            <div>
+              <h2>Scenario Editor</h2>
+              <p class="panel-caption">
+                Tier 3 workflow: terrain and environment, Blue placement, Red threat layout, and logical assignment. Presets remain optional.
+              </p>
+            </div>
+            <button class="sidebar-close" data-close-sidebar="wizard">Close</button>
+          </div>
           <div class="controls" style="margin-top: 12px;">
             <div class="field">
               <label for="wizard-preset">Starter Pattern</label>
               <select id="wizard-preset">
+                <option value="blank-scratch">Blank From Scratch</option>
                 <option value="baseline-single">Single-UAS Baseline</option>
                 <option value="lock-refire">Lock / Refire Two-Threat</option>
                 <option value="tewa-priority">TEWA Priority Review</option>
               </select>
             </div>
-            <button id="wizard-load-preset-btn">Load Preset</button>
-            <button id="wizard-preview-btn">Preview Wizard Scenario</button>
-            <button id="wizard-build-btn">Build Scenario From Wizard</button>
+            <button id="wizard-load-preset-btn">Load Starter</button>
+            <button id="wizard-preview-btn">Preview Editor Layout</button>
+            <button id="wizard-build-btn">Build Scenario From Editor</button>
           </div>
         </div>
 
@@ -906,7 +1153,40 @@
             </div>
 
             <div class="panel">
-              <h3>2. Blue Site</h3>
+              <div class="toolbar-row" style="margin-bottom: 10px;">
+                <button class="button-link wizard-jump-btn" data-wizard-target="wizard-environment-panel">Environment</button>
+                <button class="button-link wizard-jump-btn" data-wizard-target="wizard-blue-panel">Blue</button>
+                <button class="button-link wizard-jump-btn" data-wizard-target="wizard-red-panel">Red</button>
+                <button class="button-link wizard-jump-btn" data-wizard-target="wizard-review-panel">Review</button>
+                <button class="button-link" id="open-roster-inline-btn" type="button">Networks / Power</button>
+              </div>
+            </div>
+
+            <div class="panel" id="wizard-environment-panel">
+              <h3>1. Terrain + Environment</h3>
+              <div class="form-grid">
+                <div class="field-stack">
+                  <label for="map-width-input">Map Width (m)</label>
+                  <input id="map-width-input" type="number">
+                </div>
+                <div class="field-stack inline-check">
+                  <input id="wizard-ghost-enabled" type="checkbox">
+                  <label for="wizard-ghost-enabled">Enable ghost placeholder</label>
+                </div>
+                <div class="field-stack inline-check">
+                  <input id="wizard-clutter-enabled" type="checkbox">
+                  <label for="wizard-clutter-enabled">Enable clutter placeholder</label>
+                </div>
+              </div>
+              <div class="controls" style="margin-top: 12px;">
+                <button id="map-background-upload-btn">Upload Map Background</button>
+                <button id="clear-map-background-btn">Clear Background</button>
+                <input id="map-background-input" type="file" accept="image/*" hidden>
+              </div>
+            </div>
+
+            <div class="panel" id="wizard-blue-panel">
+              <h3>2. Blue Assets</h3>
               <div class="form-grid">
                 <div class="field-stack">
                   <label for="wizard-blue-name">Blue Site Name</label>
@@ -941,9 +1221,12 @@
                   <label for="wizard-blue-ishq">Mark as HQ / defended primary asset</label>
                 </div>
               </div>
+              <div class="controls" style="margin-top: 12px;">
+                <button id="wizard-pick-blue-position-btn">Pick Blue Position On Map</button>
+              </div>
             </div>
 
-            <div class="panel">
+            <div class="panel" id="wizard-red-panel">
               <h3>3. Red Threat Groups</h3>
               <p class="panel-caption">
                 Each group owns its own Red template profile, instance count, and route pattern. Use multiple groups when threats should differ by type, route, or spacing.
@@ -954,24 +1237,11 @@
               <div class="threat-group-list" id="wizard-threat-group-list"></div>
             </div>
 
-            <div class="panel">
-              <h3>4. Environment</h3>
-              <div class="form-grid">
-                <div class="field-stack inline-check">
-                  <input id="wizard-ghost-enabled" type="checkbox">
-                  <label for="wizard-ghost-enabled">Enable ghost placeholder</label>
-                </div>
-                <div class="field-stack inline-check">
-                  <input id="wizard-clutter-enabled" type="checkbox">
-                  <label for="wizard-clutter-enabled">Enable clutter placeholder</label>
-                </div>
-              </div>
-            </div>
           </div>
 
           <div class="stack">
-            <div class="panel">
-              <h3>Wizard Review</h3>
+            <div class="panel" id="wizard-review-panel">
+              <h3>Scenario Review</h3>
               <div class="summary-grid" id="wizard-summary"></div>
               <div id="wizard-reminder" style="margin-top: 12px;"></div>
             </div>
@@ -979,22 +1249,41 @@
               <h3>What This Builds</h3>
               <ul class="report-list">
                 <li><span>Output shape</span><strong>Current template + instance JSON</strong></li>
-                <li><span>Use case</span><strong>Quick-start scenarios for playtest and SME review</strong></li>
-                <li><span>Next step</span><strong>Refine templates or export normalized JSON</strong></li>
+                <li><span>Use case</span><strong>Map-centric scenario layout and quick spatial iteration</strong></li>
+                <li><span>Next step</span><strong>Use Template Wizard for major capability edits and Rosters for force packages, power, and C2 network setup</strong></li>
               </ul>
+            </div>
+            <div class="panel">
+              <h3>Selected Object</h3>
+              <div id="selected-object-editor"></div>
             </div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="screen" id="screen-templates">
+    <section class="screen workspace-sidebar" id="screen-templates">
       <div class="stack">
         <div class="panel">
-          <h2>Template Builder</h2>
-          <p class="panel-caption">
-            Edit the templates embedded in the active scenario. Advanced users can tune the full selected template JSON without touching the rest of the scenario payload.
-          </p>
+          <div class="sidebar-header">
+            <div>
+              <h2>Template Wizard</h2>
+              <p class="panel-caption">
+                Tier 1 workflow: helper-driven template design and major capability editing. The Scenario Editor only exposes quick geographic and assignment fields.
+              </p>
+            </div>
+            <button class="sidebar-close" data-close-sidebar="templates">Close</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Helper Workflow Placeholder</h3>
+          <div class="summary-grid">
+            <div class="summary-card"><div class="label">Health / Value</div><div class="summary-meta" style="margin-top:8px;">Future helper presets for health, defended-value, and survivability defaults.</div></div>
+            <div class="summary-card"><div class="label">Sensor Helpers</div><div class="summary-meta" style="margin-top:8px;">Future helper functions for range, FOV, cadence, and optical / RF tuning.</div></div>
+            <div class="summary-card"><div class="label">Effector Helpers</div><div class="summary-meta" style="margin-top:8px;">Future helper functions for ammo, engagement envelope, and interceptor / jammer presets.</div></div>
+            <div class="summary-card"><div class="label">Mission / Doctrine</div><div class="summary-meta" style="margin-top:8px;">Future helper fields for mission profile, doctrine defaults, and behavior shaping.</div></div>
+          </div>
         </div>
 
         <div class="editor-grid">
@@ -1026,10 +1315,14 @@
 
           <div class="split-stack">
             <div class="panel">
+              <h3>Detailed Template Editor</h3>
               <div class="controls">
                 <button id="save-template-form-btn">Save Common Fields</button>
                 <button id="duplicate-template-btn">Duplicate Template</button>
                 <button id="delete-template-btn">Delete Template</button>
+                <button id="export-selected-template-btn">Export Template</button>
+                <button id="import-template-btn">Import Template</button>
+                <input id="template-file-input" type="file" accept=".json,application/json" hidden>
               </div>
               <div class="summary-grid" id="template-usage-summary" style="margin-bottom: 12px;"></div>
 
@@ -1240,7 +1533,7 @@
       </div>
     </section>
 
-    <section class="screen" id="screen-run">
+    <section class="screen workspace-screen active" id="screen-run">
       <div class="panel">
         <div class="controls">
           <button id="run-single-btn">Run Single Scenario</button>
@@ -1264,38 +1557,76 @@
         <div id="run-reminder"></div>
       </div>
 
-      <div class="screen-grid" style="margin-top: 16px;">
-        <div class="stack">
-          <div class="panel">
-            <h2>Simulation Map</h2>
-            <div class="canvas-wrap">
+      <div class="workspace-layout" style="margin-top: 16px;">
+        <div class="panel map-panel">
+          <div class="canvas-toolbar">
+            <div>
+              <h2 style="margin: 0 0 6px;">Simulation Map</h2>
+              <p class="panel-caption">Live tactical view with track, cueing, threat-heading, and field-of-view overlays.</p>
+            </div>
+            <div class="toolbar-row">
+              <button id="zoom-reset-btn">Reset Zoom</button>
+              <button id="open-scenario-builder-inline-btn">Build / Edit Scenario</button>
+              <button id="open-template-library-inline-btn">Edit Templates</button>
+              <button id="open-analysis-inline-btn">Review Analysis</button>
+            </div>
+          </div>
+          <div class="canvas-wrap">
               <canvas id="sim-canvas" width="1080" height="630"></canvas>
-            </div>
-            <div class="legend">
-              <span class="blue">Blue object</span>
-              <span class="red">Red physical object</span>
-              <span class="track">Track belief</span>
-            </div>
+          </div>
+          <div class="legend">
+            <span class="blue">Blue object / coverage</span>
+            <span class="red">Red physical object / intent heading</span>
+            <span class="track">Track belief</span>
           </div>
         </div>
 
-        <div class="stack">
-          <div class="panel">
-            <h2>Live Run Metrics</h2>
-            <div class="metrics-grid" id="run-metrics"></div>
+        <div class="ops-grid">
+          <div class="panel feed-panel">
+            <div class="feed-header">
+              <div>
+                <h3 style="margin: 0;">Blue Force Feed</h3>
+                <span>Blue sensing, cueing, C2, and engagement actions</span>
+              </div>
+              <strong class="feed-count" id="blue-feed-count">0</strong>
+            </div>
+            <div class="log-feed blue-feed" id="blue-feed"></div>
           </div>
-          <div class="panel">
-            <h2>Event Log</h2>
-            <div class="log-feed" id="event-log"></div>
+          <div class="panel feed-panel">
+            <div class="feed-header">
+              <div>
+                <h3 style="margin: 0;">Red Force Feed</h3>
+                <span>Threat route, attack-run, and terminal behavior</span>
+              </div>
+              <strong class="feed-count" id="red-feed-count">0</strong>
+            </div>
+            <div class="log-feed red-feed" id="red-feed"></div>
+          </div>
+          <div class="panel feed-panel">
+            <div class="feed-header">
+              <div>
+                <h3 style="margin: 0;">Live Metrics</h3>
+                <span>Current run status, snapshots, and fast debrief</span>
+              </div>
+            </div>
+            <div class="metrics-grid" id="run-metrics"></div>
+            <div class="analysis-grid" id="live-analysis-summary"></div>
+            <div class="log-feed" id="event-log" style="display: none;"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="screen" id="screen-report">
+    <section class="screen workspace-sidebar" id="screen-report">
       <div class="stack">
         <div class="panel">
-          <h2>Single Run Report</h2>
+          <div class="sidebar-header">
+            <div>
+              <h2>Timeline / Analysis</h2>
+              <p class="panel-caption">Timeline, single-run debrief, and Monte Carlo aggregate review.</p>
+            </div>
+            <button class="sidebar-close" data-close-sidebar="report">Close</button>
+          </div>
           <div class="metrics-grid" id="single-run-summary"></div>
         </div>
         <div class="screen-grid">
@@ -1307,6 +1638,14 @@
             <h3>Monte Carlo Aggregate</h3>
             <div class="metrics-grid" id="monte-carlo-summary"></div>
           </div>
+        </div>
+        <div class="panel">
+          <h3>Event Timeline</h3>
+          <div class="timeline-list" id="event-timeline-list"></div>
+        </div>
+        <div class="panel">
+          <h3>Top Failure Drivers</h3>
+          <div class="analysis-grid" id="failure-drivers-list"></div>
         </div>
         <div class="panel">
           <h3>Monte Carlo Results</h3>
@@ -1331,46 +1670,71 @@
       </div>
     </section>
 
-    <section class="screen" id="screen-analysis">
+    <section class="screen workspace-sidebar" id="screen-analysis">
       <div class="stack">
         <div class="panel">
-          <h2>Version / Limitations</h2>
-          <p class="panel-caption">
-            This screen tracks what is solid in the current browser build, what remains intentionally limited, and which expert-user features are next.
-          </p>
+          <div class="sidebar-header">
+            <div>
+              <h2>Rosters / Networks / Power</h2>
+              <p class="panel-caption">
+                Tier 2 workflow: light force-package summaries and logical-assignment scaffolding for C2 networks and power grids.
+              </p>
+            </div>
+            <button class="sidebar-close" data-close-sidebar="analysis">Close</button>
+          </div>
         </div>
-        <div class="summary-grid">
-          <div class="timeline-card">
-            <h4>Current Version</h4>
-            <div class="summary-meta">Browser CsUAS Sim v2.00: builder-first SME workflow pass with Scenario Wizard, Template Builder, grouped validation, report playback, Monte Carlo CSV, structured export previews, and grouped Red threat authoring.</div>
+        <div class="panel">
+          <h3>Roster Builder</h3>
+          <div class="controls">
+            <div class="field">
+              <label for="roster-side-select">Side</label>
+              <select id="roster-side-select">
+                <option value="Blue">Blue</option>
+                <option value="Red">Red</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="roster-template-select">Template</label>
+              <select id="roster-template-select"></select>
+            </div>
+            <div class="field">
+              <label for="roster-quantity-input">Quantity</label>
+              <input id="roster-quantity-input" type="number" min="1" max="24" value="1">
+            </div>
+            <button id="add-roster-item-btn">Add Roster Item</button>
           </div>
-          <div class="timeline-card">
-            <h4>Current Physics / Models</h4>
-            <div class="summary-meta">Implemented today: waypoint movement, sensor range/FOV/signal-threshold detection, track create/update with aging, stateful classification/identification/intent, XY-only TEWA threating with hysteresis drop, locked-effector refire, projectile-speed time-to-effect, quadratic range-based kinetic Pk decay, damage / health resolution, and Monte Carlo aggregate reporting.</div>
+          <div class="analysis-grid" id="roster-summary"></div>
+          <div id="roster-item-list" style="margin-top:12px;"></div>
+        </div>
+        <div class="screen-grid">
+          <div class="panel">
+            <h3>C2 Networks</h3>
+            <div class="controls">
+              <button id="add-network-btn">Add Network</button>
+            </div>
+            <div id="network-list"></div>
           </div>
-          <div class="timeline-card">
-            <h4>Current Limitations</h4>
-            <div class="summary-meta">Not implemented yet: full terrain effects, terrain masking, weather effects, full clutter physics, spoofing workflows, jammer-vs-network modeling, reusable local template library, dedicated event timeline, failure-driver table, heat maps, and canvas overlays for effector fields of view or intent headings.</div>
-          </div>
-          <div class="timeline-card">
-            <h4>Coming Next</h4>
-            <div class="summary-meta">Planned / likely next: event timeline review, top failure-driver analysis, FOV and intent-heading overlays on the map, richer environment authoring, reusable local template workflows, and interceptor child-object modeling for launcher effects.</div>
-          </div>
-          <div class="timeline-card">
-            <h4>Expert Workflow</h4>
-            <div class="summary-meta">Use Scenario Wizard for quick starts, Template Builder for embedded template tuning, Report Viewer for outcomes, and Raw Data / Export for normalized scenario sharing and deep debug payloads.</div>
-          </div>
-          <div class="timeline-card">
-            <h4>Model Constraints</h4>
-            <div class="summary-meta">Deliberate constraints in v2.00: ghost/clutter remain placeholders, TEWA payload estimation remains heuristic, validation quality checks are advisory unless structurally blocking, and the wizard/builder focus on fast authoring rather than full mission/doctrine/environment fidelity.</div>
+          <div class="panel">
+            <h3>Power Grids</h3>
+            <div class="controls">
+              <button id="add-power-grid-btn">Add Power Grid</button>
+            </div>
+            <div id="power-grid-list"></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="screen" id="screen-export">
+    <section class="screen workspace-sidebar" id="screen-export">
       <div class="stack">
         <div class="panel">
+          <div class="sidebar-header">
+            <div>
+              <h2>Raw Data / Export</h2>
+              <p class="panel-caption">Export the normalized scenario, report payloads, logs, and Monte Carlo outputs.</p>
+            </div>
+            <button class="sidebar-close" data-close-sidebar="export">Close</button>
+          </div>
           <div class="controls">
             <button id="export-single-btn">Export Single Run CSV</button>
             <button id="export-monte-carlo-btn">Export Monte Carlo CSV</button>
@@ -1552,6 +1916,14 @@
         return fallbackRoles.slice();
       }
 
+      function normalizeMissionProfile(profile) {
+        const type = String(profile?.type || "Geographic");
+        return {
+          type: ["Geographic", "SpecificAsset", "MaxDamage"].includes(type) ? type : "Geographic",
+          targetTemplateId: profile?.targetTemplateId || null
+        };
+      }
+
       function normalizeSensor(sensor, index) {
         const classification = sensor.classification || {};
         const identification = sensor.identification || {};
@@ -1640,6 +2012,8 @@
         scenario.config.projectedPathToleranceM = Number(scenario.config.projectedPathToleranceM ?? 50);
         scenario.environment = scenario.environment || {};
         scenario.environment.baseNoiseDb = Number(scenario.environment.baseNoiseDb ?? 1.8);
+        scenario.environment.backgroundImageBase64 = scenario.environment.backgroundImageBase64 || "";
+        scenario.environment.mapWidthMeters = Number(scenario.environment.mapWidthMeters ?? 1080);
         scenario.environment.placeholderGhostTrack = scenario.environment.placeholderGhostTrack || {
           enabled: false,
           spawnTimeSec: 7,
@@ -1656,6 +2030,25 @@
           label: "Clutter Placeholder",
           note: "Placeholder clutter field only; no full clutter object spawning yet."
         };
+        scenario.networks = ensureArray(scenario.networks).map((network, index) => ({
+          id: network.id || "Network-" + (index + 1),
+          name: network.name || ("Network " + (index + 1)),
+          type: network.type || "RF",
+          transmissionLatencySec: Number(network.transmissionLatencySec ?? network.latencySec ?? 0.25)
+        }));
+        scenario.powerGrids = ensureArray(scenario.powerGrids).map((grid, index) => ({
+          id: grid.id || "PowerGrid-" + (index + 1),
+          name: grid.name || ("Power Grid " + (index + 1)),
+          type: grid.type || "Tactical"
+        }));
+        scenario.rosters = ensureArray(scenario.rosters).map((roster, index) => ({
+          id: roster.id || "Roster-" + (index + 1),
+          side: roster.side || "Neutral",
+          items: ensureArray(roster.items).map((item) => ({
+            templateId: item.templateId || "",
+            quantity: Math.max(1, Math.floor(Number(item.quantity || 1)))
+          }))
+        }));
         scenario.templates = ensureArray(scenario.templates).map((template, templateIndex) => {
           const components = template.components || {};
           return {
@@ -1663,6 +2056,7 @@
             name: template.name || ("Template " + (templateIndex + 1)),
             category: template.category || "Generic",
             defaultRoles: normalizeRoles(template.defaultRoles, []),
+            missionProfile: normalizeMissionProfile(template.missionProfile),
             components: {
               health: {
                 maxHealth: Number(components.health?.maxHealth ?? 100),
@@ -1696,6 +2090,8 @@
           name: instance.name || ("Instance " + (instanceIndex + 1)),
           side: instance.side || "Neutral",
           roles: normalizeRoles(instance.roles, []),
+          networkId: instance.networkId || null,
+          connectedPowerGridId: instance.connectedPowerGridId || null,
           posX: Number(instance.posX ?? 0),
           posY: Number(instance.posY ?? 0),
           posZ: Number(instance.posZ ?? 0),
@@ -1734,7 +2130,7 @@
         }
 
         if (!scenario.instances.length) {
-          addIssue("error", "At least one instance is required.", "Use the Scenario Wizard or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
+          addIssue("error", "At least one instance is required.", "Use the Scenario Editor or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
         }
 
         const templateIds = new Set();
@@ -2026,6 +2422,8 @@
           },
           environment: {
             baseNoiseDb: 1.8,
+            mapWidthMeters: 1080,
+            backgroundImageBase64: "",
             placeholderGhostTrack: {
               enabled: false,
               spawnTimeSec: 7,
@@ -2043,6 +2441,9 @@
               note: "Visual placeholder for future clutter field behavior."
             }
           },
+          networks: [],
+          powerGrids: [],
+          rosters: [],
           templates: [
             {
               id: "Template-Blue-CUAS-Site",
@@ -2102,6 +2503,10 @@
               id: "Template-Red-UAS-Generic",
               name: "Red Recon Strike UAS",
               defaultRoles: ["UAS"],
+              missionProfile: {
+                type: "MaxDamage",
+                targetTemplateId: null
+              },
               components: {
                 health: { maxHealth: 90, assetValuePts: 8, isHQ: false },
                 resistance: { kineticResistance: 0.18 },
@@ -2159,6 +2564,10 @@
         return (object.components.sensors || []).find((sensor) => sensor.id === sensorId) || null;
       }
 
+      function getSensorRuntimeState(object, sensorId) {
+        return object?.runtime?.sensorStates?.[sensorId] || null;
+      }
+
       function getBlueAssets(world) {
         return world.objectIds
           .map((id) => world.objects[id])
@@ -2167,6 +2576,50 @@
 
       function getEffectorRuntimeState(object, effectorId) {
         return object?.runtime?.effectorStates?.[effectorId] || null;
+      }
+
+      function getObjectSideById(world, objectId) {
+        return world.objects[objectId]?.side || null;
+      }
+
+      function inferLogSide(world, data = {}) {
+        if (data.side) {
+          return data.side;
+        }
+        if (data.trackId) {
+          const track = getTrack(world, data.trackId);
+          if (track?.owningSide) {
+            return track.owningSide;
+          }
+        }
+        const candidateIds = [
+          data.objectId,
+          data.observerId,
+          data.shooterId,
+          data.hostId,
+          data.c2ObjectId,
+          data.targetId
+        ];
+        for (const candidateId of candidateIds) {
+          const side = getObjectSideById(world, candidateId);
+          if (side) {
+            return side;
+          }
+        }
+        return "Neutral";
+      }
+
+      function isOpticalSensor(sensor) {
+        const type = String(sensor?.type || "").toUpperCase();
+        return type === "EO_IR" || type === "FPV";
+      }
+
+      function syncFpvSensorHeading(object, headingDeg) {
+        (object?.components?.sensors || []).forEach((sensor) => {
+          if (String(sensor.type || "").toUpperCase() === "FPV") {
+            sensor.headingDeg = round(headingDeg, 2);
+          }
+        });
       }
 
       function clearEffectorAssignment(object, effectorId, world) {
@@ -2416,6 +2869,43 @@
         return round(1 + sizeScore + behaviorScore + speedScore, 2);
       }
 
+      function findMissionHeuristicTarget(world, object) {
+        const missionProfile = object?.runtime?.missionProfile || object?.missionProfile || { type: "Geographic", targetTemplateId: null };
+        const blueAssets = getBlueAssets(world)
+          .filter((candidate) => candidate.id !== object.id && candidate.roles.includes("Asset"));
+
+        if (!blueAssets.length) {
+          return null;
+        }
+
+        if (missionProfile.type === "SpecificAsset" && missionProfile.targetTemplateId) {
+          const matches = blueAssets.filter((candidate) => candidate.templateId === missionProfile.targetTemplateId);
+          if (matches.length) {
+            return matches.sort((left, right) => (
+              distance3D(object.runtime.position, left.runtime.position) - distance3D(object.runtime.position, right.runtime.position)
+            ))[0];
+          }
+        }
+
+        if (missionProfile.type === "MaxDamage") {
+          return blueAssets
+            .slice()
+            .sort((left, right) => {
+              const valueDiff = Number(right.components.health.assetValuePts || 0) - Number(left.components.health.assetValuePts || 0);
+              if (valueDiff !== 0) {
+                return valueDiff;
+              }
+              return distance3D(object.runtime.position, left.runtime.position) - distance3D(object.runtime.position, right.runtime.position);
+            })[0];
+        }
+
+        return blueAssets
+          .slice()
+          .sort((left, right) => (
+            distance3D(object.runtime.position, left.runtime.position) - distance3D(object.runtime.position, right.runtime.position)
+          ))[0];
+      }
+
       function resolveProjectedAsset(world, originPosition, velocityVector, fallbackObject) {
         const direction = normalizeVector2D(velocityVector);
         const toleranceM = world.config.projectedPathToleranceM;
@@ -2599,6 +3089,10 @@
               x: object.runtime.position.x,
               y: object.runtime.position.y,
               z: object.runtime.position.z,
+              sensors: deepClone(object.components.sensors || []),
+              effectors: deepClone(object.components.effectors || []),
+              currentHeadingDeg: object.runtime.currentHeadingDeg ?? null,
+              behaviorState: object.runtime.behaviorState || "Active",
               destroyed: object.runtime.destroyed,
               status: object.runtime.operationalStatus
             };
@@ -2607,6 +3101,9 @@
             id: track.id,
             x: track.position ? track.position.x : null,
             y: track.position ? track.position.y : null,
+            headingDeg: track.currentHeadingUnitXY
+              ? round((Math.atan2(track.currentHeadingUnitXY.y, track.currentHeadingUnitXY.x) * (180 / Math.PI) + 360) % 360, 2)
+              : null,
             classification: track.classificationStatus,
             identification: track.identificationStatus,
             intent: track.intentStatus,
@@ -2815,10 +3312,12 @@
 
       class LoggingSystem {
         record(world, timeSec, type, message, data = {}) {
+          const side = inferLogSide(world, data);
           world.logs.push({
             timeSec: round(timeSec, 2),
             type,
             message,
+            side,
             data
           });
         }
@@ -2940,51 +3439,149 @@
 
           const movement = object.components.movement;
           const mission = object.runtime.mission;
-          if (!movement || mission.currentWaypointIndex >= mission.waypoints.length) {
+          if (!movement) {
             return;
           }
 
-          const waypoint = mission.waypoints[mission.currentWaypointIndex];
           const current = object.runtime.position;
+          let movementTarget = null;
+          let movementReason = "waypoint";
+
+          const lockedTargetId = Object.values(object.runtime.effectorStates || {})
+            .find((state) => state?.missionState === "Engaging" && state.lockedTargetId)?.lockedTargetId || null;
+          const lockedTarget = lockedTargetId ? getObject(world, lockedTargetId) : null;
+          if (lockedTarget && !lockedTarget.runtime.destroyed) {
+            movementTarget = deepClone(lockedTarget.runtime.position);
+            movementReason = "pursuit";
+            if (object.runtime.behaviorState !== "Pursuit" || object.runtime.behaviorTargetId !== lockedTarget.id) {
+              object.runtime.behaviorState = "Pursuit";
+              object.runtime.behaviorTargetId = lockedTarget.id;
+              services.logger.record(
+                world,
+                event.time,
+                "movement",
+                object.name + " shifted to pursuit of " + lockedTarget.name,
+                {
+                  objectId: object.id,
+                  targetId: lockedTarget.id,
+                  reason: "effector-lock"
+                }
+              );
+            }
+          } else if (object.runtime.behaviorTargetId) {
+            const behaviorTarget = getObject(world, object.runtime.behaviorTargetId);
+            if (behaviorTarget && !behaviorTarget.runtime.destroyed && object.side === "Red") {
+              movementTarget = deepClone(behaviorTarget.runtime.position);
+              movementReason = "attack-run";
+              object.runtime.behaviorState = "Attack Run";
+            } else {
+              object.runtime.behaviorTargetId = null;
+            }
+          }
+
+          if (!movementTarget && mission.currentWaypointIndex < mission.waypoints.length) {
+            movementTarget = mission.waypoints[mission.currentWaypointIndex];
+            movementReason = "waypoint";
+            object.runtime.behaviorState = "Route";
+          }
+
+          if (!movementTarget && object.side === "Red" && object.roles.includes("UAS")) {
+            const missionProfile = object.runtime.missionProfile || object.missionProfile || { type: "Geographic" };
+            if (missionProfile.type === "Geographic") {
+              if (object.runtime.behaviorState !== "Loiter") {
+                object.runtime.behaviorState = "Loiter";
+                object.runtime.behaviorTargetId = null;
+                services.logger.record(
+                  world,
+                  event.time,
+                  "movement",
+                  object.name + " entered geographic loiter",
+                  {
+                    objectId: object.id,
+                    reason: "route-complete"
+                  }
+                );
+              }
+              return;
+            }
+
+            const heuristicTarget = findMissionHeuristicTarget(world, object);
+            if (heuristicTarget) {
+              object.runtime.behaviorTargetId = heuristicTarget.id;
+              object.runtime.behaviorState = "Attack Run";
+              movementTarget = deepClone(heuristicTarget.runtime.position);
+              movementReason = "attack-run";
+              services.logger.record(
+                world,
+                event.time,
+                "movement",
+                object.name + " initiated attack run toward " + heuristicTarget.name,
+                {
+                  objectId: object.id,
+                  targetId: heuristicTarget.id,
+                  missionProfileType: missionProfile.type,
+                  targetTemplateId: missionProfile.targetTemplateId || null
+                }
+              );
+            }
+          }
+
+          if (!movementTarget) {
+            if (object.runtime.behaviorState !== "Complete") {
+              object.runtime.behaviorState = "Complete";
+              services.logger.record(
+                world,
+                event.time,
+                "movement",
+                object.name + " completed its waypoint route",
+                { objectId: object.id }
+              );
+            }
+            return;
+          }
+
           const stepDistance = movement.speedMps * movement.stepSec;
-          const remainingDistance = distance3D(current, waypoint);
+          const remainingDistance = distance3D(current, movementTarget);
+          if (remainingDistance > 0.001) {
+            object.runtime.currentHeadingDeg = round(angleDeg(current, movementTarget), 2);
+            syncFpvSensorHeading(object, object.runtime.currentHeadingDeg);
+          }
 
           if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
-            object.runtime.position = { x: waypoint.x, y: waypoint.y, z: waypoint.z };
-            mission.currentWaypointIndex += 1;
+            object.runtime.position = { x: movementTarget.x, y: movementTarget.y, z: movementTarget.z };
+            if (movementReason === "waypoint") {
+              mission.currentWaypointIndex += 1;
+            }
             services.logger.record(
               world,
               event.time,
               "movement",
-              object.name + " reached waypoint " + mission.currentWaypointIndex,
-              { objectId: object.id, waypointIndex: mission.currentWaypointIndex }
+              movementReason === "waypoint"
+                ? (object.name + " reached waypoint " + mission.currentWaypointIndex)
+                : (object.name + " closed on current target"),
+              {
+                objectId: object.id,
+                waypointIndex: mission.currentWaypointIndex,
+                targetId: object.runtime.behaviorTargetId || null,
+                movementReason
+              }
             );
           } else {
             const ratio = stepDistance / remainingDistance;
             object.runtime.position = {
-              x: current.x + ((waypoint.x - current.x) * ratio),
-              y: current.y + ((waypoint.y - current.y) * ratio),
-              z: current.z + ((waypoint.z - current.z) * ratio)
+              x: current.x + ((movementTarget.x - current.x) * ratio),
+              y: current.y + ((movementTarget.y - current.y) * ratio),
+              z: current.z + ((movementTarget.z - current.z) * ratio)
             };
           }
 
           services.captureFrame(world, event.time, "movement");
 
-          if (mission.currentWaypointIndex < mission.waypoints.length) {
-            services.events.scheduleDelay(event.time, movement.stepSec, {
-              type: "movement.step",
-              priority: EVENT_PRIORITIES.movement,
-              payload: { objectId: object.id }
-            });
-          } else {
-            services.logger.record(
-              world,
-              event.time,
-              "movement",
-              object.name + " completed its waypoint route",
-              { objectId: object.id }
-            );
-          }
+          services.events.scheduleDelay(event.time, movement.stepSec, {
+            type: "movement.step",
+            priority: EVENT_PRIORITIES.movement,
+            payload: { objectId: object.id }
+          });
         }
       }
 
@@ -2996,7 +3593,12 @@
           }
 
           (host.components.sensors || []).forEach((sensor) => {
-            world.objectIds.forEach((targetId) => {
+            const sensorState = getSensorRuntimeState(host, sensor.id);
+            const cuedTrack = sensorState?.cuedTrackId ? getTrack(world, sensorState.cuedTrackId) : null;
+            const focusedTargetId = cuedTrack?.realObjectId || null;
+            const candidateTargetIds = focusedTargetId ? [focusedTargetId] : world.objectIds.slice();
+
+            candidateTargetIds.forEach((targetId) => {
               const target = getObject(world, targetId);
               if (!target || target.runtime.destroyed || target.side === host.side) {
                 return;
@@ -3020,18 +3622,32 @@
                 return;
               }
 
-              const signalStrengthDb = sensor.transmitPowerDb
-                + target.components.signature.radarSignatureDb
-                - (20 * Math.log10(Math.max(1, rangeM)));
-              const noiseDb = sensor.noiseFloorDb
-                + world.environment.baseNoiseDb
-                + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
+              let confidence = 0;
+              let signalStrengthDb = null;
+              let noiseDb = null;
+              if (isOpticalSensor(sensor)) {
+                confidence = clamp(1 - Math.pow((rangeM / Math.max(1, sensor.maxRangeM)), 2), 0, 0.99);
+                if (confidence <= 0.1) {
+                  return;
+                }
+              } else {
+                signalStrengthDb = sensor.transmitPowerDb
+                  + target.components.signature.radarSignatureDb
+                  - (20 * Math.log10(Math.max(1, rangeM)));
+                noiseDb = sensor.noiseFloorDb
+                  + world.environment.baseNoiseDb
+                  + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
 
-              if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
-                return;
+                if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
+                  return;
+                }
+
+                confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
               }
 
-              const confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
+              if (focusedTargetId && target.id === focusedTargetId) {
+                confidence = clamp(confidence + 0.08, 0.1, 0.99);
+              }
               world.metrics.detectionCandidates += 1;
               if (world.metrics.firstDetectionTimeSec === null) {
                 world.metrics.firstDetectionTimeSec = round(event.time, 2);
@@ -3048,7 +3664,9 @@
                   sensorId: sensor.id,
                   targetId: target.id,
                   rangeM: round(rangeM, 2),
-                  confidence: round(confidence, 2)
+                  confidence: round(confidence, 2),
+                  cueFocused: focusedTargetId === target.id,
+                  sensorMode: isOpticalSensor(sensor) ? "optical" : "em"
                 }
               );
 
@@ -3075,6 +3693,32 @@
               });
             }
           });
+        }
+
+        releaseCue(event, world, services) {
+          const host = getObject(world, event.payload.objectId);
+          if (!host || host.runtime.destroyed) {
+            return;
+          }
+          const sensorState = getSensorRuntimeState(host, event.payload.sensorId);
+          if (!sensorState || sensorState.cuedTrackId !== event.payload.trackId) {
+            return;
+          }
+          sensorState.missionState = "Scanning";
+          sensorState.cuedTrackId = null;
+          sensorState.busyUntilSec = 0;
+          services.logger.record(
+            world,
+            event.time,
+            "sensor",
+            host.name + " released cue on " + event.payload.trackId,
+            {
+              objectId: host.id,
+              sensorId: event.payload.sensorId,
+              trackId: event.payload.trackId,
+              reason: event.payload.reason || "cue-complete"
+            }
+          );
         }
       }
 
@@ -3143,19 +3787,31 @@
               event.time,
               "track",
               "Track created for " + target.name,
-              { trackId: track.id, targetId: target.id }
+              { trackId: track.id, targetId: target.id, observerId: observer.id, updateReason: "new-track" }
             );
-          } else {
+          }
+
+          const newSensorContribution = !track.sourceSensorIds.includes(sensor.id);
+          if (track.history.length > 0) {
+            const lastKnownPosition = track.position || track.history[track.history.length - 1]?.position || target.runtime.position;
+            const movedDistanceM = distance3D(lastKnownPosition, target.runtime.position);
+            const updateReason = newSensorContribution
+              ? "new-sensor-fused"
+              : (movedDistanceM >= 15 ? "track-state-changed" : "same-sensor-refresh");
             services.logger.record(
               world,
               event.time,
               "track",
               "Track updated for " + target.name,
-              { trackId: track.id, targetId: target.id }
+              {
+                trackId: track.id,
+                targetId: target.id,
+                observerId: observer.id,
+                updateReason,
+                movementDeltaM: round(movedDistanceM, 2)
+              }
             );
           }
-
-          const newSensorContribution = !track.sourceSensorIds.includes(sensor.id);
           if (newSensorContribution) {
             track.sourceSensorIds.push(sensor.id);
           }
@@ -3311,9 +3967,13 @@
             0.99
           );
 
-          track.classificationStatus = target.roles.includes("UAS") && confidence >= 0.52
-            ? "UAS"
-            : "Unknown Air Object";
+          if (target.roles.includes("UAS") && confidence >= 0.52) {
+            track.classificationStatus = "UAS";
+          } else if (target.roles.includes("Asset") && confidence >= 0.48) {
+            track.classificationStatus = "Ground Asset";
+          } else {
+            track.classificationStatus = "Unknown Object";
+          }
           track.classificationConfidence = round(confidence, 2);
           world.metrics.classifications += 1;
           recordAssessmentDecision(track, "classification", "refreshed", reason, event.time, cycle.id);
@@ -3366,7 +4026,7 @@
           const stageState = assessmentState.identification;
           let shouldRefresh = false;
           let reason = "retained";
-          if (track.classificationStatus === "Unknown Air Object") {
+          if (track.classificationStatus === "Unknown Air Object" || track.classificationStatus === "Unknown Object") {
             reason = "classification-unknown";
           } else if (track.classificationConfidence < 0.45) {
             reason = "classification-weak";
@@ -3452,9 +4112,9 @@
           let identificationStatus = "Unknown";
           if (target.side === observer.side && confidence >= 0.52) {
             identificationStatus = "Friendly";
-          } else if (track.classificationStatus === "UAS" && confidence >= 0.58) {
+          } else if (["UAS", "Ground Asset"].includes(track.classificationStatus) && confidence >= 0.58) {
             identificationStatus = "Hostile";
-          } else if (track.classificationStatus === "UAS" && confidence >= 0.42) {
+          } else if (["UAS", "Ground Asset"].includes(track.classificationStatus) && confidence >= 0.42) {
             identificationStatus = "Suspect";
           }
 
@@ -3641,6 +4301,88 @@
       }
 
       class C2System {
+        needsSensorCue(track) {
+          return track
+            && track.status === "Active"
+            && track.trackType !== "Ghost"
+            && (
+              ["Unknown Air Object", "Unknown Object"].includes(track.classificationStatus)
+              || ["Unknown", "Suspect"].includes(track.identificationStatus)
+            );
+        }
+
+        cueSensor(world, c2Object, track, timeSec, services) {
+          const alreadyCued = world.objectIds.some((objectId) => {
+            const object = world.objects[objectId];
+            return Object.values(object?.runtime?.sensorStates || {}).some((state) => state?.cuedTrackId === track.id);
+          });
+          if (alreadyCued) {
+            return false;
+          }
+
+          for (const objectId of world.objectIds) {
+            const sensorHost = world.objects[objectId];
+            if (!sensorHost || sensorHost.side !== "Blue" || sensorHost.runtime.destroyed) {
+              continue;
+            }
+
+            for (const sensor of sensorHost.components.sensors || []) {
+              const sensorState = getSensorRuntimeState(sensorHost, sensor.id);
+              if (!sensorState || sensorState.missionState !== "Scanning") {
+                continue;
+              }
+
+              const cueDurationSec = Math.max(
+                0.2,
+                Number(sensor.classification?.latencySec || 0)
+                  + Number(sensor.identification?.latencySec || 0)
+                  + 0.1
+              );
+              sensorState.missionState = "Cued";
+              sensorState.cuedTrackId = track.id;
+              sensorState.busyUntilSec = round(timeSec + cueDurationSec, 2);
+              sensorState.lastCueTimeSec = round(timeSec, 2);
+              if (track.position) {
+                sensor.headingDeg = round(angleDeg(sensorHost.runtime.position, track.position), 2);
+              }
+
+              services.logger.record(
+                world,
+                timeSec,
+                "sensor",
+                c2Object.name + " cued " + sensor.name + " toward " + track.id,
+                {
+                  c2ObjectId: c2Object.id,
+                  objectId: sensorHost.id,
+                  sensorId: sensor.id,
+                  trackId: track.id,
+                  targetId: track.realObjectId || null,
+                  reason: "assessment-gap"
+                }
+              );
+
+              services.events.scheduleDelay(timeSec, cueDurationSec, {
+                type: "sensor.scan",
+                priority: EVENT_PRIORITIES.sensor,
+                payload: { objectId: sensorHost.id }
+              }, { enforceMinimumDelay: cueDurationSec <= 0 });
+              services.events.scheduleDelay(timeSec, cueDurationSec, {
+                type: "sensor.releaseCue",
+                priority: EVENT_PRIORITIES.sensor,
+                payload: {
+                  objectId: sensorHost.id,
+                  sensorId: sensor.id,
+                  trackId: track.id,
+                  reason: "cue-window-complete"
+                }
+              }, { enforceMinimumDelay: cueDurationSec <= 0 });
+              return true;
+            }
+          }
+
+          return false;
+        }
+
         buildThreatPicture(world, c2Object) {
           return Object.values(world.tracks)
             .filter((track) => {
@@ -3694,10 +4436,19 @@
               object.side === "Blue"
               && !object.runtime.destroyed
               && object.components.c2
-              && (object.components.effectors || []).length
             );
 
           for (const c2Object of c2Objects) {
+            Object.values(world.tracks)
+              .filter((track) => this.needsSensorCue(track))
+              .forEach((track) => {
+                this.cueSensor(world, c2Object, track, event.time, services);
+              });
+
+            if (!(c2Object.components.effectors || []).length) {
+              continue;
+            }
+
             const threatEntries = this.buildThreatPicture(world, c2Object);
             for (const entry of threatEntries) {
               const track = entry.track;
@@ -3725,6 +4476,7 @@
                   "c2",
                   c2Object.name + " ordered engagement against " + track.id,
                   {
+                    c2ObjectId: c2Object.id,
                     trackId: track.id,
                     effectorId: effector.id,
                     targetId: entry.target.id,
@@ -3803,6 +4555,7 @@
               "effector",
               shooter.name + " released " + effector.name + " without firing",
               {
+                shooterId: shooter.id,
                 trackId: track.id,
                 targetId: target.id,
                 reason: "target-invalid-or-out-of-range"
@@ -3835,6 +4588,7 @@
             "effector",
             shooter.name + " fired " + effector.name + " at " + target.name,
             {
+              shooterId: shooter.id,
               trackId: track.id,
               targetId: target.id,
               effectivePk: round(effectivePk, 2),
@@ -3882,6 +4636,7 @@
             "effect",
             hit ? "Effect resolved as a hit on " + target.name : "Effect missed " + target.name,
             {
+              shooterId: event.payload.shooterId,
               targetId: target.id,
               trackId: track.id,
               hit,
@@ -3941,6 +4696,7 @@
             "effector",
             shooter.name + " reset " + effector.name + " to Idle",
             {
+              shooterId: shooter.id,
               trackId: releasedTrackId,
               targetId: releasedTargetId,
               reason: "cooldown-complete-or-target-invalid"
@@ -4058,7 +4814,7 @@
 
           runtime.objectIds.forEach((objectId) => {
             const object = runtime.objects[objectId];
-            if (object.components.movement && object.runtime.mission.waypoints.length > 0) {
+            if (object.components.movement) {
               runtime.eventManager.schedule({
                 time: 0,
                 type: "movement.step",
@@ -4091,6 +4847,9 @@
                 break;
               case "sensor.scan":
                 this.sensorSystem.process(event, runtime, services);
+                break;
+              case "sensor.releaseCue":
+                this.sensorSystem.releaseCue(event, runtime, services);
                 break;
               case "environment.spawnGhostTrack":
                 this.environmentSystem.spawnGhostTrack(event, runtime, services);
@@ -4163,6 +4922,7 @@
               name: instance.name,
               side: instance.side,
               roles: normalizeRoles(instance.roles, template.defaultRoles),
+              missionProfile: deepClone(template.missionProfile || normalizeMissionProfile({})),
               components: deepClone(template.components),
               runtime: {
                 position: { x: instance.posX, y: instance.posY, z: instance.posZ },
@@ -4171,13 +4931,27 @@
                 destroyed: false,
                 ammo: {},
                 lastFireTimeSec: {},
+                sensorStates: {},
                 effectorStates: {},
                 mission: {
                   currentWaypointIndex: 0,
                   waypoints: deepClone(instance.missionWaypoints || [])
-                }
+                },
+                missionProfile: deepClone(template.missionProfile || normalizeMissionProfile({})),
+                behaviorState: "Route",
+                behaviorTargetId: null,
+                lastCueLogTrackId: null
               }
             };
+
+            (object.components.sensors || []).forEach((sensor) => {
+              object.runtime.sensorStates[sensor.id] = {
+                missionState: "Scanning",
+                cuedTrackId: null,
+                busyUntilSec: 0,
+                lastCueTimeSec: null
+              };
+            });
 
             (object.components.effectors || []).forEach((effector) => {
               object.runtime.ammo[effector.id] = effector.ammoCapacity;
@@ -4334,12 +5108,152 @@
         this.context = canvas.getContext("2d");
         this.width = canvas.width;
         this.height = canvas.height;
+        this.scenario = null;
+        this.viewport = {
+          zoom: 1,
+          offsetX: 0,
+          offsetY: 0
+        };
+        this.backgroundImage = null;
+        this.isDragging = false;
+        this.lastPointer = null;
+        this.onViewportChange = null;
+        this.selectedEntity = null;
+        this.bindInteractions();
+      }
+
+      bindInteractions() {
+        this.canvas.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          const delta = event.deltaY < 0 ? 1.08 : 0.92;
+          this.viewport.zoom = SIMULATION_KERNEL.clamp(this.viewport.zoom * delta, 0.65, 2.8);
+          if (typeof this.onViewportChange === "function") {
+            this.onViewportChange();
+          }
+        });
+        this.canvas.addEventListener("pointerdown", (event) => {
+          this.isDragging = true;
+          this.lastPointer = { x: event.clientX, y: event.clientY };
+          this.canvas.setPointerCapture(event.pointerId);
+        });
+        this.canvas.addEventListener("pointermove", (event) => {
+          if (!this.isDragging || !this.lastPointer) {
+            return;
+          }
+          this.viewport.offsetX += event.clientX - this.lastPointer.x;
+          this.viewport.offsetY += event.clientY - this.lastPointer.y;
+          this.lastPointer = { x: event.clientX, y: event.clientY };
+          if (typeof this.onViewportChange === "function") {
+            this.onViewportChange();
+          }
+        });
+        const endDrag = (event) => {
+          this.isDragging = false;
+          this.lastPointer = null;
+          if (event?.pointerId != null) {
+            this.canvas.releasePointerCapture(event.pointerId);
+          }
+        };
+        this.canvas.addEventListener("pointerup", endDrag);
+        this.canvas.addEventListener("pointerleave", endDrag);
+      }
+
+      setScenario(scenario) {
+        this.scenario = scenario || null;
+        const src = this.scenario?.environment?.backgroundImageBase64 || "";
+        if (!src) {
+          this.backgroundImage = null;
+          return;
+        }
+        const image = new Image();
+        image.onload = () => {
+          if (typeof this.onViewportChange === "function") {
+            this.onViewportChange();
+          }
+        };
+        image.src = src;
+        this.backgroundImage = image;
+      }
+
+      resetViewport() {
+        this.viewport.zoom = 1;
+        this.viewport.offsetX = 0;
+        this.viewport.offsetY = 0;
+      }
+
+      setSelection(selection) {
+        this.selectedEntity = selection || null;
+      }
+
+      getPixelsPerMeter() {
+        const mapWidthMeters = Math.max(100, Number(this.scenario?.environment?.mapWidthMeters || 1080));
+        return (this.width / mapWidthMeters) * this.viewport.zoom;
+      }
+
+      worldToCanvas(position) {
+        const ppm = this.getPixelsPerMeter();
+        return {
+          x: (position.x * ppm) + this.viewport.offsetX,
+          y: (position.y * ppm) + this.viewport.offsetY
+        };
+      }
+
+      canvasToWorld(canvasPoint) {
+        const ppm = this.getPixelsPerMeter();
+        return {
+          x: (canvasPoint.x - this.viewport.offsetX) / ppm,
+          y: (canvasPoint.y - this.viewport.offsetY) / ppm,
+          z: 0
+        };
+      }
+
+      eventToCanvas(event) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+          x: ((event.clientX - rect.left) / rect.width) * this.width,
+          y: ((event.clientY - rect.top) / rect.height) * this.height
+        };
+      }
+
+      hitTest(frame, event) {
+        if (!frame) {
+          return null;
+        }
+        const point = this.eventToCanvas(event);
+        const candidates = [];
+        (frame.objects || []).forEach((object) => {
+          const canvasPoint = this.worldToCanvas({ x: object.x, y: object.y });
+          candidates.push({
+            type: "object",
+            id: object.id,
+            name: object.name,
+            side: object.side,
+            distancePx: Math.hypot(point.x - canvasPoint.x, point.y - canvasPoint.y)
+          });
+        });
+        (frame.tracks || []).forEach((track) => {
+          if (track.x == null || track.y == null) {
+            return;
+          }
+          const canvasPoint = this.worldToCanvas({ x: track.x, y: track.y });
+          candidates.push({
+            type: "track",
+            id: track.id,
+            name: track.id,
+            side: "Blue",
+            distancePx: Math.hypot(point.x - canvasPoint.x, point.y - canvasPoint.y)
+          });
+        });
+        return candidates
+          .filter((candidate) => candidate.distancePx <= 24)
+          .sort((left, right) => left.distancePx - right.distancePx)[0] || null;
       }
 
       draw(frame, report) {
         const ctx = this.context;
         ctx.clearRect(0, 0, this.width, this.height);
         this.drawTerrain(ctx);
+        this.drawBackground(ctx);
         this.drawScale(ctx);
         if (!frame) {
           return;
@@ -4364,7 +5278,49 @@
           this.drawClutterPlaceholder(ctx, placeholder);
         });
 
+        this.drawSelection(ctx, frame);
+
         this.drawOverlay(ctx, frame, report);
+      }
+
+      drawSelection(ctx, frame) {
+        if (!this.selectedEntity) {
+          return;
+        }
+        const target = this.selectedEntity.type === "track"
+          ? (frame.tracks || []).find((track) => track.id === this.selectedEntity.id)
+          : (frame.objects || []).find((object) => object.id === this.selectedEntity.id);
+        if (!target) {
+          return;
+        }
+        const position = this.selectedEntity.type === "track"
+          ? this.worldToCanvas({ x: target.x, y: target.y })
+          : this.worldToCanvas({ x: target.x, y: target.y });
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7, 5]);
+        ctx.beginPath();
+        ctx.arc(position.x, position.y, 22, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      drawBackground(ctx) {
+        if (!this.backgroundImage || !this.backgroundImage.complete) {
+          return;
+        }
+        ctx.save();
+        ctx.globalAlpha = 0.32;
+        ctx.drawImage(
+          this.backgroundImage,
+          this.viewport.offsetX,
+          this.viewport.offsetY,
+          this.width * this.viewport.zoom,
+          this.height * this.viewport.zoom
+        );
+        ctx.restore();
       }
 
       drawTerrain(ctx) {
@@ -4401,33 +5357,65 @@
       }
 
       drawScale(ctx) {
+        const ppm = this.getPixelsPerMeter();
+        const barMeters = 100;
+        const barPixels = Math.max(24, barMeters * ppm);
         ctx.fillStyle = "rgba(10, 16, 20, 0.55)";
-        ctx.fillRect(18, this.height - 42, 120, 18);
+        ctx.fillRect(18, this.height - 42, barPixels, 18);
         ctx.fillStyle = "#f7f0df";
-        ctx.fillRect(18, this.height - 42, 60, 18);
+        ctx.fillRect(18, this.height - 42, barPixels / 2, 18);
         ctx.strokeStyle = "rgba(255,255,255,0.3)";
-        ctx.strokeRect(18, this.height - 42, 120, 18);
+        ctx.strokeRect(18, this.height - 42, barPixels, 18);
         ctx.fillStyle = "#f7f0df";
         ctx.font = "12px Trebuchet MS";
         ctx.fillText("0", 18, this.height - 48);
-        ctx.fillText("100m", 122, this.height - 48);
+        ctx.fillText(barMeters + "m", 18 + barPixels - 16, this.height - 48);
+      }
+
+      drawSector(ctx, position, rangeM, headingDeg, fovDeg, strokeStyle) {
+        const center = this.worldToCanvas(position);
+        const radius = Math.max(2, rangeM * this.getPixelsPerMeter());
+        const start = (headingDeg - (fovDeg / 2)) * (Math.PI / 180);
+        const end = (headingDeg + (fovDeg / 2)) * (Math.PI / 180);
+        ctx.save();
+        ctx.strokeStyle = strokeStyle;
+        ctx.fillStyle = strokeStyle.replace("0.22", "0.08");
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.arc(center.x, center.y, radius, start, end);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawRangeRing(ctx, position, rangeM, strokeStyle) {
+        const center = this.worldToCanvas(position);
+        const radius = Math.max(2, rangeM * this.getPixelsPerMeter());
+        ctx.save();
+        ctx.strokeStyle = strokeStyle;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
       }
 
       drawBlueObject(ctx, object) {
-        const position = { x: object.x, y: object.y };
+        const worldPosition = { x: object.x, y: object.y };
+        const position = this.worldToCanvas(worldPosition);
         ctx.save();
-        ctx.strokeStyle = "rgba(89, 183, 207, 0.24)";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(position.x, position.y, 230, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.strokeStyle = "rgba(89, 183, 207, 0.18)";
-        ctx.beginPath();
-        ctx.moveTo(position.x, position.y);
-        ctx.arc(position.x, position.y, 420, Math.PI * 0.6, Math.PI * 1.4);
-        ctx.closePath();
-        ctx.stroke();
+        (object.sensors || []).forEach((sensor) => {
+          if ((sensor.horizontalFovDeg || 360) >= 359) {
+            this.drawRangeRing(ctx, worldPosition, sensor.maxRangeM, "rgba(89, 183, 207, 0.22)");
+          } else {
+            this.drawSector(ctx, worldPosition, sensor.maxRangeM, sensor.headingDeg || 0, sensor.horizontalFovDeg || 360, "rgba(89, 183, 207, 0.22)");
+          }
+        });
+        (object.effectors || []).forEach((effector) => {
+          this.drawRangeRing(ctx, worldPosition, effector.maxRangeM, "rgba(125, 255, 177, 0.24)");
+        });
 
         ctx.fillStyle = "#59b7cf";
         ctx.beginPath();
@@ -4443,7 +5431,8 @@
       }
 
       drawRedObject(ctx, object) {
-        const position = { x: object.x, y: object.y };
+        const worldPosition = { x: object.x, y: object.y };
+        const position = this.worldToCanvas(worldPosition);
         ctx.save();
         ctx.fillStyle = object.destroyed ? "rgba(216, 91, 74, 0.35)" : "#d85b4a";
         ctx.beginPath();
@@ -4469,11 +5458,20 @@
         ctx.fillStyle = "#ffe6dd";
         ctx.font = "bold 13px Trebuchet MS";
         ctx.fillText(object.name, position.x + 16, position.y - 10);
+        if (Number.isFinite(object.currentHeadingDeg)) {
+          const headingRad = object.currentHeadingDeg * (Math.PI / 180);
+          ctx.strokeStyle = "rgba(255, 212, 200, 0.85)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(position.x, position.y);
+          ctx.lineTo(position.x + (Math.cos(headingRad) * 36), position.y + (Math.sin(headingRad) * 36));
+          ctx.stroke();
+        }
         ctx.restore();
       }
 
       drawTrack(ctx, track) {
-        const position = { x: track.x, y: track.y };
+        const position = this.worldToCanvas({ x: track.x, y: track.y });
         ctx.save();
         if (track.status === "Dropped") {
           ctx.setLineDash([5, 4]);
@@ -4493,23 +5491,32 @@
         ctx.fillStyle = track.status === "Dropped" ? "#d7d7d7" : "#ffcc71";
         ctx.font = "12px Trebuchet MS";
         ctx.fillText(track.id, position.x + 14, position.y + 4);
+        if (Number.isFinite(track.headingDeg)) {
+          const headingRad = track.headingDeg * (Math.PI / 180);
+          ctx.strokeStyle = "rgba(255, 204, 113, 0.85)";
+          ctx.beginPath();
+          ctx.moveTo(position.x, position.y);
+          ctx.lineTo(position.x + (Math.cos(headingRad) * 24), position.y + (Math.sin(headingRad) * 24));
+          ctx.stroke();
+        }
         ctx.restore();
       }
 
       drawClutterPlaceholder(ctx, placeholder) {
+        const position = this.worldToCanvas({ x: placeholder.centerX, y: placeholder.centerY });
         ctx.save();
         ctx.strokeStyle = "rgba(168, 85, 255, 0.48)";
         ctx.fillStyle = "rgba(80, 216, 255, 0.08)";
         ctx.lineWidth = 2;
         ctx.setLineDash([8, 6]);
         ctx.beginPath();
-        ctx.arc(placeholder.centerX, placeholder.centerY, placeholder.radiusM, 0, Math.PI * 2);
+        ctx.arc(position.x, position.y, placeholder.radiusM * this.getPixelsPerMeter(), 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = "#caa7ff";
         ctx.font = "12px Trebuchet MS";
-        ctx.fillText(placeholder.label || "Clutter Placeholder", placeholder.centerX + 12, placeholder.centerY - 10);
+        ctx.fillText(placeholder.label || "Clutter Placeholder", position.x + 12, position.y - 10);
         ctx.restore();
       }
 
@@ -4542,15 +5549,33 @@
           analysis: document.getElementById("screen-analysis"),
           export: document.getElementById("screen-export")
         };
+        this.mainScreen = this.screens.run;
+        this.sidebarIds = ["wizard", "templates", "report", "analysis", "export"];
       }
 
       showScreen(screenId) {
-        Object.entries(this.screens).forEach(([key, element]) => {
-          element.classList.toggle("active", key === screenId);
+        if (this.mainScreen) {
+          this.mainScreen.classList.add("active");
+        }
+        this.sidebarIds.forEach((sidebarId) => {
+          const element = this.screens[sidebarId];
+          if (element) {
+            element.classList.toggle("sidebar-active", sidebarId === screenId);
+          }
         });
-        document.querySelectorAll(".nav-button").forEach((button) => {
-          button.classList.toggle("active", button.dataset.screen === screenId);
+        document.querySelectorAll(".tray-button").forEach((button) => {
+          button.classList.toggle("active",
+            (screenId === "wizard" && button.id === "open-scenario-sidebar-btn")
+            || (screenId === "templates" && button.id === "open-template-sidebar-btn")
+            || (screenId === "analysis" && button.id === "open-roster-sidebar-btn")
+            || (screenId === "export" && button.id === "open-export-sidebar-btn")
+            || (screenId === "report" && button.id === "open-analysis-sidebar-btn")
+          );
         });
+      }
+
+      closePanels() {
+        this.showScreen("run");
       }
     }
 
@@ -4561,10 +5586,13 @@
         this.simulationManager = new this.kernel.SimulationManager();
         this.monteCarloManager = new this.kernel.MonteCarloManager(this.simulationManager);
         this.renderer = new MapRenderer(document.getElementById("sim-canvas"));
+        this.renderer.onViewportChange = () => this.renderCurrentView();
         this.state = {
           currentScenario: this.kernel.buildBaselineScenario(),
           singleRun: null,
           monteCarloRows: [],
+          currentFrame: null,
+          currentReport: null,
           playbackTimer: null,
           monteCarloWorker: null,
           selectedTemplateId: null,
@@ -4574,6 +5602,9 @@
           scenarioExportSource: "normalized",
           originalScenarioPayloadText: "",
           wizardThreatGroups: [],
+          activeWizardThreatGroupId: null,
+          mapInteraction: null,
+          selectedMapEntity: null,
           nextWizardThreatGroupId: 1,
           lastImportSummary: {
             source: "Built-in baseline",
@@ -4585,17 +5616,21 @@
         };
         this.bindEvents();
         this.applyQueryParams();
+        this.renderer.setScenario(this.state.currentScenario);
         this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
-        this.loadWizardPreset("baseline-single");
+        this.loadWizardPreset("blank-scratch");
         this.updateScenarioLabel();
         this.syncPlaceholderControls();
         this.clearResults();
         this.refreshValidationSummary();
         this.refreshImportSummary();
         this.renderTemplateBuilder();
+        this.renderRosterEditor();
         this.refreshWizardSummary();
         this.renderScenarioSnapshot();
+        this.renderSelectedObjectEditor();
         this.refreshExportPreview();
+        this.updateMapSelectionChip();
         this.handleAutorun();
       }
 
@@ -4603,6 +5638,56 @@
         document.querySelectorAll(".nav-button").forEach((button) => {
           button.addEventListener("click", () => {
             this.uiManager.showScreen(button.dataset.screen);
+          });
+        });
+
+        document.getElementById("new-scenario-btn").addEventListener("click", () => {
+          this.resetToBaselineScenario();
+        });
+        document.getElementById("open-scenario-sidebar-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("wizard");
+        });
+        document.getElementById("open-scenario-builder-inline-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("wizard");
+        });
+        document.getElementById("open-roster-inline-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("analysis");
+        });
+        document.getElementById("load-scenario-header-btn").addEventListener("click", () => {
+          document.getElementById("scenario-file-input").click();
+        });
+        document.getElementById("save-scenario-btn").addEventListener("click", () => {
+          this.exportCurrentScenario();
+        });
+        document.getElementById("open-template-sidebar-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("templates");
+        });
+        document.getElementById("open-template-library-inline-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("templates");
+        });
+        document.getElementById("open-roster-sidebar-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("analysis");
+        });
+        document.getElementById("open-analysis-sidebar-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("report");
+        });
+        document.getElementById("open-analysis-inline-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("report");
+        });
+        document.getElementById("open-export-sidebar-btn").addEventListener("click", () => {
+          this.uiManager.showScreen("export");
+        });
+        document.getElementById("run-monte-carlo-header-btn").addEventListener("click", () => {
+          this.runMonteCarlo();
+        });
+        document.getElementById("zoom-reset-btn").addEventListener("click", () => {
+          this.renderer.resetViewport();
+          this.renderCurrentView();
+          this.setStatus("Map viewport reset");
+        });
+        document.querySelectorAll("[data-close-sidebar]").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.uiManager.closePanels();
           });
         });
 
@@ -4625,12 +5710,12 @@
         document.getElementById("wizard-load-preset-btn").addEventListener("click", () => {
           this.loadWizardPreset(document.getElementById("wizard-preset").value);
           this.refreshWizardSummary();
-          this.setStatus("Wizard preset loaded");
+          this.setStatus("Starter pattern loaded");
         });
 
         document.getElementById("wizard-preview-btn").addEventListener("click", () => {
           this.refreshWizardSummary();
-          this.setStatus("Wizard preview refreshed");
+          this.setStatus("Scenario editor preview refreshed");
         });
 
         document.getElementById("wizard-build-btn").addEventListener("click", () => {
@@ -4639,6 +5724,45 @@
 
         document.getElementById("wizard-add-threat-group-btn").addEventListener("click", () => {
           this.addWizardThreatGroup();
+        });
+        document.getElementById("wizard-pick-blue-position-btn").addEventListener("click", () => {
+          this.state.mapInteraction = { mode: "blue-position" };
+          this.setStatus("Click the map to place the Blue site");
+        });
+        document.querySelectorAll(".wizard-jump-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            const target = document.getElementById(button.dataset.wizardTarget || "");
+            if (target) {
+              target.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          });
+        });
+
+        document.getElementById("map-width-input").addEventListener("input", (event) => {
+          this.state.currentScenario.environment.mapWidthMeters = Number(event.target.value || 1080);
+          this.renderScenarioSnapshot();
+          this.refreshExportPreview();
+        });
+        document.getElementById("map-background-upload-btn").addEventListener("click", () => {
+          document.getElementById("map-background-input").click();
+        });
+        document.getElementById("map-background-input").addEventListener("change", (event) => {
+          this.importMapBackground(event);
+        });
+        document.getElementById("clear-map-background-btn").addEventListener("click", () => {
+          this.state.currentScenario.environment.backgroundImageBase64 = "";
+          this.renderScenarioSnapshot();
+          this.refreshExportPreview();
+          this.setStatus("Map background cleared");
+        });
+        document.getElementById("add-roster-item-btn").addEventListener("click", () => {
+          this.addRosterItem();
+        });
+        document.getElementById("add-network-btn").addEventListener("click", () => {
+          this.addNetwork();
+        });
+        document.getElementById("add-power-grid-btn").addEventListener("click", () => {
+          this.addPowerGrid();
         });
 
         [
@@ -4651,6 +5775,7 @@
           "wizard-sensor-range",
           "wizard-effector-range",
           "wizard-effector-ammo",
+          "map-width-input",
           "wizard-blue-ishq",
           "wizard-ghost-enabled",
           "wizard-clutter-enabled",
@@ -4759,6 +5884,15 @@
         document.getElementById("apply-template-json-btn").addEventListener("click", () => {
           this.applyTemplateJsonEditor();
         });
+        document.getElementById("export-selected-template-btn").addEventListener("click", () => {
+          this.exportSelectedTemplate();
+        });
+        document.getElementById("import-template-btn").addEventListener("click", () => {
+          document.getElementById("template-file-input").click();
+        });
+        document.getElementById("template-file-input").addEventListener("change", (event) => {
+          this.importTemplateFile(event);
+        });
 
         document.getElementById("ghost-placeholder-toggle").addEventListener("change", (event) => {
           this.state.currentScenario.environment.placeholderGhostTrack.enabled = event.target.checked;
@@ -4779,15 +5913,212 @@
           this.renderScenarioSnapshot();
           this.setStatus("Clutter placeholder " + (event.target.checked ? "enabled" : "disabled"));
         });
+
+        this.renderer.canvas.addEventListener("click", (event) => {
+          this.handleMapClick(event);
+        });
+      }
+
+      resetToBaselineScenario() {
+        this.state.currentScenario = this.kernel.buildBaselineScenario();
+        this.state.originalScenarioPayloadText = "";
+        this.state.scenarioExportSource = "normalized";
+        this.state.lastImportSummary = {
+          source: "Built-in baseline",
+          templateCount: this.state.currentScenario.templates.length,
+          instanceCount: this.state.currentScenario.instances.length,
+          normalizedChanged: false,
+          dirty: false
+        };
+        this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
+        this.renderer.setScenario(this.state.currentScenario);
+        this.loadWizardPreset("blank-scratch");
+        this.updateScenarioLabel();
+        this.syncPlaceholderControls();
+        this.clearResults();
+        this.refreshValidationSummary();
+        this.refreshImportSummary();
+        this.renderTemplateBuilder();
+        this.renderRosterEditor();
+        this.refreshWizardSummary();
+        this.renderScenarioSnapshot();
+        this.renderSelectedObjectEditor();
+        this.refreshExportPreview();
+        this.uiManager.closePanels();
+        this.setStatus("Baseline scenario loaded");
+      }
+
+      async importMapBackground(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(reader.error || new Error("Map load failed"));
+            reader.readAsDataURL(file);
+          });
+          this.state.currentScenario.environment.backgroundImageBase64 = String(dataUrl || "");
+          this.renderer.setScenario(this.state.currentScenario);
+          this.renderScenarioSnapshot();
+          this.refreshExportPreview();
+          this.setStatus("Map background loaded");
+        } catch (error) {
+          this.setStatus("Map background load failed");
+        } finally {
+          event.target.value = "";
+        }
+      }
+
+      exportSelectedTemplate() {
+        const template = this.state.currentScenario.templates.find((candidate) => candidate.id === this.state.selectedTemplateId);
+        if (!template) {
+          this.setStatus("Select a template first");
+          return;
+        }
+        downloadText(buildSafeFileStem(template.id) + ".json", JSON.stringify(template, null, 2), "application/json;charset=utf-8");
+        this.setStatus("Template exported");
+      }
+
+      async importTemplateFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const template = this.kernel.normalizeScenario({
+            metadata: { name: "Template import wrapper" },
+            templates: [parsed],
+            instances: []
+          }).templates[0];
+          const existingIndex = this.state.currentScenario.templates.findIndex((candidate) => candidate.id === template.id);
+          if (existingIndex >= 0) {
+            this.state.currentScenario.templates[existingIndex] = template;
+          } else {
+            this.state.currentScenario.templates.push(template);
+          }
+          this.state.selectedTemplateId = template.id;
+          this.renderTemplateBuilder();
+          this.refreshValidationSummary();
+          this.refreshExportPreview();
+          this.setStatus("Template imported");
+        } catch (error) {
+          this.setStatus("Template import failed");
+        } finally {
+          event.target.value = "";
+        }
+      }
+
+      renderCurrentView() {
+        if (this.state.currentFrame && this.state.currentReport) {
+          this.renderer.draw(this.state.currentFrame, this.state.currentReport);
+          return;
+        }
+        this.renderScenarioSnapshot();
+      }
+
+      updateMapSelectionChip() {
+        const chip = document.getElementById("map-selection-chip");
+        if (this.state.mapInteraction) {
+          const modeLabels = {
+            "blue-position": "Placing Blue site",
+            "group-start": "Placing Red start",
+            "group-end": "Placing Red end",
+            "selected-object-move": "Moving selected object"
+          };
+          chip.textContent = modeLabels[this.state.mapInteraction.mode] || "Map interaction active";
+          return;
+        }
+        if (!this.state.selectedMapEntity) {
+          chip.textContent = "No map selection";
+          return;
+        }
+        chip.textContent = this.state.selectedMapEntity.name + " selected";
+      }
+
+      handleMapClick(event) {
+        const canvasPoint = this.renderer.eventToCanvas(event);
+        const worldPoint = this.renderer.canvasToWorld(canvasPoint);
+        if (this.state.mapInteraction) {
+          if (this.state.mapInteraction.mode === "blue-position") {
+            document.getElementById("wizard-blue-x").value = this.kernel.round(worldPoint.x, 1);
+            document.getElementById("wizard-blue-y").value = this.kernel.round(worldPoint.y, 1);
+            this.state.mapInteraction = null;
+            this.refreshWizardSummary();
+            this.renderScenarioSnapshot();
+            this.setStatus("Blue site position updated from map");
+            this.updateMapSelectionChip();
+            return;
+          }
+          const group = this.state.wizardThreatGroups.find((item) => item.localId === this.state.mapInteraction.threatGroupId);
+          if (group) {
+            if (this.state.mapInteraction.mode === "group-start") {
+              group.startX = this.kernel.round(worldPoint.x, 1);
+              group.startY = this.kernel.round(worldPoint.y, 1);
+            } else if (this.state.mapInteraction.mode === "group-end") {
+              group.endX = this.kernel.round(worldPoint.x, 1);
+              group.endY = this.kernel.round(worldPoint.y, 1);
+            }
+            this.state.activeWizardThreatGroupId = group.localId;
+            this.state.mapInteraction = null;
+            this.renderWizardThreatGroups();
+            this.refreshWizardSummary();
+            this.renderScenarioSnapshot();
+            this.setStatus("Threat-group route updated from map");
+            this.updateMapSelectionChip();
+            return;
+          }
+          if (this.state.mapInteraction.mode === "selected-object-move") {
+            const instance = (this.state.currentScenario.instances || []).find((candidate) => candidate.id === this.state.mapInteraction.instanceId);
+            if (instance) {
+              instance.posX = this.kernel.round(worldPoint.x, 1);
+              instance.posY = this.kernel.round(worldPoint.y, 1);
+              this.state.mapInteraction = null;
+              this.updateScenarioState("Moved selected object");
+              this.updateMapSelectionChip();
+              return;
+            }
+          }
+        }
+
+        const hit = this.renderer.hitTest(this.state.currentFrame, event);
+        this.state.selectedMapEntity = hit ? {
+          type: hit.type,
+          id: hit.id,
+          name: hit.name,
+          side: hit.side
+        } : null;
+        this.renderer.setSelection(this.state.selectedMapEntity);
+        this.renderCurrentView();
+        this.updateMapSelectionChip();
+        this.renderSelectedObjectEditor();
       }
 
       setBusy(isBusy) {
         [
+          "new-scenario-btn",
+          "open-scenario-sidebar-btn",
+          "load-scenario-header-btn",
+          "save-scenario-btn",
+          "open-template-sidebar-btn",
+          "open-roster-sidebar-btn",
+          "open-analysis-sidebar-btn",
+          "open-export-sidebar-btn",
+          "run-monte-carlo-header-btn",
           "run-single-btn",
           "run-monte-carlo-btn",
           "load-scenario-btn",
           "export-scenario-btn",
           "reset-view-btn",
+          "zoom-reset-btn",
+          "open-scenario-builder-inline-btn",
+          "open-template-library-inline-btn",
+          "open-analysis-inline-btn",
+          "open-roster-inline-btn",
           "wizard-load-preset-btn",
           "wizard-preview-btn",
           "wizard-build-btn",
@@ -4795,7 +6126,12 @@
           "save-template-form-btn",
           "duplicate-template-btn",
           "delete-template-btn",
+          "export-selected-template-btn",
+          "import-template-btn",
           "apply-template-json-btn",
+          "add-roster-item-btn",
+          "add-network-btn",
+          "add-power-grid-btn",
           "copy-export-preview-btn",
           "export-single-btn",
           "export-monte-carlo-btn",
@@ -4922,6 +6258,298 @@
         )).join("");
       }
 
+      getOrCreateRoster(side) {
+        let roster = (this.state.currentScenario.rosters || []).find((candidate) => candidate.side === side);
+        if (!roster) {
+          roster = {
+            id: "Roster-" + side,
+            side,
+            items: []
+          };
+          this.state.currentScenario.rosters.push(roster);
+        }
+        return roster;
+      }
+
+      renderRosterEditor() {
+        const templateSelect = document.getElementById("roster-template-select");
+        const templates = this.state.currentScenario.templates || [];
+        templateSelect.innerHTML = templates.map((template) => (
+          "<option value=\"" + escapeHtml(template.id) + "\">" + escapeHtml(template.name) + "</option>"
+        )).join("");
+
+        const rosterRows = [];
+        (this.state.currentScenario.rosters || []).forEach((roster) => {
+          (roster.items || []).forEach((item, itemIndex) => {
+            rosterRows.push({
+              rosterId: roster.id,
+              side: roster.side,
+              itemIndex,
+              templateId: item.templateId,
+              quantity: item.quantity
+            });
+          });
+        });
+
+        document.getElementById("roster-summary").innerHTML = [
+          { label: "Rosters", value: (this.state.currentScenario.rosters || []).length },
+          { label: "Entries", value: rosterRows.length },
+          { label: "Networks", value: (this.state.currentScenario.networks || []).length },
+          { label: "Power Grids", value: (this.state.currentScenario.powerGrids || []).length }
+        ].map((card) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.05rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
+        )).join("");
+
+        const rosterList = document.getElementById("roster-item-list");
+        rosterList.innerHTML = rosterRows.length
+          ? rosterRows.map((row) => (
+              "<div class=\"timeline-card\">" +
+                "<div class=\"toolbar-row\" style=\"justify-content:space-between; align-items:flex-start;\">" +
+                  "<div><h4>" + escapeHtml(row.side) + " roster</h4><div class=\"summary-meta\">" + escapeHtml(row.rosterId) + "</div></div>" +
+                  "<button class=\"button-link remove-roster-item-btn\" data-roster-id=\"" + escapeHtml(row.rosterId) + "\" data-item-index=\"" + escapeHtml(String(row.itemIndex)) + "\">Remove</button>" +
+                "</div>" +
+                "<div class=\"form-grid tight\" style=\"margin-top:10px;\">" +
+                  "<div class=\"field-stack\"><label>Template</label><select class=\"roster-template-field\" data-roster-id=\"" + escapeHtml(row.rosterId) + "\" data-item-index=\"" + escapeHtml(String(row.itemIndex)) + "\">" +
+                    templates.map((template) => (
+                      "<option value=\"" + escapeHtml(template.id) + "\"" + (template.id === row.templateId ? " selected" : "") + ">" + escapeHtml(template.name) + "</option>"
+                    )).join("") +
+                  "</select></div>" +
+                  "<div class=\"field-stack\"><label>Quantity</label><input class=\"roster-quantity-field\" data-roster-id=\"" + escapeHtml(row.rosterId) + "\" data-item-index=\"" + escapeHtml(String(row.itemIndex)) + "\" type=\"number\" min=\"1\" max=\"48\" value=\"" + escapeHtml(String(row.quantity)) + "\"></div>" +
+                "</div>" +
+              "</div>"
+            )).join("")
+          : "<div class=\"empty-state\">No roster items yet. Add Blue or Red force-package entries here.</div>";
+
+        rosterList.querySelectorAll(".remove-roster-item-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.removeRosterItem(button.dataset.rosterId, Number(button.dataset.itemIndex));
+          });
+        });
+        rosterList.querySelectorAll(".roster-template-field").forEach((select) => {
+          select.addEventListener("change", () => {
+            this.updateRosterItem(select.dataset.rosterId, Number(select.dataset.itemIndex), "templateId", select.value);
+          });
+        });
+        rosterList.querySelectorAll(".roster-quantity-field").forEach((input) => {
+          input.addEventListener("change", () => {
+            this.updateRosterItem(input.dataset.rosterId, Number(input.dataset.itemIndex), "quantity", input.value);
+          });
+        });
+
+        const networkList = document.getElementById("network-list");
+        networkList.innerHTML = (this.state.currentScenario.networks || []).length
+          ? this.state.currentScenario.networks.map((network, index) => (
+              "<div class=\"timeline-card\">" +
+                "<div class=\"toolbar-row\" style=\"justify-content:space-between;\"><h4>" + escapeHtml(network.name) + "</h4><button class=\"button-link remove-network-btn\" data-network-index=\"" + escapeHtml(String(index)) + "\">Remove</button></div>" +
+                "<div class=\"form-grid tight\" style=\"margin-top:10px;\">" +
+                  "<div class=\"field-stack\"><label>ID</label><input class=\"network-field\" data-network-index=\"" + escapeHtml(String(index)) + "\" data-field=\"id\" type=\"text\" value=\"" + escapeHtml(network.id) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Name</label><input class=\"network-field\" data-network-index=\"" + escapeHtml(String(index)) + "\" data-field=\"name\" type=\"text\" value=\"" + escapeHtml(network.name) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Type</label><input class=\"network-field\" data-network-index=\"" + escapeHtml(String(index)) + "\" data-field=\"type\" type=\"text\" value=\"" + escapeHtml(network.type) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Latency (sec)</label><input class=\"network-field\" data-network-index=\"" + escapeHtml(String(index)) + "\" data-field=\"transmissionLatencySec\" type=\"number\" step=\"0.1\" value=\"" + escapeHtml(String(network.transmissionLatencySec)) + "\"></div>" +
+                "</div>" +
+              "</div>"
+            )).join("")
+          : "<div class=\"empty-state\">No C2 networks yet. Add one to expose logical assignment options in the Scenario Editor.</div>";
+
+        networkList.querySelectorAll(".remove-network-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.removeNetwork(Number(button.dataset.networkIndex));
+          });
+        });
+        networkList.querySelectorAll(".network-field").forEach((input) => {
+          input.addEventListener("change", () => {
+            this.updateNetworkField(Number(input.dataset.networkIndex), input.dataset.field, input.value);
+          });
+        });
+
+        const powerGridList = document.getElementById("power-grid-list");
+        powerGridList.innerHTML = (this.state.currentScenario.powerGrids || []).length
+          ? this.state.currentScenario.powerGrids.map((grid, index) => (
+              "<div class=\"timeline-card\">" +
+                "<div class=\"toolbar-row\" style=\"justify-content:space-between;\"><h4>" + escapeHtml(grid.name) + "</h4><button class=\"button-link remove-power-grid-btn\" data-power-grid-index=\"" + escapeHtml(String(index)) + "\">Remove</button></div>" +
+                "<div class=\"form-grid tight\" style=\"margin-top:10px;\">" +
+                  "<div class=\"field-stack\"><label>ID</label><input class=\"power-grid-field\" data-power-grid-index=\"" + escapeHtml(String(index)) + "\" data-field=\"id\" type=\"text\" value=\"" + escapeHtml(grid.id) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Name</label><input class=\"power-grid-field\" data-power-grid-index=\"" + escapeHtml(String(index)) + "\" data-field=\"name\" type=\"text\" value=\"" + escapeHtml(grid.name) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Type</label><input class=\"power-grid-field\" data-power-grid-index=\"" + escapeHtml(String(index)) + "\" data-field=\"type\" type=\"text\" value=\"" + escapeHtml(grid.type) + "\"></div>" +
+                "</div>" +
+              "</div>"
+            )).join("")
+          : "<div class=\"empty-state\">No power grids yet. Add one to expose assignment options for placed assets and nodes.</div>";
+
+        powerGridList.querySelectorAll(".remove-power-grid-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.removePowerGrid(Number(button.dataset.powerGridIndex));
+          });
+        });
+        powerGridList.querySelectorAll(".power-grid-field").forEach((input) => {
+          input.addEventListener("change", () => {
+            this.updatePowerGridField(Number(input.dataset.powerGridIndex), input.dataset.field, input.value);
+          });
+        });
+      }
+
+      addRosterItem() {
+        const side = document.getElementById("roster-side-select").value;
+        const templateId = document.getElementById("roster-template-select").value;
+        const quantity = Math.max(1, Math.floor(Number(document.getElementById("roster-quantity-input").value || 1)));
+        if (!templateId) {
+          this.setStatus("Choose a template first");
+          return;
+        }
+        const roster = this.getOrCreateRoster(side);
+        roster.items.push({ templateId, quantity });
+        this.updateScenarioState("Added roster item");
+      }
+
+      updateRosterItem(rosterId, itemIndex, field, value) {
+        const roster = (this.state.currentScenario.rosters || []).find((candidate) => candidate.id === rosterId);
+        const item = roster?.items?.[itemIndex];
+        if (!item) {
+          return;
+        }
+        item[field] = field === "quantity"
+          ? Math.max(1, Math.floor(Number(value || 1)))
+          : value;
+        this.updateScenarioState("Updated roster item");
+      }
+
+      removeRosterItem(rosterId, itemIndex) {
+        const roster = (this.state.currentScenario.rosters || []).find((candidate) => candidate.id === rosterId);
+        if (!roster) {
+          return;
+        }
+        roster.items.splice(itemIndex, 1);
+        this.state.currentScenario.rosters = this.state.currentScenario.rosters.filter((candidate) => candidate.items.length > 0);
+        this.updateScenarioState("Removed roster item");
+      }
+
+      addNetwork() {
+        this.state.currentScenario.networks.push({
+          id: this.buildUniqueId("Network", new Set((this.state.currentScenario.networks || []).map((item) => item.id))),
+          name: "New Network",
+          type: "RF",
+          transmissionLatencySec: 0.25
+        });
+        this.updateScenarioState("Added network");
+      }
+
+      updateNetworkField(index, field, value) {
+        const network = (this.state.currentScenario.networks || [])[index];
+        if (!network) {
+          return;
+        }
+        network[field] = field === "transmissionLatencySec" ? Number(value || 0) : value;
+        this.updateScenarioState("Updated network");
+      }
+
+      removeNetwork(index) {
+        this.state.currentScenario.networks.splice(index, 1);
+        this.state.currentScenario.instances.forEach((instance) => {
+          if (instance.networkId && !(this.state.currentScenario.networks || []).some((network) => network.id === instance.networkId)) {
+            instance.networkId = null;
+          }
+        });
+        this.updateScenarioState("Removed network");
+      }
+
+      addPowerGrid() {
+        this.state.currentScenario.powerGrids.push({
+          id: this.buildUniqueId("PowerGrid", new Set((this.state.currentScenario.powerGrids || []).map((item) => item.id))),
+          name: "New Power Grid",
+          type: "Tactical"
+        });
+        this.updateScenarioState("Added power grid");
+      }
+
+      updatePowerGridField(index, field, value) {
+        const grid = (this.state.currentScenario.powerGrids || [])[index];
+        if (!grid) {
+          return;
+        }
+        grid[field] = value;
+        this.updateScenarioState("Updated power grid");
+      }
+
+      removePowerGrid(index) {
+        this.state.currentScenario.powerGrids.splice(index, 1);
+        this.state.currentScenario.instances.forEach((instance) => {
+          if (instance.connectedPowerGridId && !(this.state.currentScenario.powerGrids || []).some((grid) => grid.id === instance.connectedPowerGridId)) {
+            instance.connectedPowerGridId = null;
+          }
+        });
+        this.updateScenarioState("Removed power grid");
+      }
+
+      renderSelectedObjectEditor() {
+        const container = document.getElementById("selected-object-editor");
+        const selection = this.state.selectedMapEntity;
+        if (!selection) {
+          container.innerHTML = "<div class=\"empty-state\">Select a placed object on the map to adjust coordinates or assign it to a power grid or C2 network.</div>";
+          return;
+        }
+        if (selection.type !== "object") {
+          container.innerHTML = "<div class=\"empty-state\">Track selected. Tracks are review-only here; select a physical object to edit placement or assignments.</div>";
+          return;
+        }
+        const instance = (this.state.currentScenario.instances || []).find((candidate) => candidate.id === selection.id);
+        if (!instance) {
+          container.innerHTML = "<div class=\"empty-state\">Selected object is part of preview-only state. Build the scenario first to edit persistent object assignments.</div>";
+          return;
+        }
+        const template = this.getTemplateById(instance.templateId);
+        const sensorSummary = (template?.components?.sensors || []).map((sensor) => sensor.type).filter(Boolean);
+        const effectorSummary = (template?.components?.effectors || []).map((effector) => effector.type).filter(Boolean);
+        const quickCapabilityNotes = [
+          sensorSummary.length ? sensorSummary.join(", ") : "No sensors",
+          effectorSummary.length ? effectorSummary.join(", ") : "No effectors",
+          template?.components?.c2 ? "Includes C2" : "No C2",
+          "Asset value " + Number(template?.components?.health?.assetValuePts || 0)
+        ];
+        container.innerHTML =
+          "<div class=\"summary-grid\" style=\"margin-bottom:12px;\">" +
+            "<div class=\"summary-card\"><div class=\"label\">Object</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(instance.name) + "</div></div>" +
+            "<div class=\"summary-card\"><div class=\"label\">Side / Template</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(instance.side + " / " + (template?.name || instance.templateId)) + "</div></div>" +
+            "<div class=\"summary-card\"><div class=\"label\">Quick Capability View</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(quickCapabilityNotes.join(" | ")) + "</div></div>" +
+          "</div>" +
+          "<div class=\"form-grid tight\">" +
+            "<div class=\"field-stack\"><label>X</label><input id=\"selected-object-x\" type=\"number\" value=\"" + escapeHtml(String(instance.posX)) + "\"></div>" +
+            "<div class=\"field-stack\"><label>Y</label><input id=\"selected-object-y\" type=\"number\" value=\"" + escapeHtml(String(instance.posY)) + "\"></div>" +
+            "<div class=\"field-stack\"><label>Z</label><input id=\"selected-object-z\" type=\"number\" value=\"" + escapeHtml(String(instance.posZ)) + "\"></div>" +
+            "<div class=\"field-stack\"><label>C2 Network</label><select id=\"selected-object-network\"><option value=\"\">None</option>" +
+              (this.state.currentScenario.networks || []).map((network) => (
+                "<option value=\"" + escapeHtml(network.id) + "\"" + (network.id === instance.networkId ? " selected" : "") + ">" + escapeHtml(network.name) + "</option>"
+              )).join("") +
+            "</select></div>" +
+            "<div class=\"field-stack\"><label>Power Grid</label><select id=\"selected-object-power\"><option value=\"\">None</option>" +
+              (this.state.currentScenario.powerGrids || []).map((grid) => (
+                "<option value=\"" + escapeHtml(grid.id) + "\"" + (grid.id === instance.connectedPowerGridId ? " selected" : "") + ">" + escapeHtml(grid.name) + "</option>"
+              )).join("") +
+            "</select></div>" +
+          "</div>" +
+          "<div class=\"controls\" style=\"margin-top:12px;\">" +
+            "<button id=\"save-selected-object-btn\">Save Object</button>" +
+            "<button id=\"move-selected-object-btn\">Move On Map</button>" +
+            "<button id=\"open-selected-template-btn\">Open Template</button>" +
+          "</div>";
+
+        document.getElementById("save-selected-object-btn").addEventListener("click", () => {
+          instance.posX = Number(document.getElementById("selected-object-x").value || instance.posX);
+          instance.posY = Number(document.getElementById("selected-object-y").value || instance.posY);
+          instance.posZ = Number(document.getElementById("selected-object-z").value || instance.posZ);
+          instance.networkId = document.getElementById("selected-object-network").value || null;
+          instance.connectedPowerGridId = document.getElementById("selected-object-power").value || null;
+          this.updateScenarioState("Updated selected object");
+        });
+        document.getElementById("move-selected-object-btn").addEventListener("click", () => {
+          this.state.mapInteraction = { mode: "selected-object-move", instanceId: instance.id };
+          this.setStatus("Click the map to move the selected object");
+          this.updateMapSelectionChip();
+        });
+        document.getElementById("open-selected-template-btn").addEventListener("click", () => {
+          this.selectTemplate(instance.templateId, "templates");
+        });
+      }
+
       updateScenarioState(statusText) {
         this.state.currentScenario = this.kernel.normalizeScenario(this.state.currentScenario);
         this.state.lastImportSummary = {
@@ -4938,8 +6566,10 @@
         this.refreshValidationSummary();
         this.refreshImportSummary();
         this.renderTemplateBuilder();
+        this.renderRosterEditor();
         this.refreshWizardSummary();
         this.renderScenarioSnapshot();
+        this.renderSelectedObjectEditor();
         this.refreshExportPreview();
         if (statusText) {
           this.setStatus(statusText);
@@ -5345,9 +6975,26 @@
 
       loadWizardPreset(preset) {
         const presets = {
+          "blank-scratch": {
+            scenarioName: "New Scenario",
+            description: "Start from scratch, then add Blue assets, Red threat groups, and optional environment placeholders.",
+            mapWidth: 1080,
+            blueName: "Blue Site",
+            blueX: 670,
+            blueY: 315,
+            blueZ: 20,
+            sensorRange: 420,
+            effectorRange: 230,
+            effectorAmmo: 3,
+            blueIsHQ: true,
+            threatGroups: [],
+            ghost: false,
+            clutter: false
+          },
           "baseline-single": {
-            scenarioName: "Wizard Baseline",
+            scenarioName: "Editor Baseline",
             description: "Single-UAS baseline built from the quick-start wizard.",
+            mapWidth: 1080,
             blueName: "Blue Site 01",
             blueX: 670,
             blueY: 315,
@@ -5380,8 +7027,9 @@
             clutter: false
           },
           "lock-refire": {
-            scenarioName: "Wizard Lock Refire",
+            scenarioName: "Editor Lock Refire",
             description: "Two threats to review locked engagements and autonomous refire behavior.",
+            mapWidth: 1080,
             blueName: "Blue Lock Site",
             blueX: 650,
             blueY: 315,
@@ -5414,8 +7062,9 @@
             clutter: false
           },
           "tewa-priority": {
-            scenarioName: "Wizard TEWA Priority",
+            scenarioName: "Editor TEWA Priority",
             description: "Two defended assets and mixed Red threats for TEWA priority review.",
+            mapWidth: 1080,
             blueName: "Blue HQ Node",
             blueX: 700,
             blueY: 275,
@@ -5477,8 +7126,10 @@
         document.getElementById("wizard-sensor-range").value = values.sensorRange;
         document.getElementById("wizard-effector-range").value = values.effectorRange;
         document.getElementById("wizard-effector-ammo").value = values.effectorAmmo;
+        document.getElementById("map-width-input").value = values.mapWidth || 1080;
         document.getElementById("wizard-blue-ishq").checked = values.blueIsHQ;
         this.state.wizardThreatGroups = (values.threatGroups || []).map((group) => this.createWizardThreatGroup(group));
+        this.state.activeWizardThreatGroupId = this.state.wizardThreatGroups[0]?.localId || null;
         this.renderWizardThreatGroups();
         document.getElementById("wizard-ghost-enabled").checked = values.ghost;
         document.getElementById("wizard-clutter-enabled").checked = values.clutter;
@@ -5548,17 +7199,17 @@
       addWizardThreatGroup(overrides = {}) {
         const group = this.createWizardThreatGroup(overrides);
         this.state.wizardThreatGroups.push(group);
+        this.state.activeWizardThreatGroupId = group.localId;
         this.renderWizardThreatGroups();
         this.refreshWizardSummary();
         this.setStatus("Threat group added");
       }
 
       removeWizardThreatGroup(localId) {
-        if (this.state.wizardThreatGroups.length <= 1) {
-          this.setStatus("At least one threat group is required");
-          return;
-        }
         this.state.wizardThreatGroups = this.state.wizardThreatGroups.filter((group) => group.localId !== localId);
+        if (this.state.activeWizardThreatGroupId === localId) {
+          this.state.activeWizardThreatGroupId = this.state.wizardThreatGroups[0]?.localId || null;
+        }
         this.renderWizardThreatGroups();
         this.refreshWizardSummary();
         this.setStatus("Threat group removed");
@@ -5572,13 +7223,18 @@
           return;
         }
         container.innerHTML = groups.map((group, index) => (
-          "<div class=\"threat-group-card\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
+          "<div class=\"threat-group-card" + (this.state.activeWizardThreatGroupId === group.localId ? " active" : "") + "\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
             "<div class=\"threat-group-header\">" +
               "<div>" +
                 "<h4>Threat Group " + escapeHtml(String(index + 1)) + "</h4>" +
                 "<div class=\"threat-group-subtitle\">" + escapeHtml(group.templateName || "Red UAS") + " | " + escapeHtml(group.routePattern) + " pattern | " + escapeHtml(String(group.count)) + " instance(s)</div>" +
               "</div>" +
-              "<button class=\"button-link wizard-remove-group-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\"" + (groups.length <= 1 ? " disabled" : "") + ">Remove Group</button>" +
+              "<div class=\"toolbar-row\">" +
+                "<button class=\"button-link wizard-select-group-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">Select</button>" +
+                "<button class=\"button-link wizard-pick-start-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">Pick Start</button>" +
+                "<button class=\"button-link wizard-pick-end-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">Pick End</button>" +
+                "<button class=\"button-link wizard-remove-group-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">Remove Group</button>" +
+              "</div>" +
             "</div>" +
             "<div class=\"form-grid tight\">" +
               "<div class=\"field-stack\"><label>Template Name</label><input data-group-field=\"templateName\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"text\" value=\"" + escapeHtml(group.templateName) + "\"></div>" +
@@ -5621,6 +7277,29 @@
         container.querySelectorAll(".wizard-remove-group-btn").forEach((button) => {
           button.addEventListener("click", () => {
             this.removeWizardThreatGroup(button.dataset.threatGroupId);
+          });
+        });
+        container.querySelectorAll(".wizard-select-group-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.state.activeWizardThreatGroupId = button.dataset.threatGroupId;
+            this.renderWizardThreatGroups();
+            this.setStatus("Threat group selected");
+          });
+        });
+        container.querySelectorAll(".wizard-pick-start-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.state.activeWizardThreatGroupId = button.dataset.threatGroupId;
+            this.state.mapInteraction = { mode: "group-start", threatGroupId: button.dataset.threatGroupId };
+            this.renderWizardThreatGroups();
+            this.setStatus("Click the map to place threat-group start");
+          });
+        });
+        container.querySelectorAll(".wizard-pick-end-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.state.activeWizardThreatGroupId = button.dataset.threatGroupId;
+            this.state.mapInteraction = { mode: "group-end", threatGroupId: button.dataset.threatGroupId };
+            this.renderWizardThreatGroups();
+            this.setStatus("Click the map to place threat-group end");
           });
         });
       }
@@ -5673,16 +7352,16 @@
         const runContainer = document.getElementById("run-reminder");
         const needsBuild = this.isWizardBuildPending();
         const reminderHtml = needsBuild
-          ? "<div class=\"attention-card\"><strong>Wizard changes are not active yet.</strong> Click <strong>Build Scenario From Wizard</strong> before running if you want the current wizard values to become the live scenario.</div>"
-          : "<div class=\"summary-meta\">Wizard draft matches the active scenario.</div>";
+          ? "<div class=\"attention-card\"><strong>Scenario editor changes are not active yet.</strong> Click <strong>Build Scenario From Editor</strong> before running if you want the current editor values to become the live scenario.</div>"
+          : "<div class=\"summary-meta\">Scenario editor draft matches the active scenario.</div>";
         wizardContainer.innerHTML = reminderHtml;
         runContainer.innerHTML = needsBuild
-          ? "<div class=\"attention-card\"><strong>Reminder:</strong> if you edited the Scenario Wizard, click <strong>Build Scenario From Wizard</strong> first. Running now uses the current active scenario, not the unsaved wizard draft.</div>"
+          ? "<div class=\"attention-card\"><strong>Reminder:</strong> if you edited the Scenario Editor, click <strong>Build Scenario From Editor</strong> first. Running now uses the current active scenario, not the unsaved editor draft.</div>"
           : "";
       }
 
       buildScenarioFromWizardInputs() {
-        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Wizard Scenario";
+        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Editor Draft";
         const description = document.getElementById("wizard-scenario-description").value.trim();
         const blueName = document.getElementById("wizard-blue-name").value.trim() || "Blue Site";
         const blueX = this.getWizardInputNumber("wizard-blue-x", 670);
@@ -5708,6 +7387,8 @@
           },
           environment: {
             baseNoiseDb: 1.8,
+            mapWidthMeters: this.getWizardInputNumber("map-width-input", 1080),
+            backgroundImageBase64: this.state.currentScenario.environment.backgroundImageBase64 || "",
             placeholderGhostTrack: {
               enabled: document.getElementById("wizard-ghost-enabled").checked,
               spawnTimeSec: 7,
@@ -5724,6 +7405,9 @@
               label: "Clutter Placeholder"
             }
           },
+          networks: this.kernel.deepClone(this.state.currentScenario.networks || []),
+          powerGrids: this.kernel.deepClone(this.state.currentScenario.powerGrids || []),
+          rosters: [],
           templates: [
             {
               ...blueTemplate,
@@ -5737,6 +7421,8 @@
               name: blueName,
               side: "Blue",
               roles: ["Asset", "Sensor", "Effector", "C2"],
+              networkId: this.state.currentScenario.instances.find((instance) => instance.id === "Blue-Site-01")?.networkId || null,
+              connectedPowerGridId: this.state.currentScenario.instances.find((instance) => instance.id === "Blue-Site-01")?.connectedPowerGridId || null,
               posX: blueX,
               posY: blueY,
               posZ: blueZ,
@@ -5745,15 +7431,17 @@
           ]
         };
 
-        if (!this.state.wizardThreatGroups.length) {
-          this.state.wizardThreatGroups = [this.createWizardThreatGroup()];
-        }
         this.state.wizardThreatGroups.forEach((group, groupIndex) => {
           const redTemplate = this.buildTemplatePreset("red-uas");
           redTemplate.name = group.templateName || ("Red Group " + (groupIndex + 1));
           redTemplate.components.health.maxHealth = Number(group.health || 90);
           redTemplate.components.signature.radarSignatureDb = Number(group.signature || -14);
           redTemplate.components.movement.speedMps = Number(group.speed || 35);
+          redTemplate.missionProfile = group.profile === "isr"
+            ? { type: "Geographic", targetTemplateId: null }
+            : (group.profile === "attack"
+              ? { type: "SpecificAsset", targetTemplateId: "Template-Blue-Site" }
+              : { type: "MaxDamage", targetTemplateId: null });
           const templateId = "Template-Red-Group-" + String(groupIndex + 1).padStart(2, "0");
           scenario.templates.push({
             ...redTemplate,
@@ -5778,6 +7466,8 @@
               name: (group.instancePrefix || ("Threat " + (groupIndex + 1))) + " " + (index + 1),
               side: "Red",
               roles: ["UAS"],
+              networkId: null,
+              connectedPowerGridId: null,
               posX: Number(group.startX || 90),
               posY: Number(group.startY || 315) + startYOffset,
               posZ: Number(group.startZ || 120),
@@ -5813,12 +7503,41 @@
             name: "Water Tank",
             side: "Blue",
             roles: ["Asset"],
+            networkId: null,
+            connectedPowerGridId: null,
             posX: blueX - 20,
             posY: blueY + 140,
             posZ: 10,
             missionWaypoints: []
           });
         }
+
+        const blueRosterItems = scenario.instances
+          .filter((instance) => instance.side === "Blue")
+          .reduce((accumulator, instance) => {
+            const existing = accumulator.find((item) => item.templateId === instance.templateId);
+            if (existing) {
+              existing.quantity += 1;
+            } else {
+              accumulator.push({ templateId: instance.templateId, quantity: 1 });
+            }
+            return accumulator;
+          }, []);
+        const redRosterItems = scenario.instances
+          .filter((instance) => instance.side === "Red")
+          .reduce((accumulator, instance) => {
+            const existing = accumulator.find((item) => item.templateId === instance.templateId);
+            if (existing) {
+              existing.quantity += 1;
+            } else {
+              accumulator.push({ templateId: instance.templateId, quantity: 1 });
+            }
+            return accumulator;
+          }, []);
+        scenario.rosters = [
+          { id: "Roster-Blue", side: "Blue", items: blueRosterItems },
+          { id: "Roster-Red", side: "Red", items: redRosterItems }
+        ];
 
         return this.kernel.normalizeScenario(scenario);
       }
@@ -5841,9 +7560,12 @@
           container.innerHTML = cards.map((card) => (
             "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.1rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
           )).join("");
+          if (!this.state.singleRun && document.getElementById("screen-wizard").classList.contains("sidebar-active")) {
+            this.renderScenarioModel(validation.scenario, { preserveSelection: false });
+          }
           this.updateWizardBuildReminder();
         } catch (error) {
-          container.innerHTML = "<div class=\"empty-state\">Wizard preview error: " + escapeHtml(String(error && error.message ? error.message : error)) + "</div>";
+          container.innerHTML = "<div class=\"empty-state\">Scenario editor preview error: " + escapeHtml(String(error && error.message ? error.message : error)) + "</div>";
           this.updateWizardBuildReminder();
         }
       }
@@ -5856,7 +7578,7 @@
           this.state.scenarioExportSource = "normalized";
           document.getElementById("scenario-export-source").value = "normalized";
           this.state.lastImportSummary = {
-            source: "Scenario Wizard",
+            source: "Scenario Editor",
             templateCount: scenario.templates.length,
             instanceCount: scenario.instances.length,
             normalizedChanged: false,
@@ -5870,13 +7592,15 @@
           this.refreshValidationSummary();
           this.refreshImportSummary();
           this.renderTemplateBuilder();
+          this.renderRosterEditor();
           this.refreshWizardSummary();
           this.renderScenarioSnapshot();
+          this.renderSelectedObjectEditor();
           this.refreshExportPreview();
           this.uiManager.showScreen("templates");
-          this.setStatus("Wizard scenario built");
+          this.setStatus("Scenario editor build complete");
         } catch (error) {
-          this.setStatus("Wizard build failed: " + String(error && error.message ? error.message : error));
+          this.setStatus("Scenario editor build failed: " + String(error && error.message ? error.message : error));
         }
       }
 
@@ -5960,21 +7684,31 @@
         document.getElementById("seed-text").textContent = "-";
         this.state.singleRun = null;
         this.state.monteCarloRows = [];
+        this.state.currentFrame = null;
+        this.state.currentReport = null;
+        this.state.selectedMapEntity = null;
+        this.renderer.setSelection(null);
         this.updateRunMetrics(null);
         this.updateLog([]);
         this.updateSingleRunReport(null);
         this.updateMonteCarloReport([]);
+        this.renderEventTimeline(null);
+        this.renderFailureDrivers();
+        this.refreshLiveAnalysisSummary();
         this.setStatus("Ready");
         this.setPlaybackStatus("Idle");
         this.refreshExportPreview();
+        this.updateMapSelectionChip();
       }
 
-      renderScenarioSnapshot() {
-        this.syncPlaceholderCards();
+      renderScenarioModel(scenario, options = {}) {
+        const preserveSelection = options.preserveSelection !== false;
+        this.renderer.setScenario(scenario);
+        document.getElementById("map-width-input").value = scenario.environment.mapWidthMeters ?? 1080;
         const frame = {
           timeSec: 0,
           reason: "scenario-preview",
-          objects: this.state.currentScenario.instances.map((instance) => ({
+          objects: scenario.instances.map((instance) => ({
             id: instance.id,
             name: instance.name,
             side: instance.side,
@@ -5982,12 +7716,24 @@
             x: instance.posX,
             y: instance.posY,
             z: instance.posZ,
+            sensors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.sensors) || []),
+            effectors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.effectors) || []),
+            currentHeadingDeg: null,
+            behaviorState: "Preview",
             destroyed: false,
             status: "Active"
           })),
           tracks: []
         };
-        this.renderer.draw(frame, { scenarioName: this.state.currentScenario.metadata.name, targetDestroyed: false });
+        this.state.currentFrame = frame;
+        this.state.currentReport = { scenarioName: scenario.metadata.name, targetDestroyed: false };
+        this.renderer.setSelection(preserveSelection ? this.state.selectedMapEntity : null);
+        this.renderer.draw(frame, this.state.currentReport);
+      }
+
+      renderScenarioSnapshot() {
+        this.syncPlaceholderCards();
+        this.renderScenarioModel(this.state.currentScenario, { preserveSelection: true });
       }
 
       stopPlayback() {
@@ -6002,10 +7748,15 @@
         if (!frames || !frames.length) {
           return;
         }
+        this.state.currentReport = report;
         let index = 0;
         this.setPlaybackStatus("Playing");
+        this.state.currentFrame = frames[0];
+        this.renderer.setSelection(this.state.selectedMapEntity);
         this.renderer.draw(frames[0], report);
         this.state.playbackTimer = window.setInterval(() => {
+          this.state.currentFrame = frames[index];
+          this.renderer.setSelection(this.state.selectedMapEntity);
           this.renderer.draw(frames[index], report);
           index += 1;
           if (index >= frames.length) {
@@ -6055,8 +7806,10 @@
           this.refreshValidationSummary();
           this.refreshImportSummary();
           this.renderTemplateBuilder();
+          this.renderRosterEditor();
           this.refreshWizardSummary();
           this.renderScenarioSnapshot();
+          this.renderSelectedObjectEditor();
           this.refreshExportPreview();
           this.setStatus(validation.valid
             ? ("Loaded scenario " + normalized.metadata.name)
@@ -6102,9 +7855,12 @@
         this.updateRunMetrics(result.report);
         this.updateLog(result.report.logs);
         this.updateSingleRunReport(result.report);
+        this.renderEventTimeline(result.report);
+        this.renderFailureDrivers();
+        this.refreshLiveAnalysisSummary();
         this.playFrames(result.report.frames, result.report);
         this.refreshExportPreview();
-        this.uiManager.showScreen("run");
+        this.uiManager.showScreen("report");
         this.setStatus("Single scenario complete");
         this.setBusy(false);
       }
@@ -6125,8 +7881,9 @@
         try {
           this.state.monteCarloRows = await this.runMonteCarloOffThread(iterations, baseSeed);
           this.updateMonteCarloReport(this.state.monteCarloRows);
+          this.renderFailureDrivers();
           this.refreshExportPreview();
-          this.uiManager.showScreen("report");
+          this.uiManager.showScreen("analysis");
           this.setStatus("Monte Carlo complete");
         } catch (error) {
           this.setStatus("Monte Carlo failed");
@@ -6214,15 +7971,113 @@
       }
 
       updateLog(logs) {
-        const container = document.getElementById("event-log");
+        const renderEntries = (entries) => entries.map((entry) => (
+          "<div class=\"log-entry\"><span class=\"time\">T+" + Number(entry.timeSec).toFixed(2) + "s</span>" +
+          "<span class=\"tag\">" + escapeHtml(entry.type || "event") + "</span> " +
+          escapeHtml(entry.message) + "</div>"
+        )).join("");
+        const allContainer = document.getElementById("event-log");
+        const blueContainer = document.getElementById("blue-feed");
+        const redContainer = document.getElementById("red-feed");
         if (!logs || !logs.length) {
-          container.innerHTML = "<div class=\"log-entry\">No events yet.</div>";
+          const empty = "<div class=\"log-entry\">No events yet.</div>";
+          allContainer.innerHTML = empty;
+          blueContainer.innerHTML = empty;
+          redContainer.innerHTML = empty;
+          document.getElementById("blue-feed-count").textContent = "0";
+          document.getElementById("red-feed-count").textContent = "0";
           return;
         }
-        container.innerHTML = logs.map((entry) => (
-          "<div class=\"log-entry\"><span class=\"time\">T+" + Number(entry.timeSec).toFixed(2) + "s</span>" + escapeHtml(entry.message) + "</div>"
+        const blueEntries = logs.filter((entry) => entry.side === "Blue");
+        const redEntries = logs.filter((entry) => entry.side === "Red");
+        allContainer.innerHTML = renderEntries(logs);
+        blueContainer.innerHTML = blueEntries.length ? renderEntries(blueEntries) : "<div class=\"log-entry\">No Blue-side events yet.</div>";
+        redContainer.innerHTML = redEntries.length ? renderEntries(redEntries) : "<div class=\"log-entry\">No Red-side events yet.</div>";
+        document.getElementById("blue-feed-count").textContent = String(blueEntries.length);
+        document.getElementById("red-feed-count").textContent = String(redEntries.length);
+        allContainer.scrollTop = 0;
+        blueContainer.scrollTop = 0;
+        redContainer.scrollTop = 0;
+      }
+
+      renderEventTimeline(report) {
+        const container = document.getElementById("event-timeline-list");
+        if (!report?.logs?.length) {
+          container.innerHTML = "<div class=\"timeline-card\">Run a scenario to populate the timeline.</div>";
+          return;
+        }
+        const interestingTypes = new Set(["detection", "track", "classification", "identification", "intent", "sensor", "c2", "effector", "damage", "movement"]);
+        const entries = report.logs
+          .filter((entry) => interestingTypes.has(entry.type))
+          .slice(0, 40);
+        container.innerHTML = entries.map((entry) => (
+          "<div class=\"timeline-card\"><h4>T+" + Number(entry.timeSec).toFixed(2) + "s</h4>" +
+          "<div class=\"summary-meta\">" + escapeHtml(entry.message) + "</div>" +
+          "<small>" + escapeHtml((entry.side || "Neutral") + " | " + (entry.type || "event")) + "</small></div>"
         )).join("");
-        container.scrollTop = 0;
+      }
+
+      renderFailureDrivers() {
+        const container = document.getElementById("failure-drivers-list");
+        const cards = [];
+        if (this.state.monteCarloRows.length) {
+          const rows = this.state.monteCarloRows;
+          const total = rows.length || 1;
+          const drivers = [
+            { label: "Threat Survived", count: rows.filter((row) => row.Threat_Destroyed !== "Yes").length },
+            { label: "No Detection", count: rows.filter((row) => row.Detected !== "Yes").length },
+            { label: "No Identification", count: rows.filter((row) => row.Identified !== "Yes").length },
+            { label: "No Engagement", count: rows.filter((row) => row.Engaged !== "Yes").length },
+            { label: "Track Drop", count: rows.filter((row) => Number(row.Tracks_Dropped || 0) > 0).length },
+            { label: "HQ Lost", count: rows.filter((row) => Number(row.HQ_Survived || 0) !== 1).length }
+          ]
+            .sort((left, right) => right.count - left.count)
+            .slice(0, 5);
+          drivers.forEach((driver) => {
+            cards.push(
+              "<div class=\"timeline-card\"><h4>" + escapeHtml(driver.label) + "</h4><div class=\"summary-meta\">" +
+              escapeHtml(String(driver.count)) + " of " + escapeHtml(String(total)) + " iterations (" +
+              escapeHtml(String(this.kernel.round((driver.count / total) * 100, 1))) + "%)</div></div>"
+            );
+          });
+        } else if (this.state.singleRun?.report) {
+          const report = this.state.singleRun.report;
+          const singleDrivers = [
+            { label: "Detection", ok: report.detected, detail: report.detected ? "Threat detected" : "No detection candidate generated" },
+            { label: "Identification", ok: report.identified, detail: report.identified ? report.finalIdentificationStatus : "No hostile ID achieved" },
+            { label: "Engagement", ok: report.engaged, detail: report.engaged ? "Effector fired" : "No shot fired" },
+            { label: "Outcome", ok: report.targetDestroyed, detail: report.targetDestroyed ? "Threat destroyed" : "Threat survived run window" },
+            { label: "HQ", ok: report.hqSurvived, detail: report.hqSurvived ? "HQ survived" : "HQ was lost" }
+          ];
+          singleDrivers.forEach((driver) => {
+            cards.push(
+              "<div class=\"timeline-card\"><h4>" + escapeHtml(driver.label) + "</h4><div class=\"summary-meta\">" +
+              escapeHtml(driver.detail) + "</div><small>" + escapeHtml(driver.ok ? "Nominal" : "Attention") + "</small></div>"
+            );
+          });
+        } else {
+          cards.push("<div class=\"timeline-card\">Run a scenario or Monte Carlo batch to populate failure-driver analysis.</div>");
+        }
+        container.innerHTML = cards.join("");
+      }
+
+      refreshLiveAnalysisSummary() {
+        const container = document.getElementById("live-analysis-summary");
+        const report = this.state.singleRun?.report || null;
+        const summary = report ? [
+          { label: "Assessment Snapshots", value: report.assessmentSnapshotCount || 0 },
+          { label: "First Detection", value: report.firstDetectionTimeSec ?? "-" },
+          { label: "Track Status", value: report.finalTrackStatus || "-" },
+          { label: "Intent", value: report.finalIntentStatus || "-" }
+        ] : [
+          { label: "Assessment Snapshots", value: "-" },
+          { label: "First Detection", value: "-" },
+          { label: "Track Status", value: "-" },
+          { label: "Intent", value: "-" }
+        ];
+        container.innerHTML = summary.map((metric) => (
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
+        )).join("");
       }
 
       updateSingleRunReport(report) {
