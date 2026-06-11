@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
-  <title>Browser CsUAS Sim v2.00</title>
+  <title>Browser CsUAS Sim v2.2</title>
   <style>
     :root {
       --bg-top: #080212;
@@ -780,6 +780,10 @@
       display: block;
     }
 
+    .workspace-screen.map-hidden {
+      display: none;
+    }
+
     .workspace-layout {
       display: grid;
       gap: 16px;
@@ -907,6 +911,69 @@
       backdrop-filter: blur(22px) saturate(142%);
     }
 
+    #screen-templates.workspace-sidebar {
+      left: 20px;
+      right: 20px;
+      width: auto;
+      max-width: none;
+    }
+
+    #screen-templates .editor-grid {
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    .template-workbench {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.8fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .template-subcomponent-grid {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .subcomponent-list {
+      display: grid;
+      gap: 10px;
+      max-height: 320px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .subcomponent-card {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(80, 216, 255, 0.14);
+      background: rgba(255, 255, 255, 0.04);
+      cursor: pointer;
+      transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+
+    .subcomponent-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(80, 216, 255, 0.45);
+    }
+
+    .subcomponent-card.active {
+      border-color: rgba(80, 216, 255, 0.72);
+      background: rgba(80, 216, 255, 0.1);
+      box-shadow: 0 0 18px rgba(80, 216, 255, 0.14);
+    }
+
+    .subcomponent-card h4 {
+      margin: 0 0 6px;
+    }
+
+    .helper-button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
     .sidebar-header {
       display: flex;
       justify-content: space-between;
@@ -974,7 +1041,9 @@
     @media (max-width: 1080px) {
       .screen-grid,
       .editor-grid,
-      .ops-grid {
+      .ops-grid,
+      .template-workbench,
+      .template-subcomponent-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -999,7 +1068,7 @@
   <div class="app-shell">
     <header class="hero">
       <div>
-        <h1>Browser CsUAS Sim v2.00</h1>
+        <h1>Browser CsUAS Sim v2.2</h1>
         <p>
           Single-file browser prototype for a component-system discrete event simulation.
           The current slice runs one hardcoded Red UAS against one Blue sensor / effector site,
@@ -1193,43 +1262,10 @@
 
             <div class="panel" id="wizard-blue-panel">
               <h3>2. Blue Assets</h3>
-              <div class="form-grid">
-                <div class="field-stack">
-                  <label for="wizard-blue-name">Blue Site Name</label>
-                  <input id="wizard-blue-name" type="text">
-                </div>
-                <div class="field-stack">
-                  <label for="wizard-blue-x">Blue X</label>
-                  <input id="wizard-blue-x" type="number">
-                </div>
-                <div class="field-stack">
-                  <label for="wizard-blue-y">Blue Y</label>
-                  <input id="wizard-blue-y" type="number">
-                </div>
-                <div class="field-stack">
-                  <label for="wizard-blue-z">Blue Z</label>
-                  <input id="wizard-blue-z" type="number">
-                </div>
-                <div class="field-stack">
-                  <label for="wizard-sensor-range">Sensor Range (m)</label>
-                  <input id="wizard-sensor-range" type="number">
-                </div>
-                <div class="field-stack">
-                  <label for="wizard-effector-range">Effector Range (m)</label>
-                  <input id="wizard-effector-range" type="number">
-                </div>
-                <div class="field-stack">
-                  <label for="wizard-effector-ammo">Effector Ammo</label>
-                  <input id="wizard-effector-ammo" type="number">
-                </div>
-                <div class="field-stack inline-check">
-                  <input id="wizard-blue-ishq" type="checkbox">
-                  <label for="wizard-blue-ishq">Mark as HQ / defended primary asset</label>
-                </div>
-              </div>
               <div class="controls" style="margin-top: 12px;">
-                <button id="wizard-pick-blue-position-btn">Pick Blue Position On Map</button>
+                <button id="wizard-add-blue-asset-btn">Add Blue Asset</button>
               </div>
+              <div class="threat-group-list" id="wizard-blue-asset-list"></div>
             </div>
 
             <div class="panel" id="wizard-red-panel">
@@ -1283,13 +1319,16 @@
         </div>
 
         <div class="panel">
-          <h3>Helper Workflow Placeholder</h3>
-          <div class="summary-grid">
-            <div class="summary-card"><div class="label">Health / Value</div><div class="summary-meta" style="margin-top:8px;">Future helper presets for health, defended-value, and survivability defaults.</div></div>
-            <div class="summary-card"><div class="label">Sensor Helpers</div><div class="summary-meta" style="margin-top:8px;">Future helper functions for range, FOV, cadence, and optical / RF tuning.</div></div>
-            <div class="summary-card"><div class="label">Effector Helpers</div><div class="summary-meta" style="margin-top:8px;">Future helper functions for ammo, engagement envelope, and interceptor / jammer presets.</div></div>
-            <div class="summary-card"><div class="label">Mission / Doctrine</div><div class="summary-meta" style="margin-top:8px;">Future helper fields for mission profile, doctrine defaults, and behavior shaping.</div></div>
+          <h3>Template Helpers</h3>
+          <p class="panel-caption">The helper area now changes with the selected template and can seed common component bundles without dropping into raw JSON.</p>
+          <div class="helper-button-grid" style="margin-top: 12px;">
+            <button id="template-helper-static-asset-btn">Make Static Asset</button>
+            <button id="template-helper-mobile-uas-btn">Make Mobile UAS</button>
+            <button id="template-helper-add-radar-btn">Add Radar Sensor</button>
+            <button id="template-helper-add-interceptor-btn">Add Interceptor Effector</button>
+            <button id="template-helper-add-jammer-btn">Add Jammer Effector</button>
           </div>
+          <div class="summary-grid" id="template-helper-summary" style="margin-top: 12px;"></div>
         </div>
 
         <div class="editor-grid">
@@ -1320,6 +1359,7 @@
           </div>
 
           <div class="split-stack">
+            <div class="template-workbench">
             <div class="panel">
               <h3>Detailed Template Editor</h3>
               <div class="controls">
@@ -1331,6 +1371,7 @@
                 <input id="template-file-input" type="file" accept=".json,application/json" hidden>
               </div>
               <div class="summary-grid" id="template-usage-summary" style="margin-bottom: 12px;"></div>
+              <div class="summary-grid" id="template-structure-summary" style="margin-bottom: 12px;"></div>
 
               <div class="builder-section">
                 <h3>Identity</h3>
@@ -1370,12 +1411,83 @@
                     <input id="template-resistance-input" type="number" step="0.01">
                   </div>
                   <div class="field-stack">
+                    <label for="template-ew-resistance-input">EW Resistance</label>
+                    <input id="template-ew-resistance-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-network-resistance-input">Network Resistance</label>
+                    <input id="template-network-resistance-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
                     <label for="template-signature-input">Radar Signature (dB)</label>
                     <input id="template-signature-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-acoustic-signature-input">Acoustic Signature (dB)</label>
+                    <input id="template-acoustic-signature-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-rf-signature-input">RF Emission (dB)</label>
+                    <input id="template-rf-signature-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-comms-resilience-input">Comms Resilience</label>
+                    <input id="template-comms-resilience-input" type="number" min="0" max="1" step="0.05">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-nav-resilience-input">Nav Resilience</label>
+                    <input id="template-nav-resilience-input" type="number" min="0" max="1" step="0.05">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-cyber-resilience-input">Cyber Resilience</label>
+                    <input id="template-cyber-resilience-input" type="number" min="0" max="1" step="0.05">
                   </div>
                   <div class="field-stack inline-check">
                     <input id="template-ishq-input" type="checkbox">
                     <label for="template-ishq-input">HQ / primary defended asset</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Payload + Behavior</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack">
+                    <label for="template-impact-damage-input">Impact Damage</label>
+                    <input id="template-impact-damage-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-lost-link-behavior-input">Lost Link Behavior</label>
+                    <select id="template-lost-link-behavior-input">
+                      <option value="ContinueDeadReckoning">Continue Dead Reckoning</option>
+                      <option value="RTB">RTB</option>
+                      <option value="Hover/Loiter">Hover / Loiter</option>
+                      <option value="ExecuteTerminalDive">Execute Terminal Dive</option>
+                    </select>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-self-destruct-input" type="checkbox">
+                    <label for="template-self-destruct-input">Self destruct on impact</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-uses-network-input" type="checkbox">
+                    <label for="template-uses-network-input">Uses network</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-uses-rf-input" type="checkbox">
+                    <label for="template-uses-rf-input">Uses RF emissions</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-requires-c2-input" type="checkbox">
+                    <label for="template-requires-c2-input">Requires C2</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-autonomy-input" type="checkbox">
+                    <label for="template-autonomy-input">Can operate autonomously</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-power-consumed-input">Power Draw (kW)</label>
+                    <input id="template-power-consumed-input" type="number" step="0.1">
                   </div>
                 </div>
               </div>
@@ -1403,11 +1515,21 @@
               </div>
 
               <div class="builder-section">
-                <h3>Primary Sensor</h3>
+                <div class="toolbar-row" style="justify-content: space-between; margin-bottom: 12px;">
+                  <h3 style="margin: 0;">Sensors</h3>
+                  <div class="toolbar-row">
+                    <button class="button-link" id="add-template-sensor-btn" type="button">Add Sensor</button>
+                    <button class="button-link" id="duplicate-template-sensor-btn" type="button">Duplicate Sensor</button>
+                    <button class="button-link" id="remove-template-sensor-btn" type="button">Remove Sensor</button>
+                  </div>
+                </div>
+                <div class="template-subcomponent-grid">
+                  <div class="subcomponent-list" id="template-sensor-list"></div>
+                  <div class="builder-section" style="margin-top: 0; padding-top: 0; border-top: none;">
                 <div class="form-grid tight">
                   <div class="field-stack inline-check">
                     <input id="template-sensor-enabled" type="checkbox">
-                    <label for="template-sensor-enabled">Enable first sensor</label>
+                    <label for="template-sensor-enabled">Enable selected sensor slot</label>
                   </div>
                   <div class="field-stack">
                     <label for="template-sensor-id-input">Sensor ID</label>
@@ -1451,15 +1573,47 @@
                     <label for="template-sensor-threshold-input">Detection Threshold (dB)</label>
                     <input id="template-sensor-threshold-input" type="number" step="0.1">
                   </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-transmit-input">Transmit Power (dB)</label>
+                    <input id="template-sensor-transmit-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-noise-floor-input">Noise Floor (dB)</label>
+                    <input id="template-sensor-noise-floor-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-noise-sigma-input">Noise Sigma (dB)</label>
+                    <input id="template-sensor-noise-sigma-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-classify-accuracy-input">Classification Accuracy</label>
+                    <input id="template-sensor-classify-accuracy-input" type="number" min="0" max="1" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-identify-accuracy-input">Identification Accuracy</label>
+                    <input id="template-sensor-identify-accuracy-input" type="number" min="0" max="1" step="0.01">
+                  </div>
+                </div>
+                  </div>
                 </div>
               </div>
 
               <div class="builder-section">
-                <h3>Primary Effector + C2</h3>
+                <div class="toolbar-row" style="justify-content: space-between; margin-bottom: 12px;">
+                  <h3 style="margin: 0;">Effectors</h3>
+                  <div class="toolbar-row">
+                    <button class="button-link" id="add-template-effector-btn" type="button">Add Effector</button>
+                    <button class="button-link" id="duplicate-template-effector-btn" type="button">Duplicate Effector</button>
+                    <button class="button-link" id="remove-template-effector-btn" type="button">Remove Effector</button>
+                  </div>
+                </div>
+                <div class="template-subcomponent-grid">
+                  <div class="subcomponent-list" id="template-effector-list"></div>
+                  <div class="builder-section" style="margin-top: 0; padding-top: 0; border-top: none;">
                 <div class="form-grid tight">
                   <div class="field-stack inline-check">
                     <input id="template-effector-enabled" type="checkbox">
-                    <label for="template-effector-enabled">Enable first effector</label>
+                    <label for="template-effector-enabled">Enable selected effector slot</label>
                   </div>
                   <div class="field-stack inline-check">
                     <input id="template-c2-enabled" type="checkbox">
@@ -1478,8 +1632,10 @@
                     <select id="template-effector-type-input">
                       <option value="Kinetic">Kinetic</option>
                       <option value="Jammer">Jammer</option>
-                      <option value="Laser">Laser</option>
+                      <option value="DirectedEnergy">Directed Energy</option>
                       <option value="Interceptor">Interceptor</option>
+                      <option value="Spoofer">Spoofer</option>
+                      <option value="Cyber">Cyber</option>
                     </select>
                   </div>
                   <div class="field-stack">
@@ -1515,12 +1671,34 @@
                     <input id="template-effector-speed-input" type="number">
                   </div>
                   <div class="field-stack">
+                    <label for="template-effector-terminal-radius-input">Terminal Radius (m)</label>
+                    <input id="template-effector-terminal-radius-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-flight-time-input">Max Flight Time (sec)</label>
+                    <input id="template-effector-flight-time-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-effect-duration-input">Effect Duration (sec)</label>
+                    <input id="template-effector-effect-duration-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-jam-strength-input">Jam Strength (dB)</label>
+                    <input id="template-effector-jam-strength-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-domains-input">Affected Domains</label>
+                    <input id="template-effector-domains-input" type="text">
+                  </div>
+                  <div class="field-stack">
                     <label for="template-c2-capacity-input">C2 Track Capacity</label>
                     <input id="template-c2-capacity-input" type="number">
                   </div>
                   <div class="field-stack">
                     <label for="template-c2-latency-input">C2 Latency (sec)</label>
                     <input id="template-c2-latency-input" type="number" step="0.1">
+                  </div>
+                </div>
                   </div>
                 </div>
               </div>
@@ -1533,6 +1711,7 @@
               <div class="controls" style="margin-top: 12px;">
                 <button id="apply-template-json-btn">Apply Template JSON</button>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -1930,6 +2109,13 @@
         };
       }
 
+      function normalizeLostLinkBehavior(value) {
+        const behavior = String(value || "ContinueDeadReckoning");
+        return ["ContinueDeadReckoning", "RTB", "Hover/Loiter", "ExecuteTerminalDive"].includes(behavior)
+          ? behavior
+          : "ContinueDeadReckoning";
+      }
+
       function normalizePayload(payload) {
         return {
           impactDamagePoints: Number(payload?.impactDamagePoints ?? payload?.damagePoints ?? payload?.payloadYield ?? 0),
@@ -1937,10 +2123,35 @@
         };
       }
 
+      function normalizeResistance(resistance = {}) {
+        return {
+          kineticResistance: Number(resistance.kineticResistance ?? 0.1),
+          ewResistance: Number(resistance.ewResistance ?? 0.1),
+          networkResistance: Number(resistance.networkResistance ?? 0.1)
+        };
+      }
+
+      function normalizeSignature(signature = {}) {
+        return {
+          radarSignatureDb: Number(signature.radarSignatureDb ?? signature.radarSignature_dB ?? -10),
+          acousticSignatureDb: Number(signature.acousticSignatureDb ?? signature.acousticSignature_dB ?? 60),
+          rfEmissionDb: Number(signature.rfEmissionDb ?? signature.rfEmission_dB ?? 20)
+        };
+      }
+
+      function normalizeVulnerability(vulnerability = {}, resistance = {}) {
+        const fallbackLinkResilience = vulnerability.linkResilience ?? resistance.linkResilience ?? 0.5;
+        return {
+          commsResilience: clamp(Number(vulnerability.commsResilience ?? fallbackLinkResilience), 0, 1),
+          navResilience: clamp(Number(vulnerability.navResilience ?? fallbackLinkResilience), 0, 1),
+          cyberResilience: clamp(Number(vulnerability.cyberResilience ?? fallbackLinkResilience), 0, 1)
+        };
+      }
+
       function normalizeCapability(capability, components = {}) {
         const inferredUsesRf = ensureArray(components.sensors).length > 0 || ensureArray(components.effectors).some((effector) => {
           const type = String(effector?.type || "").toUpperCase();
-          return type === "EW" || type === "JAMMER";
+          return ["EW", "JAMMER", "SPOOFER", "CYBER", "RF_PASSIVE", "FPV"].includes(type);
         });
         const inferredNeedsPower = ensureArray(components.sensors).length > 0
           || ensureArray(components.effectors).length > 0
@@ -1952,8 +2163,29 @@
           usesRF: capability?.usesRF != null ? !!capability.usesRF : inferredUsesRf,
           requiresPower: capability?.requiresPower != null ? !!capability.requiresPower : inferredNeedsPower,
           requiresC2: !!capability?.requiresC2,
-          canOperateAutonomously: capability?.canOperateAutonomously !== false
+          canOperateAutonomously: capability?.canOperateAutonomously !== false,
+          lostLinkBehavior: normalizeLostLinkBehavior(capability?.lostLinkBehavior)
         };
+      }
+
+      function normalizeSensorType(type) {
+        const rawType = String(type || "Radar").trim();
+        const upperType = rawType.toUpperCase();
+        const sensorType = ({
+          RADAR: "Radar",
+          EO_IR: "EO_IR",
+          "EO-IR": "EO_IR",
+          EOIR: "EO_IR",
+          RF: "RF_Passive",
+          RF_PASSIVE: "RF_Passive",
+          "RF-PASSIVE": "RF_Passive",
+          RFPASSIVE: "RF_Passive",
+          ACOUSTIC: "Acoustic",
+          FPV: "FPV"
+        }[upperType] || rawType);
+        return ["Radar", "EO_IR", "RF_Passive", "Acoustic", "FPV"].includes(sensorType)
+          ? sensorType
+          : "Radar";
       }
 
       function normalizeSensor(sensor, index) {
@@ -1962,7 +2194,7 @@
         return {
           id: sensor.id || "Sensor-" + (index + 1),
           name: sensor.name || sensor.type || ("Sensor " + (index + 1)),
-          type: sensor.type || "Radar",
+          type: normalizeSensorType(sensor.type),
           maxRangeM: Number(sensor.maxRangeM ?? sensor.maxRange_m ?? 0),
           horizontalFovDeg: Number(sensor.horizontalFovDeg ?? sensor.fov_azimuth_deg ?? 360),
           verticalFovDeg: Number(sensor.verticalFovDeg ?? sensor.fov_elevation_deg ?? 180),
@@ -1985,6 +2217,24 @@
         };
       }
 
+      function normalizeEffectorType(type) {
+        const rawType = String(type || "Kinetic").trim();
+        const effectorType = ({
+          KINETIC: "Kinetic",
+          EW: "Jammer",
+          JAMMER: "Jammer",
+          LASER: "DirectedEnergy",
+          DIRECTEDENERGY: "DirectedEnergy",
+          DIRECTED_ENERGY: "DirectedEnergy",
+          INTERCEPTOR: "Interceptor",
+          SPOOFER: "Spoofer",
+          CYBER: "Cyber"
+        }[rawType.toUpperCase()] || rawType);
+        return ["Kinetic", "Jammer", "DirectedEnergy", "Interceptor", "Spoofer", "Cyber"].includes(effectorType)
+          ? effectorType
+          : "Kinetic";
+      }
+
       function normalizeEffector(effector, index) {
         const projectileSpeedMps = Number(
           effector.projectileSpeedMps
@@ -1995,7 +2245,7 @@
         return {
           id: effector.id || "Effector-" + (index + 1),
           name: effector.name || effector.type || ("Effector " + (index + 1)),
-          type: effector.type || "Kinetic",
+          type: normalizeEffectorType(effector.type),
           maxRangeM: Number(effector.maxRangeM ?? effector.maxRange_m ?? 0),
           basePk: Number(effector.basePk ?? 0),
           basePe: Number(effector.basePe ?? 0),
@@ -2010,9 +2260,11 @@
           jamStrengthDb: Number(effector.jamStrengthDb ?? effector.jammingPowerDb ?? 8),
           affectedDomains: ensureArray(effector.affectedDomains).length
             ? ensureArray(effector.affectedDomains)
-            : (String(effector.type || "").toUpperCase() === "EW" || String(effector.type || "").toUpperCase() === "JAMMER"
-              ? ["Sensor", "Network", "C2"]
-              : [])
+            : ({
+              Jammer: ["Sensor", "Network", "C2"],
+              Spoofer: ["Navigation"],
+              Cyber: ["Track", "Telemetry", "C2"]
+            }[normalizeEffectorType(effector.type)] || [])
         };
       }
 
@@ -2115,14 +2367,9 @@
                 assetValuePts: Number(components.health?.assetValuePts ?? components.health?.assetValue_pts ?? 1),
                 isHQ: Boolean(components.health?.isHQ)
               },
-              resistance: {
-                kineticResistance: Number(components.resistance?.kineticResistance ?? 0.1),
-                ewResistance: Number(components.resistance?.ewResistance ?? 0.1),
-                networkResistance: Number(components.resistance?.networkResistance ?? 0.1)
-              },
-              signature: {
-                radarSignatureDb: Number(components.signature?.radarSignatureDb ?? components.signature?.radarSignature_dB ?? -10)
-              },
+              resistance: normalizeResistance(components.resistance),
+              signature: normalizeSignature(components.signature),
+              vulnerability: normalizeVulnerability(components.vulnerability, components.resistance),
               payload: normalizePayload(components.payload),
               capability: normalizeCapability(components.capability, components),
               powerConsumer: {
@@ -2732,6 +2979,45 @@
         return type === "EO_IR" || type === "FPV";
       }
 
+      function isRfPassiveSensor(sensor) {
+        return String(sensor?.type || "").toUpperCase() === "RF_PASSIVE";
+      }
+
+      function isAcousticSensor(sensor) {
+        return String(sensor?.type || "").toUpperCase() === "ACOUSTIC";
+      }
+
+      function isDirectedEnergyEffector(effector) {
+        return String(effector?.type || "").toUpperCase() === "DIRECTEDENERGY";
+      }
+
+      function getObjectEmissionState(object) {
+        if (!object) {
+          return { radioSilent: true, navigationCompromised: false, telemetryCompromised: false };
+        }
+        const controlMode = String(object.runtime?.controlMode || "");
+        return {
+          radioSilent: !object.components?.capability?.usesRF || ["AutonomousFallback", "HeuristicFallback", "Jammed/Severed"].includes(controlMode),
+          navigationCompromised: Boolean(object.runtime?.spoofedOffset && !object.runtime?.spoofRestored),
+          telemetryCompromised: Boolean(object.runtime?.telemetrySpoofed && !object.runtime?.telemetryRestored)
+        };
+      }
+
+      function getTrackObservedPosition(world, observerSide, target) {
+        if (
+          observerSide === "Blue"
+          && target?.runtime?.telemetrySpoofed
+          && target.runtime.telemetryOffsetXY
+        ) {
+          return {
+            x: (target.runtime.position.x || 0) + Number(target.runtime.telemetryOffsetXY.x || 0),
+            y: (target.runtime.position.y || 0) + Number(target.runtime.telemetryOffsetXY.y || 0),
+            z: target.runtime.position.z || 0
+          };
+        }
+        return deepClone(target?.runtime?.position || { x: 0, y: 0, z: 0 });
+      }
+
       function syncFpvSensorHeading(object, headingDeg) {
         (object?.components?.sensors || []).forEach((sensor) => {
           if (String(sensor.type || "").toUpperCase() === "FPV") {
@@ -2896,6 +3182,68 @@
             reason: reason || "control-state-change"
           }
         );
+      }
+
+      function restoreObjectControlMode(world, object, timeSec, services, reason) {
+        if (!object?.runtime) {
+          return;
+        }
+        if (object.components.capability?.requiresC2 && canObjectAct(world, object, timeSec)) {
+          setObjectControlMode(world, object, "C2Directed", timeSec, services, reason);
+          return;
+        }
+        if (object.components.capability?.canOperateAutonomously === false) {
+          setObjectControlMode(world, object, "HeuristicFallback", timeSec, services, reason);
+          return;
+        }
+        setObjectControlMode(world, object, "AutonomousFallback", timeSec, services, reason);
+      }
+
+      function clearExpiredRuntimeEffects(world, object, timeSec, services) {
+        if (!object?.runtime) {
+          return;
+        }
+        if (object.runtime.jammedUntilSec && timeSec >= object.runtime.jammedUntilSec) {
+          object.runtime.jammedUntilSec = 0;
+          if (object.runtime.controlMode === "Jammed/Severed") {
+            restoreObjectControlMode(world, object, timeSec, services, "jam-expired");
+          }
+        }
+        if (object.runtime.spoofedUntilSec && timeSec >= object.runtime.spoofedUntilSec) {
+          object.runtime.spoofedOffset = null;
+          object.runtime.spoofedUntilSec = 0;
+          object.runtime.spoofRestored = true;
+          services.logger.record(
+            world,
+            timeSec,
+            "effect",
+            object.name + " cleared spoofed navigation offset",
+            { objectId: object.id, side: object.side }
+          );
+        }
+        if (object.runtime.telemetrySpoofedUntilSec && timeSec >= object.runtime.telemetrySpoofedUntilSec) {
+          object.runtime.telemetrySpoofed = false;
+          object.runtime.telemetryOffsetXY = null;
+          object.runtime.telemetrySpoofedUntilSec = 0;
+          object.runtime.telemetryRestored = true;
+          services.logger.record(
+            world,
+            timeSec,
+            "effect",
+            object.name + " restored telemetry integrity",
+            { objectId: object.id, side: object.side }
+          );
+        }
+      }
+
+      function buildRandomOffset(services, maxMagnitudeM, includeAltitude = false) {
+        const magnitudeM = clamp(Math.abs(services.rng.nextGaussian(maxMagnitudeM * 0.7, maxMagnitudeM * 0.2)), maxMagnitudeM * 0.25, maxMagnitudeM);
+        const angleRad = services.rng.next() * Math.PI * 2;
+        return {
+          x: round(Math.cos(angleRad) * magnitudeM, 2),
+          y: round(Math.sin(angleRad) * magnitudeM, 2),
+          z: includeAltitude ? round(services.rng.nextGaussian(0, maxMagnitudeM * 0.15), 2) : 0
+        };
       }
 
       function getActiveTerrainObjects(world) {
@@ -3536,6 +3884,8 @@
             interceptorAborts: world.metrics.interceptorAborts,
             terrainCollisions: world.metrics.terrainCollisions,
             ewEvents: world.metrics.ewEvents,
+            spoofEvents: world.metrics.spoofEvents || 0,
+            cyberEvents: world.metrics.cyberEvents || 0,
             networkJamEvents: world.metrics.networkJamEvents,
             fallbackTransitions: world.metrics.fallbackTransitions,
             ammoExpended: deepClone(world.metrics.ammoExpended),
@@ -3585,6 +3935,8 @@
           Interceptor_Aborts: report.interceptorAborts ?? 0,
           Terrain_Collisions: report.terrainCollisions ?? 0,
           EW_Events: report.ewEvents ?? 0,
+          Spoof_Events: report.spoofEvents ?? 0,
+          Cyber_Events: report.cyberEvents ?? 0,
           Network_Jam_Events: report.networkJamEvents ?? 0,
           Fallback_Transitions: report.fallbackTransitions ?? 0,
           Final_Target_Status: report.finalTargetStatus,
@@ -3820,6 +4172,7 @@
           if (!object || object.runtime.destroyed) {
             return;
           }
+          clearExpiredRuntimeEffects(world, object, event.time, services);
 
           const movement = object.components.movement;
           const mission = object.runtime.mission;
@@ -3828,6 +4181,14 @@
           }
 
           const current = object.runtime.position;
+          const stepDistance = movement.speedMps * movement.stepSec;
+          const navigationOrigin = object.runtime.telemetrySpoofed && object.runtime.telemetryOffsetXY
+            ? {
+              x: current.x + Number(object.runtime.telemetryOffsetXY.x || 0),
+              y: current.y + Number(object.runtime.telemetryOffsetXY.y || 0),
+              z: current.z
+            }
+            : current;
           let movementTarget = null;
           let movementReason = "waypoint";
 
@@ -3882,9 +4243,54 @@
             }
 
             movementTarget = deepClone(target.runtime.position);
+            if (childState.aimOffsetXY) {
+              movementTarget.x += Number(childState.aimOffsetXY.x || 0);
+              movementTarget.y += Number(childState.aimOffsetXY.y || 0);
+            }
             movementReason = "interceptor-pursuit";
             object.runtime.behaviorState = "Pursuit";
             object.runtime.behaviorTargetId = target.id;
+          }
+
+          if (!movementTarget) {
+            if (object.side === "Red" && object.roles.includes("UAS") && object.runtime.controlMode === "Jammed/Severed") {
+              const lostLinkBehavior = normalizeLostLinkBehavior(object.components.capability?.lostLinkBehavior);
+              if (lostLinkBehavior === "Hover/Loiter") {
+                object.runtime.behaviorState = "Loiter";
+                services.events.scheduleDelay(event.time, movement.stepSec, {
+                  type: "movement.step",
+                  priority: EVENT_PRIORITIES.movement,
+                  payload: { objectId: object.id }
+                });
+                return;
+              }
+              if (lostLinkBehavior === "RTB") {
+                movementTarget = deepClone(object.runtime.initialPosition || current);
+                movementReason = "rtb";
+                object.runtime.behaviorState = "RTB";
+              } else if (lostLinkBehavior === "ExecuteTerminalDive") {
+                const terminalTarget = object.runtime.behaviorTargetId
+                  ? getObject(world, object.runtime.behaviorTargetId)
+                  : findMissionHeuristicTarget(world, object);
+                if (terminalTarget && !terminalTarget.runtime.destroyed) {
+                  movementTarget = deepClone(terminalTarget.runtime.position);
+                  movementTarget.z = Math.min(Number(movementTarget.z || 0), 0);
+                  movementReason = "terminal-dive";
+                  object.runtime.behaviorTargetId = terminalTarget.id;
+                  object.runtime.behaviorState = "Terminal Dive";
+                }
+              }
+              if (!movementTarget && lostLinkBehavior === "ContinueDeadReckoning") {
+                const headingRad = (Number.isFinite(object.runtime.currentHeadingDeg) ? object.runtime.currentHeadingDeg : 0) * (Math.PI / 180);
+                movementTarget = {
+                  x: current.x + (Math.cos(headingRad) * Math.max(stepDistance, movement.waypointToleranceM)),
+                  y: current.y + (Math.sin(headingRad) * Math.max(stepDistance, movement.waypointToleranceM)),
+                  z: current.z
+                };
+                movementReason = "dead-reckoning";
+                object.runtime.behaviorState = "Dead Reckoning";
+              }
+            }
           }
 
           if (!movementTarget) {
@@ -3987,6 +4393,17 @@
             }
           }
 
+          if (movementTarget && object.runtime.spoofedOffset) {
+            movementTarget = {
+              x: Number(movementTarget.x || 0) + Number(object.runtime.spoofedOffset.x || 0),
+              y: Number(movementTarget.y || 0) + Number(object.runtime.spoofedOffset.y || 0),
+              z: Number(movementTarget.z || 0) + Number(object.runtime.spoofedOffset.z || 0)
+            };
+            if (movementReason === "waypoint") {
+              movementReason = "spoofed-waypoint";
+            }
+          }
+
           if (!movementTarget) {
             if (object.runtime.behaviorState !== "Complete") {
               object.runtime.behaviorState = "Complete";
@@ -4001,10 +4418,9 @@
             return;
           }
 
-          const stepDistance = movement.speedMps * movement.stepSec;
-          const remainingDistance = distance3D(current, movementTarget);
+          const remainingDistance = distance3D(navigationOrigin, movementTarget);
           if (remainingDistance > 0.001) {
-            object.runtime.currentHeadingDeg = round(angleDeg(current, movementTarget), 2);
+            object.runtime.currentHeadingDeg = round(angleDeg(navigationOrigin, movementTarget), 2);
             syncFpvSensorHeading(object, object.runtime.currentHeadingDeg);
           }
 
@@ -4017,9 +4433,9 @@
           } else {
             const ratio = stepDistance / remainingDistance;
             nextPosition = {
-              x: current.x + ((movementTarget.x - current.x) * ratio),
-              y: current.y + ((movementTarget.y - current.y) * ratio),
-              z: current.z + ((movementTarget.z - current.z) * ratio)
+              x: current.x + ((movementTarget.x - navigationOrigin.x) * ratio),
+              y: current.y + ((movementTarget.y - navigationOrigin.y) * ratio),
+              z: current.z + ((movementTarget.z - navigationOrigin.z) * ratio)
             };
           }
 
@@ -4243,6 +4659,7 @@
           if (!host || host.runtime.destroyed || !hasOperationalPower(world, host)) {
             return;
           }
+          clearExpiredRuntimeEffects(world, host, event.time, services);
 
           (host.components.sensors || []).forEach((sensor) => {
             const sensorState = getSensorRuntimeState(host, sensor.id);
@@ -4255,9 +4672,10 @@
               if (!target || target.runtime.destroyed || target.side === host.side) {
                 return;
               }
+              clearExpiredRuntimeEffects(world, target, event.time, services);
 
               const hostPosition = host.runtime.position;
-              const targetPosition = target.runtime.position;
+              const targetPosition = getTrackObservedPosition(world, host.side, target);
               const rangeM = distance3D(hostPosition, targetPosition);
               const horizontalRangeM = distance2D(hostPosition, targetPosition);
               if (rangeM > sensor.maxRangeM) {
@@ -4297,10 +4715,20 @@
                 }
               } else {
                 const terrainNoiseDb = getTerrainNoisePenalty(world, hostPosition, targetPosition, Math.max(hostPosition.z || 0, targetPosition.z || 0));
-                const networkNoiseDb = getNetworkState(world, host.side, event.time).noisePenaltyDb;
-                signalStrengthDb = sensor.transmitPowerDb
-                  + target.components.signature.radarSignatureDb
-                  - (20 * Math.log10(Math.max(1, rangeM)));
+                const networkNoiseDb = isAcousticSensor(sensor) ? 0 : getNetworkState(world, host.side, event.time).noisePenaltyDb;
+                const pathLossDb = 20 * Math.log10(Math.max(1, rangeM));
+                if (isAcousticSensor(sensor)) {
+                  signalStrengthDb = Number(target.components.signature.acousticSignatureDb || 0) - pathLossDb;
+                } else if (isRfPassiveSensor(sensor)) {
+                  if (getObjectEmissionState(target).radioSilent) {
+                    return;
+                  }
+                  signalStrengthDb = Number(target.components.signature.rfEmissionDb || 0) - pathLossDb;
+                } else {
+                  signalStrengthDb = sensor.transmitPowerDb
+                    + Number(target.components.signature.radarSignatureDb || 0)
+                    - pathLossDb;
+                }
                 noiseDb = sensor.noiseFloorDb
                   + world.environment.baseNoiseDb
                   + terrainNoiseDb
@@ -4347,6 +4775,7 @@
                   observerId: host.id,
                   sensorId: sensor.id,
                   targetId: target.id,
+                  observedPosition: deepClone(targetPosition),
                   confidence,
                   rangeM,
                   bearingDeg
@@ -4411,6 +4840,7 @@
           if (!target || !observer || !sensor || target.runtime.destroyed) {
             return;
           }
+          clearExpiredRuntimeEffects(world, target, event.time, services);
 
           let track = Object.values(world.tracks).find((candidate) =>
             candidate.realObjectId === target.id
@@ -4484,8 +4914,9 @@
           if (newSensorContribution) {
             track.sourceSensorIds.push(sensor.id);
           }
+          const observedPosition = deepClone(event.payload.observedPosition || target.runtime.position);
           track.lastUpdateTimeSec = round(event.time, 2);
-          track.position = deepClone(target.runtime.position);
+          track.position = observedPosition;
           track.rangeM = round(event.payload.rangeM, 2);
           track.detectionConfidence = round(event.payload.confidence, 2);
           track.trackQuality = round(clamp((track.trackQuality * 0.45) + (event.payload.confidence * 0.55), 0.1, 0.99), 2);
@@ -4493,7 +4924,7 @@
             timeSec: round(event.time, 2),
             confidence: round(event.payload.confidence, 2),
             rangeM: round(event.payload.rangeM, 2),
-            position: deepClone(target.runtime.position)
+            position: observedPosition
           });
 
           const cycle = startAssessmentCycle(track, event.time, {
@@ -5158,6 +5589,7 @@
             );
 
           for (const c2Object of c2Objects) {
+            clearExpiredRuntimeEffects(world, c2Object, event.time, services);
             const networkState = getNetworkState(world, c2Object.side, event.time);
             if (networkState.status === "Jammed") {
               services.logger.record(
@@ -5296,6 +5728,63 @@
           return true;
         }
 
+        getEffectMode(effector) {
+          const effectorType = String(effector?.type || "").toUpperCase();
+          if (effectorType === "JAMMER") {
+            return "jammer";
+          }
+          if (effectorType === "SPOOFER") {
+            return "spoofer";
+          }
+          if (effectorType === "CYBER") {
+            return "cyber";
+          }
+          if (effectorType === "DIRECTEDENERGY") {
+            return "directed-energy";
+          }
+          return "kinetic-child";
+        }
+
+        computeNonKineticProbability(world, effector, target, rangeM) {
+          const rangeFactor = effector.maxRangeM > 0
+            ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0, 1)
+            : 0;
+          const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
+          const vulnerability = target.components.vulnerability || normalizeVulnerability({}, target.components.resistance);
+          const effectMode = this.getEffectMode(effector);
+          if (effectMode === "jammer") {
+            return clamp(
+              (Number(effector.basePe || 0.55) + world.randomization.pkBias)
+                * rangeFactor
+                * environmentFactor
+                * clamp(1 - Number(vulnerability.commsResilience || 0), 0.05, 1),
+              0,
+              0.98
+            );
+          }
+          if (effectMode === "spoofer") {
+            return clamp(
+              (Number(effector.basePe || 0.45) + world.randomization.pkBias)
+                * rangeFactor
+                * environmentFactor
+                * clamp(1 - Number(vulnerability.navResilience || 0), 0.05, 1),
+              0,
+              0.98
+            );
+          }
+          if (effectMode === "cyber") {
+            return clamp(
+              (Number(effector.basePe || 0.4) + world.randomization.pkBias)
+                * rangeFactor
+                * environmentFactor
+                * clamp(1 - Number(vulnerability.cyberResilience || 0), 0.05, 1),
+              0,
+              0.98
+            );
+          }
+          return 0;
+        }
+
         spawnChildInterceptor(world, shooter, effector, track, target, effectivePk, timeSec, services) {
           const interceptorId = "Interceptor-" + world.objectIds.length + "-" + Math.floor(timeSec * 10);
           const childObject = {
@@ -5329,6 +5818,7 @@
             },
             runtime: {
               position: deepClone(shooter.runtime.position),
+              initialPosition: deepClone(shooter.runtime.position),
               health: 1,
               operationalStatus: "In Flight",
               destroyed: false,
@@ -5346,6 +5836,12 @@
               lastCueLogTrackId: null,
               controlMode: "AutonomousFallback",
               c2AssignedTargetId: null,
+              jammedUntilSec: 0,
+              spoofedOffset: null,
+              spoofedUntilSec: 0,
+              telemetrySpoofed: false,
+              telemetryOffsetXY: null,
+              telemetrySpoofedUntilSec: 0,
               infrastructure: {
                 networkId: null,
                 powerGridId: null
@@ -5356,6 +5852,9 @@
                 sourceShooterId: shooter.id,
                 targetTrackId: track.id,
                 targetObjectId: target.id,
+                aimOffsetXY: shooter.side === "Blue" && target.runtime.telemetrySpoofed
+                  ? deepClone(target.runtime.telemetryOffsetXY || { x: 0, y: 0 })
+                  : null,
                 spawnTimeSec: round(timeSec, 2),
                 effectivePk,
                 damagePoints: effector.damagePoints,
@@ -5440,14 +5939,9 @@
             ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0, 1)
             : 0;
           const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
-          const typeKey = String(effector.type || "").toUpperCase();
-          if (typeKey === "EW" || typeKey === "JAMMER") {
-            const targetModifier = clamp(1 - Number(target.components.resistance.networkResistance || 0), 0.25, 1);
-            const effectivePe = clamp(
-              (Number(effector.basePe || 0.55) + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
-              0,
-              0.98
-            );
+          const effectMode = this.getEffectMode(effector);
+          if (["jammer", "spoofer", "cyber"].includes(effectMode)) {
+            const effectivePe = this.computeNonKineticProbability(world, effector, target, rangeM);
             services.logger.record(
               world,
               event.time,
@@ -5475,7 +5969,42 @@
                 effectDurationSec: effector.effectDurationSec,
                 jamStrengthDb: effector.jamStrengthDb,
                 affectedDomains: deepClone(effector.affectedDomains || []),
-                effectMode: "ew"
+                effectMode
+              }
+            });
+          } else if (effectMode === "directed-energy") {
+            const targetModifier = clamp(1 - Number(target.components.resistance.kineticResistance || 0), 0.2, 1);
+            const effectivePk = clamp(
+              (Number(effector.basePk || 0.7) + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
+              0,
+              0.98
+            );
+            services.logger.record(
+              world,
+              event.time,
+              "effector",
+              shooter.name + " fired directed energy at " + target.name,
+              {
+                shooterId: shooter.id,
+                trackId: track.id,
+                targetId: target.id,
+                effectivePk: round(effectivePk, 2),
+                rangeM: round(rangeM, 2)
+              }
+            );
+            services.events.schedule({
+              time: round(event.time, 3),
+              type: "effect.resolve",
+              priority: EVENT_PRIORITIES.effect,
+              payload: {
+                shooterId: shooter.id,
+                targetId: target.id,
+                trackId: track.id,
+                damagePoints: effector.damagePoints,
+                effectivePk,
+                interceptorId: null,
+                sourceEffectorId: effector.id,
+                effectMode
               }
             });
           } else {
@@ -5516,20 +6045,25 @@
             if (event.payload.interceptorId) {
               removeRuntimeObject(world, event.payload.interceptorId);
             }
-            if (shooter && event.payload.sourceEffectorId) {
-              clearEffectorAssignment(shooter, event.payload.sourceEffectorId, world);
-            }
             return;
           }
 
-          if (effectMode === "ew") {
+          if (["jammer", "spoofer", "cyber"].includes(effectMode)) {
             const hit = services.rng.chance(event.payload.effectivePk);
             world.metrics.ewEvents += 1;
+            if (effectMode === "spoofer") {
+              world.metrics.spoofEvents += 1;
+            }
+            if (effectMode === "cyber") {
+              world.metrics.cyberEvents += 1;
+            }
             services.logger.record(
               world,
               event.time,
               "effect",
-              hit ? "EW effect degraded " + target.name : "EW effect missed " + target.name,
+              hit
+                ? (effectMode.charAt(0).toUpperCase() + effectMode.slice(1) + " effect degraded " + target.name)
+                : (effectMode.charAt(0).toUpperCase() + effectMode.slice(1) + " effect missed " + target.name),
               {
                 shooterId: event.payload.shooterId,
                 targetId: target.id,
@@ -5539,8 +6073,74 @@
               }
             );
             if (hit) {
-              const hostileInfrastructure = getInfrastructureForSide(world, target.side)?.network;
-              if (hostileInfrastructure) {
+              if (effectMode === "jammer") {
+                target.runtime.jammedUntilSec = Math.max(target.runtime.jammedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
+                target.components.vulnerability.navResilience = clamp(
+                  Number(target.components.vulnerability.navResilience || 0.5) * 0.5,
+                  0,
+                  1
+                );
+                setObjectControlMode(world, target, "Jammed/Severed", event.time, services, "jammer-hit");
+                services.logger.record(
+                  world,
+                  event.time,
+                  "effect",
+                  shooter.name + " successfully jammed " + target.name + ". Target executing lost-link protocol.",
+                  {
+                    shooterId: event.payload.shooterId,
+                    targetId: target.id,
+                    trackId: track.id
+                  }
+                );
+                services.logger.record(
+                  world,
+                  event.time,
+                  "effect",
+                  shooter.name + " forced " + target.name + " to downgrade navigation systems. Spoofing vulnerability increased.",
+                  {
+                    shooterId: event.payload.shooterId,
+                    targetId: target.id,
+                    trackId: track.id,
+                    navResilience: round(target.components.vulnerability.navResilience, 2)
+                  }
+                );
+              } else if (effectMode === "spoofer") {
+                target.runtime.spoofedOffset = buildRandomOffset(services, 500, true);
+                target.runtime.spoofedUntilSec = Math.max(target.runtime.spoofedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
+                target.runtime.spoofRestored = false;
+                services.logger.record(
+                  world,
+                  event.time,
+                  "effect",
+                  shooter.name + " successfully meaconed " + target.name + ". Target deviating from mission path.",
+                  {
+                    shooterId: event.payload.shooterId,
+                    targetId: target.id,
+                    trackId: track.id,
+                    spoofedOffset: deepClone(target.runtime.spoofedOffset)
+                  }
+                );
+              } else if (effectMode === "cyber") {
+                target.runtime.telemetrySpoofed = true;
+                target.runtime.telemetryOffsetXY = buildRandomOffset(services, 650, false);
+                target.runtime.telemetrySpoofedUntilSec = Math.max(target.runtime.telemetrySpoofedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
+                target.runtime.telemetryRestored = false;
+                services.logger.record(
+                  world,
+                  event.time,
+                  "effect",
+                  shooter.name + " successfully injected false telemetry into " + target.name + ". Track and operator navigation corrupted.",
+                  {
+                    shooterId: event.payload.shooterId,
+                    targetId: target.id,
+                    trackId: track.id,
+                    telemetryOffsetXY: deepClone(target.runtime.telemetryOffsetXY)
+                  }
+                );
+              }
+              if (effectMode === "jammer" || ensureArray(event.payload.affectedDomains).includes("Network") || ensureArray(event.payload.affectedDomains).includes("C2")) {
+                const hostileInfrastructure = getInfrastructureForSide(world, target.side)?.network;
+                if (hostileInfrastructure) {
                 hostileInfrastructure.status = "Jammed";
                 hostileInfrastructure.jammedUntilSec = Math.max(hostileInfrastructure.jammedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
                 hostileInfrastructure.degradedUntilSec = Math.max(hostileInfrastructure.degradedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
@@ -5565,10 +6165,42 @@
                   }
                 }, { enforceMinimumDelay: true });
               }
+              }
             }
             if (shooter && event.payload.sourceEffectorId) {
               clearEffectorAssignment(shooter, event.payload.sourceEffectorId, world);
             }
+            return;
+          }
+
+          if (effectMode === "directed-energy") {
+            const hit = services.rng.chance(event.payload.effectivePk);
+            services.logger.record(
+              world,
+              event.time,
+              "effect",
+              hit ? "Directed energy hit " + target.name : "Directed energy missed " + target.name,
+              {
+                shooterId: event.payload.shooterId,
+                targetId: target.id,
+                trackId: track.id,
+                hit,
+                effectivePk: round(event.payload.effectivePk, 2)
+              }
+            );
+            if (shooter && event.payload.sourceEffectorId) {
+              clearEffectorAssignment(shooter, event.payload.sourceEffectorId, world);
+            }
+            services.events.scheduleDelay(event.time, 0, {
+              type: "damage.resolve",
+              priority: EVENT_PRIORITIES.damage,
+              payload: {
+                targetId: target.id,
+                trackId: track.id,
+                hit,
+                damagePoints: event.payload.damagePoints
+              }
+            }, { enforceMinimumDelay: true });
             return;
           }
 
@@ -5862,6 +6494,7 @@
               components: deepClone(template.components),
               runtime: {
                 position: { x: instance.posX, y: instance.posY, z: instance.posZ },
+                initialPosition: { x: instance.posX, y: instance.posY, z: instance.posZ },
                 health: template.components.health.maxHealth,
                 operationalStatus: "Active",
                 destroyed: false,
@@ -5879,6 +6512,13 @@
                 lastCueLogTrackId: null,
                 controlMode: template.components.capability.requiresC2 ? "C2Directed" : "AutonomousFallback",
                 c2AssignedTargetId: null
+                ,
+                jammedUntilSec: 0,
+                spoofedOffset: null,
+                spoofedUntilSec: 0,
+                telemetrySpoofed: false,
+                telemetryOffsetXY: null,
+                telemetrySpoofedUntilSec: 0
               }
             };
 
@@ -6004,10 +6644,12 @@
               damageResolutions: 0,
               targetsDestroyed: 0,
               interceptorLaunches: 0,
-              interceptorResolutions: 0,
-              interceptorAborts: 0,
-              terrainCollisions: 0,
+             interceptorResolutions: 0,
+             interceptorAborts: 0,
+             terrainCollisions: 0,
              ewEvents: 0,
+             spoofEvents: 0,
+             cyberEvents: 0,
              networkJamEvents: 0,
              fallbackTransitions: 0,
              successfulStrikes: 0,
@@ -6025,6 +6667,7 @@
         clamp,
         round,
         deepClone,
+        ensureArray,
         normalizeScenario,
         validateScenario,
         buildBaselineScenario,
@@ -6632,16 +7275,30 @@
         this.sidebarIds = ["wizard", "templates", "report", "analysis", "export"];
       }
 
-      showScreen(screenId) {
-        if (this.mainScreen) {
-          this.mainScreen.classList.add("active");
-        }
+      closeAllSideTrays() {
         this.sidebarIds.forEach((sidebarId) => {
           const element = this.screens[sidebarId];
           if (element) {
-            element.classList.toggle("sidebar-active", sidebarId === screenId);
+            element.classList.remove("sidebar-active");
           }
         });
+        document.querySelectorAll(".tray-button").forEach((button) => {
+          button.classList.remove("active");
+        });
+      }
+
+      showScreen(screenId) {
+        if (this.mainScreen) {
+          this.mainScreen.classList.add("active");
+          this.mainScreen.classList.toggle("map-hidden", screenId === "templates");
+        }
+        this.closeAllSideTrays();
+        if (this.sidebarIds.includes(screenId)) {
+          const element = this.screens[screenId];
+          if (element) {
+            element.classList.add("sidebar-active");
+          }
+        }
         document.querySelectorAll(".tray-button").forEach((button) => {
           button.classList.toggle("active",
             (screenId === "wizard" && button.id === "open-scenario-sidebar-btn")
@@ -6654,7 +7311,10 @@
       }
 
       closePanels() {
-        this.showScreen("run");
+        this.closeAllSideTrays();
+        if (this.mainScreen) {
+          this.mainScreen.classList.remove("map-hidden");
+        }
       }
     }
 
@@ -6675,15 +7335,23 @@
           playbackTimer: null,
           monteCarloWorker: null,
           selectedTemplateId: null,
+          templateEditorSensors: [],
+          templateEditorEffectors: [],
+          activeTemplateSensorIndex: 0,
+          activeTemplateEffectorIndex: 0,
+          templateJsonDirty: false,
           templateSearch: "",
           exportTab: "scenario",
           exportPrettyJson: true,
           scenarioExportSource: "normalized",
           originalScenarioPayloadText: "",
+          wizardBlueAssets: [],
           wizardThreatGroups: [],
+          activeWizardBlueAssetId: null,
           activeWizardThreatGroupId: null,
           mapInteraction: null,
           selectedMapEntity: null,
+          nextWizardBlueAssetId: 1,
           nextWizardThreatGroupId: 1,
           lastImportSummary: {
             source: "Built-in baseline",
@@ -6706,6 +7374,8 @@
         this.renderTemplateBuilder();
         this.renderRosterEditor();
         this.renderTerrainEditor();
+        this.renderWizardBlueAssets();
+        this.renderWizardThreatGroups();
         this.refreshWizardSummary();
         this.renderScenarioSnapshot();
         this.renderSelectedObjectEditor();
@@ -6805,9 +7475,8 @@
         document.getElementById("wizard-add-threat-group-btn").addEventListener("click", () => {
           this.addWizardThreatGroup();
         });
-        document.getElementById("wizard-pick-blue-position-btn").addEventListener("click", () => {
-          this.state.mapInteraction = { mode: "blue-position" };
-          this.setStatus("Click the map to place the Blue site");
+        document.getElementById("wizard-add-blue-asset-btn").addEventListener("click", () => {
+          this.addWizardBlueAsset();
         });
         document.querySelectorAll(".wizard-jump-btn").forEach((button) => {
           button.addEventListener("click", () => {
@@ -6854,15 +7523,7 @@
         [
           "wizard-scenario-name",
           "wizard-scenario-description",
-          "wizard-blue-name",
-          "wizard-blue-x",
-          "wizard-blue-y",
-          "wizard-blue-z",
-          "wizard-sensor-range",
-          "wizard-effector-range",
-          "wizard-effector-ammo",
           "map-width-input",
-          "wizard-blue-ishq",
           "wizard-ghost-enabled",
           "wizard-clutter-enabled",
           "wizard-preset"
@@ -6979,6 +7640,100 @@
         document.getElementById("template-file-input").addEventListener("change", (event) => {
           this.importTemplateFile(event);
         });
+        document.getElementById("template-json-editor").addEventListener("input", () => {
+          this.state.templateJsonDirty = true;
+        });
+        document.getElementById("template-helper-static-asset-btn").addEventListener("click", () => {
+          this.applyTemplateHelper("static-asset");
+        });
+        document.getElementById("template-helper-mobile-uas-btn").addEventListener("click", () => {
+          this.applyTemplateHelper("mobile-uas");
+        });
+        document.getElementById("template-helper-add-radar-btn").addEventListener("click", () => {
+          this.applyTemplateHelper("add-radar");
+        });
+        document.getElementById("template-helper-add-interceptor-btn").addEventListener("click", () => {
+          this.applyTemplateHelper("add-interceptor");
+        });
+        document.getElementById("template-helper-add-jammer-btn").addEventListener("click", () => {
+          this.applyTemplateHelper("add-jammer");
+        });
+        document.getElementById("add-template-sensor-btn").addEventListener("click", () => {
+          this.addTemplateSensor();
+        });
+        document.getElementById("duplicate-template-sensor-btn").addEventListener("click", () => {
+          this.duplicateTemplateSensor();
+        });
+        document.getElementById("remove-template-sensor-btn").addEventListener("click", () => {
+          this.removeTemplateSensor();
+        });
+        document.getElementById("add-template-effector-btn").addEventListener("click", () => {
+          this.addTemplateEffector();
+        });
+        document.getElementById("duplicate-template-effector-btn").addEventListener("click", () => {
+          this.duplicateTemplateEffector();
+        });
+        document.getElementById("remove-template-effector-btn").addEventListener("click", () => {
+          this.removeTemplateEffector();
+        });
+        [
+          "template-sensor-enabled",
+          "template-sensor-id-input",
+          "template-sensor-name-input",
+          "template-sensor-type-input",
+          "template-sensor-range-input",
+          "template-sensor-heading-input",
+          "template-sensor-hfov-input",
+          "template-sensor-vfov-input",
+          "template-sensor-scan-input",
+          "template-sensor-threshold-input",
+          "template-sensor-transmit-input",
+          "template-sensor-noise-floor-input",
+          "template-sensor-noise-sigma-input",
+          "template-sensor-classify-accuracy-input",
+          "template-sensor-identify-accuracy-input"
+        ].forEach((id) => {
+          const element = document.getElementById(id);
+          const eventName = element.type === "checkbox" || element.tagName === "SELECT" ? "change" : "input";
+          element.addEventListener(eventName, () => {
+            this.updateTemplateSensorDraftFromForm();
+          });
+          if (eventName === "input") {
+            element.addEventListener("change", () => {
+              this.updateTemplateSensorDraftFromForm();
+            });
+          }
+        });
+        [
+          "template-effector-enabled",
+          "template-effector-id-input",
+          "template-effector-name-input",
+          "template-effector-type-input",
+          "template-effector-range-input",
+          "template-effector-basepk-input",
+          "template-effector-basepe-input",
+          "template-effector-damage-input",
+          "template-effector-ammo-input",
+          "template-effector-slew-input",
+          "template-effector-cooldown-input",
+          "template-effector-speed-input",
+          "template-effector-terminal-radius-input",
+          "template-effector-flight-time-input",
+          "template-effector-effect-duration-input",
+          "template-effector-jam-strength-input",
+          "template-effector-domains-input"
+        ].forEach((id) => {
+          const element = document.getElementById(id);
+          const eventName = element.type === "checkbox" || element.tagName === "SELECT" ? "change" : "input";
+          element.addEventListener(eventName, () => {
+            this.updateTemplateEffectorDraftFromForm();
+          });
+          if (eventName === "input") {
+            element.addEventListener("change", () => {
+              this.updateTemplateEffectorDraftFromForm();
+            });
+          }
+        });
 
         document.getElementById("ghost-placeholder-toggle").addEventListener("change", (event) => {
           this.state.currentScenario.environment.placeholderGhostTrack.enabled = event.target.checked;
@@ -7027,6 +7782,8 @@
         this.renderTemplateBuilder();
         this.renderRosterEditor();
         this.renderTerrainEditor();
+        this.renderWizardBlueAssets();
+        this.renderWizardThreatGroups();
         this.refreshWizardSummary();
         this.renderScenarioSnapshot();
         this.renderSelectedObjectEditor();
@@ -7065,7 +7822,8 @@
           this.setStatus("Select a template first");
           return;
         }
-        downloadText(buildSafeFileStem(template.id) + ".json", JSON.stringify(template, null, 2), "application/json;charset=utf-8");
+        const draftSnapshot = this.buildTemplateDraftSnapshot(template);
+        downloadText(buildSafeFileStem(draftSnapshot.id) + ".json", JSON.stringify(draftSnapshot, null, 2), "application/json;charset=utf-8");
         this.setStatus("Template exported");
       }
 
@@ -7112,7 +7870,7 @@
         const chip = document.getElementById("map-selection-chip");
         if (this.state.mapInteraction) {
           const modeLabels = {
-            "blue-position": "Placing Blue site",
+            "blue-asset-position": "Placing Blue asset",
             "group-start": "Placing Red start",
             "group-end": "Placing Red end",
             "selected-object-move": "Moving selected object",
@@ -7132,13 +7890,18 @@
         const canvasPoint = this.renderer.eventToCanvas(event);
         const worldPoint = this.renderer.canvasToWorld(canvasPoint);
         if (this.state.mapInteraction) {
-          if (this.state.mapInteraction.mode === "blue-position") {
-            document.getElementById("wizard-blue-x").value = this.kernel.round(worldPoint.x, 1);
-            document.getElementById("wizard-blue-y").value = this.kernel.round(worldPoint.y, 1);
+          if (this.state.mapInteraction.mode === "blue-asset-position") {
+            const asset = this.state.wizardBlueAssets.find((item) => item.localId === this.state.mapInteraction.blueAssetId);
+            if (asset) {
+              asset.posX = this.kernel.round(worldPoint.x, 1);
+              asset.posY = this.kernel.round(worldPoint.y, 1);
+              this.state.activeWizardBlueAssetId = asset.localId;
+            }
             this.state.mapInteraction = null;
+            this.renderWizardBlueAssets();
             this.refreshWizardSummary();
             this.renderScenarioSnapshot();
-            this.setStatus("Blue site position updated from map");
+            this.setStatus("Blue asset position updated from map");
             this.updateMapSelectionChip();
             return;
           }
@@ -7334,6 +8097,138 @@
 
       getTemplateUsage(templateId) {
         return this.state.currentScenario.instances.filter((instance) => instance.templateId === templateId);
+      }
+
+      syncWizardTemplateRefs(oldTemplateId, newTemplateId) {
+        if (!oldTemplateId || !newTemplateId || oldTemplateId === newTemplateId) {
+          return;
+        }
+        const oldRef = "template:" + oldTemplateId;
+        const newRef = "template:" + newTemplateId;
+        this.state.wizardBlueAssets.forEach((asset) => {
+          if (asset.templateRef === oldRef) {
+            asset.templateRef = newRef;
+          }
+        });
+        this.state.wizardThreatGroups.forEach((group) => {
+          if (group.templateRef === oldRef) {
+            group.templateRef = newRef;
+          }
+        });
+      }
+
+      getWizardTemplateBindingUsage(templateId) {
+        const templateRef = "template:" + templateId;
+        const usage = [];
+        this.state.wizardBlueAssets.forEach((asset, index) => {
+          if (asset.templateRef === templateRef) {
+            usage.push({
+              kind: "Blue asset",
+              name: asset.name || ("Blue Asset " + (index + 1))
+            });
+          }
+        });
+        this.state.wizardThreatGroups.forEach((group, index) => {
+          if (group.templateRef === templateRef) {
+            usage.push({
+              kind: "Threat group",
+              name: group.name || group.templateName || ("Threat Group " + (index + 1))
+            });
+          }
+        });
+        return usage;
+      }
+
+      buildTemplateDraftSnapshot(template, options = {}) {
+        if (!template) {
+          return null;
+        }
+        this.updateTemplateSensorDraftFromForm();
+        this.updateTemplateEffectorDraftFromForm();
+        const currentTemplateId = template.id || "Template";
+        const requestedTemplateId = document.getElementById("template-id-input").value.trim() || currentTemplateId;
+        const existingIds = new Set(
+          this.state.currentScenario.templates
+            .map((item) => item.id)
+            .filter((id) => id !== currentTemplateId)
+        );
+        const nextTemplateId = options.enforceUniqueId
+          ? this.buildUniqueId(requestedTemplateId, existingIds)
+          : requestedTemplateId;
+        const roles = document.getElementById("template-roles-input").value
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        const c2Enabled = document.getElementById("template-c2-enabled").checked;
+        const firstC2 = template.components?.c2 || {};
+        const draft = this.kernel.deepClone(template);
+        draft.id = nextTemplateId;
+        draft.name = document.getElementById("template-name-input").value.trim() || nextTemplateId;
+        draft.category = document.getElementById("template-category-input").value.trim() || "Generic";
+        draft.defaultRoles = roles;
+        draft.components = draft.components || {};
+        draft.components.health = draft.components.health || {};
+        draft.components.resistance = draft.components.resistance || {};
+        draft.components.signature = draft.components.signature || {};
+        draft.components.vulnerability = draft.components.vulnerability || {};
+        draft.components.payload = draft.components.payload || {};
+        draft.components.capability = draft.components.capability || {};
+        draft.components.health.maxHealth = Number(document.getElementById("template-health-input").value || 0);
+        draft.components.health.assetValuePts = Number(document.getElementById("template-asset-value-input").value || 0);
+        draft.components.health.isHQ = document.getElementById("template-ishq-input").checked;
+        draft.components.resistance.kineticResistance = Number(document.getElementById("template-resistance-input").value || 0);
+        draft.components.resistance.ewResistance = Number(document.getElementById("template-ew-resistance-input").value || 0);
+        draft.components.resistance.networkResistance = Number(document.getElementById("template-network-resistance-input").value || 0);
+        draft.components.signature.radarSignatureDb = Number(document.getElementById("template-signature-input").value || 0);
+        draft.components.signature.acousticSignatureDb = Number(document.getElementById("template-acoustic-signature-input").value || 60);
+        draft.components.signature.rfEmissionDb = Number(document.getElementById("template-rf-signature-input").value || 20);
+        draft.components.vulnerability.commsResilience = Number(document.getElementById("template-comms-resilience-input").value || 0);
+        draft.components.vulnerability.navResilience = Number(document.getElementById("template-nav-resilience-input").value || 0);
+        draft.components.vulnerability.cyberResilience = Number(document.getElementById("template-cyber-resilience-input").value || 0);
+        draft.components.payload.impactDamagePoints = Number(document.getElementById("template-impact-damage-input").value || 0);
+        draft.components.payload.selfDestructOnImpact = document.getElementById("template-self-destruct-input").checked;
+        draft.components.capability.usesNetwork = document.getElementById("template-uses-network-input").checked;
+        draft.components.capability.usesRF = document.getElementById("template-uses-rf-input").checked;
+        draft.components.capability.requiresC2 = document.getElementById("template-requires-c2-input").checked;
+        draft.components.capability.canOperateAutonomously = document.getElementById("template-autonomy-input").checked;
+        draft.components.capability.lostLinkBehavior = document.getElementById("template-lost-link-behavior-input").value || "ContinueDeadReckoning";
+        draft.components.powerConsumer = draft.components.powerConsumer || {};
+        draft.components.powerConsumer.powerConsumedKw = Number(document.getElementById("template-power-consumed-input").value || 0);
+        draft.components.movement = document.getElementById("template-movement-enabled").checked ? {
+          speedMps: Number(document.getElementById("template-speed-input").value || 0),
+          stepSec: Number(document.getElementById("template-step-input").value || 1),
+          waypointToleranceM: Number(document.getElementById("template-waypoint-tolerance-input").value || 10)
+        } : null;
+        draft.components.sensors = this.kernel.deepClone(this.state.templateEditorSensors || []);
+        draft.components.effectors = this.kernel.deepClone(this.state.templateEditorEffectors || []);
+        draft.components.c2 = c2Enabled ? {
+          trackCapacity: Number(document.getElementById("template-c2-capacity-input").value || firstC2.trackCapacity || 0),
+          processingLatencySec: Number(document.getElementById("template-c2-latency-input").value || firstC2.processingLatencySec || 0.25)
+        } : null;
+        return this.kernel.normalizeScenario({
+          metadata: { name: "Template Draft Snapshot" },
+          templates: [draft],
+          instances: []
+        }).templates[0];
+      }
+
+      syncTemplateJsonEditorFromDraft(force = false) {
+        const editor = document.getElementById("template-json-editor");
+        if (!editor) {
+          return;
+        }
+        if (!force && this.state.templateJsonDirty) {
+          return;
+        }
+        const template = this.ensureSelectedTemplate();
+        if (!template) {
+          editor.value = "";
+          this.state.templateJsonDirty = false;
+          return;
+        }
+        const draftSnapshot = this.buildTemplateDraftSnapshot(template);
+        editor.value = JSON.stringify(draftSnapshot, null, 2);
+        this.state.templateJsonDirty = false;
       }
 
       selectTemplate(templateId, screenId = null) {
@@ -7894,6 +8789,334 @@
         this.uiManager.showScreen("templates");
       }
 
+      createDefaultSensorDraft(index = 0) {
+        return {
+          id: "Sensor-" + (index + 1),
+          name: "Sensor " + (index + 1),
+          type: "Radar",
+          maxRangeM: 420,
+          horizontalFovDeg: 360,
+          verticalFovDeg: 120,
+          headingDeg: 0,
+          transmitPowerDb: 53,
+          noiseFloorDb: -94,
+          noiseSigmaDb: 1.2,
+          detectionThresholdDb: 17,
+          scanIntervalSec: 1,
+          classification: { canClassify: true, latencySec: 0.25, accuracyBase: 0.8 },
+          identification: { canIdentify: true, latencySec: 0.35, accuracyBase: 0.72 }
+        };
+      }
+
+      createDefaultEffectorDraft(index = 0, type = "Kinetic") {
+        const effectorType = type || "Kinetic";
+        const affectedDomains = ({
+          Jammer: ["Sensor", "Network", "C2"],
+          Spoofer: ["Navigation"],
+          Cyber: ["Track", "Telemetry", "C2"]
+        }[effectorType] || []);
+        return {
+          id: "Effector-" + (index + 1),
+          name: effectorType + " " + (index + 1),
+          type: effectorType,
+          maxRangeM: effectorType === "Kinetic" ? 230 : 520,
+          basePk: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 0.72 : 0,
+          basePe: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 0 : 0.65,
+          damagePoints: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 140 : 0,
+          ammoCapacity: 3,
+          slewRateSec: 0.2,
+          cooldownSec: 2,
+          projectileSpeedMps: effectorType === "Kinetic" || effectorType === "Interceptor" ? 900 : 0,
+          terminalRadiusM: 12,
+          maxFlightTimeSec: 8,
+          effectDurationSec: 6,
+          jamStrengthDb: 8,
+          affectedDomains
+        };
+      }
+
+      renderTemplateHelperSummary(template) {
+        const container = document.getElementById("template-helper-summary");
+        if (!template) {
+          container.innerHTML = "<div class=\"empty-state\">Select a template to see helper guidance and quick actions.</div>";
+          return;
+        }
+        const roles = this.kernel.ensureArray(template.defaultRoles || []);
+        const sensorCount = this.state.templateEditorSensors.length;
+        const effectorCount = this.state.templateEditorEffectors.length;
+        const cards = [
+          {
+            label: "Design Profile",
+            value: roles.includes("UAS")
+              ? "Mobile threat template. Movement, payload, and lost-link helpers matter most."
+              : (roles.includes("Effector")
+                ? "Defensive shooter template. Coverage, ammo, and effector mix are the main tuning points."
+                : "Fixed or support template. Signature, survivability, and C2 support dominate.")
+          },
+          {
+            label: "Subcomponents",
+            value: sensorCount + " sensor(s), " + effectorCount + " effector(s), " + (template.components.c2 ? "C2 enabled" : "no C2")
+          },
+          {
+            label: "Suggested Next Step",
+            value: sensorCount > 1 || effectorCount > 1
+              ? "Use the subcomponent lists below to tune each sensor/effector individually."
+              : "Use helper buttons to seed common bundles, then tune the selected subcomponent."
+          }
+        ];
+        container.innerHTML = cards.map((card) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(card.value) + "</div></div>"
+        )).join("");
+      }
+
+      renderTemplateSubcomponentEditor(template) {
+        const structure = document.getElementById("template-structure-summary");
+        const sensorList = document.getElementById("template-sensor-list");
+        const effectorList = document.getElementById("template-effector-list");
+        this.renderTemplateHelperSummary(template);
+        if (!template) {
+          structure.innerHTML = "<div class=\"empty-state\">Select a template to edit structure.</div>";
+          sensorList.innerHTML = "<div class=\"empty-state\">No sensor editor active.</div>";
+          effectorList.innerHTML = "<div class=\"empty-state\">No effector editor active.</div>";
+          return;
+        }
+        const movementEnabled = !!template.components.movement;
+        structure.innerHTML = [
+          { label: "Movement", value: movementEnabled ? "Enabled" : "Static" },
+          { label: "Sensors", value: this.state.templateEditorSensors.length },
+          { label: "Effectors", value: this.state.templateEditorEffectors.length },
+          { label: "Power / C2", value: (template.components.powerConsumer?.powerConsumedKw ?? 0) + " kW | " + (template.components.c2 ? "C2 enabled" : "No C2") }
+        ].map((card) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(String(card.value)) + "</div></div>"
+        )).join("");
+
+        sensorList.innerHTML = this.state.templateEditorSensors.length
+          ? this.state.templateEditorSensors.map((sensor, index) => (
+              "<div class=\"subcomponent-card" + (index === this.state.activeTemplateSensorIndex ? " active" : "") + "\" data-template-sensor-index=\"" + escapeHtml(String(index)) + "\">" +
+                "<h4>" + escapeHtml(sensor.name || ("Sensor " + (index + 1))) + "</h4>" +
+                "<div class=\"summary-meta\">" + escapeHtml(sensor.id || ("Sensor-" + (index + 1))) + "</div>" +
+                "<div class=\"summary-meta\">" + escapeHtml(sensor.type || "Radar") + " | " + escapeHtml(String(sensor.maxRangeM ?? 0)) + " m</div>" +
+              "</div>"
+            )).join("")
+          : "<div class=\"empty-state\">No sensors yet. Add one to start component-level editing.</div>";
+        effectorList.innerHTML = this.state.templateEditorEffectors.length
+          ? this.state.templateEditorEffectors.map((effector, index) => (
+              "<div class=\"subcomponent-card" + (index === this.state.activeTemplateEffectorIndex ? " active" : "") + "\" data-template-effector-index=\"" + escapeHtml(String(index)) + "\">" +
+                "<h4>" + escapeHtml(effector.name || ("Effector " + (index + 1))) + "</h4>" +
+                "<div class=\"summary-meta\">" + escapeHtml(effector.id || ("Effector-" + (index + 1))) + "</div>" +
+                "<div class=\"summary-meta\">" + escapeHtml(effector.type || "Kinetic") + " | " + escapeHtml(String(effector.maxRangeM ?? 0)) + " m</div>" +
+              "</div>"
+            )).join("")
+          : "<div class=\"empty-state\">No effectors yet. Add one to start component-level editing.</div>";
+
+        sensorList.querySelectorAll("[data-template-sensor-index]").forEach((node) => {
+          node.addEventListener("click", () => {
+            this.updateTemplateSensorDraftFromForm();
+            this.state.activeTemplateSensorIndex = Number(node.dataset.templateSensorIndex || 0);
+            this.renderTemplateSubcomponentEditor(this.ensureSelectedTemplate());
+            this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+          });
+        });
+        effectorList.querySelectorAll("[data-template-effector-index]").forEach((node) => {
+          node.addEventListener("click", () => {
+            this.updateTemplateEffectorDraftFromForm();
+            this.state.activeTemplateEffectorIndex = Number(node.dataset.templateEffectorIndex || 0);
+            this.renderTemplateSubcomponentEditor(this.ensureSelectedTemplate());
+            this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+          });
+        });
+      }
+
+      addTemplateSensor() {
+        this.updateTemplateSensorDraftFromForm();
+        const sensor = this.createDefaultSensorDraft(this.state.templateEditorSensors.length);
+        this.state.templateEditorSensors.push(sensor);
+        this.state.activeTemplateSensorIndex = this.state.templateEditorSensors.length - 1;
+        this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Sensor slot added to template editor");
+      }
+
+      duplicateTemplateSensor() {
+        if (!this.state.templateEditorSensors.length) {
+          this.addTemplateSensor();
+          return;
+        }
+        this.updateTemplateSensorDraftFromForm();
+        const source = this.kernel.deepClone(this.state.templateEditorSensors[this.state.activeTemplateSensorIndex] || this.state.templateEditorSensors[0]);
+        source.id = this.buildUniqueId((source.id || "Sensor") + "-Copy", new Set(this.state.templateEditorSensors.map((item) => item.id)));
+        source.name = (source.name || "Sensor") + " Copy";
+        this.state.templateEditorSensors.push(source);
+        this.state.activeTemplateSensorIndex = this.state.templateEditorSensors.length - 1;
+        this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Sensor duplicated in template editor");
+      }
+
+      removeTemplateSensor() {
+        if (!this.state.templateEditorSensors.length) {
+          return;
+        }
+        this.updateTemplateSensorDraftFromForm();
+        this.state.templateEditorSensors.splice(this.state.activeTemplateSensorIndex, 1);
+        this.state.activeTemplateSensorIndex = Math.max(0, Math.min(this.state.activeTemplateSensorIndex, this.state.templateEditorSensors.length - 1));
+        this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Sensor removed from template editor");
+      }
+
+      addTemplateEffector(type = "Kinetic") {
+        this.updateTemplateEffectorDraftFromForm();
+        const effector = this.createDefaultEffectorDraft(this.state.templateEditorEffectors.length, type);
+        this.state.templateEditorEffectors.push(effector);
+        this.state.activeTemplateEffectorIndex = this.state.templateEditorEffectors.length - 1;
+        this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Effector slot added to template editor");
+      }
+
+      duplicateTemplateEffector() {
+        if (!this.state.templateEditorEffectors.length) {
+          this.addTemplateEffector();
+          return;
+        }
+        this.updateTemplateEffectorDraftFromForm();
+        const source = this.kernel.deepClone(this.state.templateEditorEffectors[this.state.activeTemplateEffectorIndex] || this.state.templateEditorEffectors[0]);
+        source.id = this.buildUniqueId((source.id || "Effector") + "-Copy", new Set(this.state.templateEditorEffectors.map((item) => item.id)));
+        source.name = (source.name || "Effector") + " Copy";
+        this.state.templateEditorEffectors.push(source);
+        this.state.activeTemplateEffectorIndex = this.state.templateEditorEffectors.length - 1;
+        this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Effector duplicated in template editor");
+      }
+
+      removeTemplateEffector() {
+        if (!this.state.templateEditorEffectors.length) {
+          return;
+        }
+        this.updateTemplateEffectorDraftFromForm();
+        this.state.templateEditorEffectors.splice(this.state.activeTemplateEffectorIndex, 1);
+        this.state.activeTemplateEffectorIndex = Math.max(0, Math.min(this.state.activeTemplateEffectorIndex, this.state.templateEditorEffectors.length - 1));
+        this.populateTemplateEditor(this.ensureSelectedTemplate(), { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Effector removed from template editor");
+      }
+
+      updateTemplateSensorDraftFromForm() {
+        const enabled = document.getElementById("template-sensor-enabled").checked;
+        if (!enabled) {
+          this.renderTemplateSubcomponentEditor(this.ensureSelectedTemplate());
+          return;
+        }
+        if (!this.state.templateEditorSensors.length) {
+          this.state.templateEditorSensors.push(this.createDefaultSensorDraft(0));
+          this.state.activeTemplateSensorIndex = 0;
+        }
+        const sensor = this.state.templateEditorSensors[this.state.activeTemplateSensorIndex] || this.state.templateEditorSensors[0];
+        if (!sensor) {
+          return;
+        }
+        sensor.id = document.getElementById("template-sensor-id-input").value.trim() || sensor.id || "Sensor-1";
+        sensor.name = document.getElementById("template-sensor-name-input").value.trim() || sensor.name || "Sensor";
+        sensor.type = document.getElementById("template-sensor-type-input").value || "Radar";
+        sensor.maxRangeM = Number(document.getElementById("template-sensor-range-input").value || 0);
+        sensor.headingDeg = Number(document.getElementById("template-sensor-heading-input").value || 0);
+        sensor.horizontalFovDeg = Number(document.getElementById("template-sensor-hfov-input").value || 360);
+        sensor.verticalFovDeg = Number(document.getElementById("template-sensor-vfov-input").value || 180);
+        sensor.scanIntervalSec = Number(document.getElementById("template-sensor-scan-input").value || 1);
+        sensor.detectionThresholdDb = Number(document.getElementById("template-sensor-threshold-input").value || 17);
+        sensor.transmitPowerDb = Number(document.getElementById("template-sensor-transmit-input").value || 0);
+        sensor.noiseFloorDb = Number(document.getElementById("template-sensor-noise-floor-input").value || -94);
+        sensor.noiseSigmaDb = Number(document.getElementById("template-sensor-noise-sigma-input").value || 1.2);
+        sensor.classification = sensor.classification || { canClassify: true, latencySec: 0.25, accuracyBase: 0.8 };
+        sensor.identification = sensor.identification || { canIdentify: true, latencySec: 0.35, accuracyBase: 0.72 };
+        sensor.classification.accuracyBase = Number(document.getElementById("template-sensor-classify-accuracy-input").value || sensor.classification.accuracyBase || 0.8);
+        sensor.identification.accuracyBase = Number(document.getElementById("template-sensor-identify-accuracy-input").value || sensor.identification.accuracyBase || 0.72);
+        this.renderTemplateSubcomponentEditor(this.ensureSelectedTemplate());
+      }
+
+      updateTemplateEffectorDraftFromForm() {
+        const enabled = document.getElementById("template-effector-enabled").checked;
+        if (!enabled) {
+          this.renderTemplateSubcomponentEditor(this.ensureSelectedTemplate());
+          return;
+        }
+        if (!this.state.templateEditorEffectors.length) {
+          this.state.templateEditorEffectors.push(this.createDefaultEffectorDraft(0));
+          this.state.activeTemplateEffectorIndex = 0;
+        }
+        const effector = this.state.templateEditorEffectors[this.state.activeTemplateEffectorIndex] || this.state.templateEditorEffectors[0];
+        if (!effector) {
+          return;
+        }
+        effector.id = document.getElementById("template-effector-id-input").value.trim() || effector.id || "Effector-1";
+        effector.name = document.getElementById("template-effector-name-input").value.trim() || effector.name || "Effector";
+        effector.type = document.getElementById("template-effector-type-input").value || "Kinetic";
+        effector.maxRangeM = Number(document.getElementById("template-effector-range-input").value || 0);
+        effector.basePk = Number(document.getElementById("template-effector-basepk-input").value || 0);
+        effector.basePe = Number(document.getElementById("template-effector-basepe-input").value || 0);
+        effector.damagePoints = Number(document.getElementById("template-effector-damage-input").value || 0);
+        effector.ammoCapacity = Number(document.getElementById("template-effector-ammo-input").value || 0);
+        effector.slewRateSec = Number(document.getElementById("template-effector-slew-input").value || 0.2);
+        effector.cooldownSec = Number(document.getElementById("template-effector-cooldown-input").value || 1.5);
+        effector.projectileSpeedMps = Number(document.getElementById("template-effector-speed-input").value || 0);
+        effector.terminalRadiusM = Number(document.getElementById("template-effector-terminal-radius-input").value || 12);
+        effector.maxFlightTimeSec = Number(document.getElementById("template-effector-flight-time-input").value || 8);
+        effector.effectDurationSec = Number(document.getElementById("template-effector-effect-duration-input").value || 6);
+        effector.jamStrengthDb = Number(document.getElementById("template-effector-jam-strength-input").value || 8);
+        effector.affectedDomains = document.getElementById("template-effector-domains-input").value
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean);
+        this.renderTemplateSubcomponentEditor(this.ensureSelectedTemplate());
+      }
+
+      applyTemplateHelper(helperId) {
+        const template = this.ensureSelectedTemplate();
+        if (!template) {
+          return;
+        }
+        this.updateTemplateSensorDraftFromForm();
+        this.updateTemplateEffectorDraftFromForm();
+        if (helperId === "static-asset") {
+          document.getElementById("template-movement-enabled").checked = false;
+          document.getElementById("template-roles-input").value = "Asset";
+          document.getElementById("template-power-consumed-input").value = 2;
+        } else if (helperId === "mobile-uas") {
+          document.getElementById("template-movement-enabled").checked = true;
+          document.getElementById("template-speed-input").value = 32;
+          document.getElementById("template-step-input").value = 1;
+          document.getElementById("template-waypoint-tolerance-input").value = 10;
+          document.getElementById("template-roles-input").value = "UAS";
+          document.getElementById("template-power-consumed-input").value = 5;
+        } else if (helperId === "add-radar") {
+          this.addTemplateSensor();
+          const sensor = this.state.templateEditorSensors[this.state.activeTemplateSensorIndex];
+          sensor.type = "Radar";
+          sensor.name = "Wide-Area Radar";
+          sensor.maxRangeM = 550;
+          sensor.horizontalFovDeg = 360;
+          sensor.verticalFovDeg = 120;
+          sensor.transmitPowerDb = 53;
+          sensor.detectionThresholdDb = 17;
+        } else if (helperId === "add-interceptor") {
+          this.addTemplateEffector("Interceptor");
+          const effector = this.state.templateEditorEffectors[this.state.activeTemplateEffectorIndex];
+          effector.name = "Interceptor Launcher";
+          effector.maxRangeM = 230;
+          effector.basePk = 0.74;
+          effector.damagePoints = 150;
+          effector.projectileSpeedMps = 900;
+        } else if (helperId === "add-jammer") {
+          this.addTemplateEffector("Jammer");
+          const effector = this.state.templateEditorEffectors[this.state.activeTemplateEffectorIndex];
+          effector.name = "Stand-In Jammer";
+          effector.maxRangeM = 520;
+          effector.basePe = 0.92;
+          effector.damagePoints = 0;
+          effector.jamStrengthDb = 14;
+          effector.effectDurationSec = 8;
+          effector.affectedDomains = ["Sensor", "Network", "C2"];
+        }
+        this.populateTemplateEditor(template, { preserveDrafts: true, preserveSelection: true });
+        this.setStatus("Template helper applied");
+      }
+
       renderTemplateBuilder() {
         const summary = document.getElementById("template-library-summary");
         const list = document.getElementById("template-list");
@@ -7942,21 +9165,38 @@
         this.populateTemplateEditor(selected);
       }
 
-      populateTemplateEditor(template) {
+      populateTemplateEditor(template, options = {}) {
         const usageSummary = document.getElementById("template-usage-summary");
         if (!template) {
           usageSummary.innerHTML = "<div class=\"empty-state\">Select or create a template to edit it.</div>";
+          document.getElementById("template-helper-summary").innerHTML = "<div class=\"empty-state\">Select a template to see helper guidance and quick actions.</div>";
+          document.getElementById("template-structure-summary").innerHTML = "";
+          document.getElementById("template-sensor-list").innerHTML = "<div class=\"empty-state\">No sensor editor active.</div>";
+          document.getElementById("template-effector-list").innerHTML = "<div class=\"empty-state\">No effector editor active.</div>";
           document.getElementById("template-json-editor").value = "";
+          this.state.templateJsonDirty = false;
           return;
         }
+        const preserveDrafts = !!options.preserveDrafts;
+        const preserveSelection = !!options.preserveSelection;
+        if (!preserveDrafts) {
+          this.state.templateEditorSensors = this.kernel.deepClone(template.components.sensors || []);
+          this.state.templateEditorEffectors = this.kernel.deepClone(template.components.effectors || []);
+        }
+        this.state.activeTemplateSensorIndex = preserveSelection
+          ? Math.max(0, Math.min(this.state.activeTemplateSensorIndex, Math.max(this.state.templateEditorSensors.length - 1, 0)))
+          : 0;
+        this.state.activeTemplateEffectorIndex = preserveSelection
+          ? Math.max(0, Math.min(this.state.activeTemplateEffectorIndex, Math.max(this.state.templateEditorEffectors.length - 1, 0)))
+          : 0;
         const usage = this.getTemplateUsage(template.id);
-        const sensor = (template.components.sensors || [])[0] || null;
-        const effector = (template.components.effectors || [])[0] || null;
+        const sensor = this.state.templateEditorSensors[this.state.activeTemplateSensorIndex] || null;
+        const effector = this.state.templateEditorEffectors[this.state.activeTemplateEffectorIndex] || null;
         const c2 = template.components.c2 || null;
         usageSummary.innerHTML = [
           { label: "Used by", value: usage.length ? usage.map((item) => item.name).join(", ") : "No instances yet" },
-          { label: "Extra components", value: Math.max((template.components.sensors || []).length - 1, 0) + " extra sensor(s), " + Math.max((template.components.effectors || []).length - 1, 0) + " extra effector(s)" },
-          { label: "Editor mode", value: "Common fields + selected-template JSON" }
+          { label: "Extra components", value: Math.max(this.state.templateEditorSensors.length - 1, 0) + " extra sensor(s), " + Math.max(this.state.templateEditorEffectors.length - 1, 0) + " extra effector(s)" },
+          { label: "Editor mode", value: "Component workbench + selected-template JSON" }
         ].map((card) => (
           "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"summary-meta\" style=\"margin-top: 8px; color: var(--text);\">" + escapeHtml(String(card.value)) + "</div></div>"
         )).join("");
@@ -7968,8 +9208,23 @@
         document.getElementById("template-health-input").value = template.components.health?.maxHealth ?? 0;
         document.getElementById("template-asset-value-input").value = template.components.health?.assetValuePts ?? 0;
         document.getElementById("template-resistance-input").value = template.components.resistance?.kineticResistance ?? 0;
+        document.getElementById("template-ew-resistance-input").value = template.components.resistance?.ewResistance ?? 0;
+        document.getElementById("template-network-resistance-input").value = template.components.resistance?.networkResistance ?? 0;
         document.getElementById("template-signature-input").value = template.components.signature?.radarSignatureDb ?? 0;
+        document.getElementById("template-acoustic-signature-input").value = template.components.signature?.acousticSignatureDb ?? 60;
+        document.getElementById("template-rf-signature-input").value = template.components.signature?.rfEmissionDb ?? 20;
+        document.getElementById("template-comms-resilience-input").value = template.components.vulnerability?.commsResilience ?? 0.5;
+        document.getElementById("template-nav-resilience-input").value = template.components.vulnerability?.navResilience ?? 0.5;
+        document.getElementById("template-cyber-resilience-input").value = template.components.vulnerability?.cyberResilience ?? 0.5;
         document.getElementById("template-ishq-input").checked = !!template.components.health?.isHQ;
+        document.getElementById("template-impact-damage-input").value = template.components.payload?.impactDamagePoints ?? 0;
+        document.getElementById("template-self-destruct-input").checked = template.components.payload?.selfDestructOnImpact !== false;
+        document.getElementById("template-uses-network-input").checked = template.components.capability?.usesNetwork !== false;
+        document.getElementById("template-uses-rf-input").checked = template.components.capability?.usesRF !== false;
+        document.getElementById("template-requires-c2-input").checked = !!template.components.capability?.requiresC2;
+        document.getElementById("template-autonomy-input").checked = template.components.capability?.canOperateAutonomously !== false;
+        document.getElementById("template-lost-link-behavior-input").value = template.components.capability?.lostLinkBehavior || "ContinueDeadReckoning";
+        document.getElementById("template-power-consumed-input").value = template.components.powerConsumer?.powerConsumedKw ?? 0;
         document.getElementById("template-movement-enabled").checked = !!template.components.movement;
         document.getElementById("template-speed-input").value = template.components.movement?.speedMps ?? 0;
         document.getElementById("template-step-input").value = template.components.movement?.stepSec ?? 1;
@@ -7984,6 +9239,11 @@
         document.getElementById("template-sensor-vfov-input").value = sensor?.verticalFovDeg ?? 180;
         document.getElementById("template-sensor-scan-input").value = sensor?.scanIntervalSec ?? 1;
         document.getElementById("template-sensor-threshold-input").value = sensor?.detectionThresholdDb ?? 17;
+        document.getElementById("template-sensor-transmit-input").value = sensor?.transmitPowerDb ?? 53;
+        document.getElementById("template-sensor-noise-floor-input").value = sensor?.noiseFloorDb ?? -94;
+        document.getElementById("template-sensor-noise-sigma-input").value = sensor?.noiseSigmaDb ?? 1.2;
+        document.getElementById("template-sensor-classify-accuracy-input").value = sensor?.classification?.accuracyBase ?? 0.8;
+        document.getElementById("template-sensor-identify-accuracy-input").value = sensor?.identification?.accuracyBase ?? 0.72;
         document.getElementById("template-effector-enabled").checked = !!effector;
         document.getElementById("template-effector-id-input").value = effector?.id || "";
         document.getElementById("template-effector-name-input").value = effector?.name || "";
@@ -7996,10 +9256,16 @@
         document.getElementById("template-effector-slew-input").value = effector?.slewRateSec ?? 0.2;
         document.getElementById("template-effector-cooldown-input").value = effector?.cooldownSec ?? 1.5;
         document.getElementById("template-effector-speed-input").value = effector?.projectileSpeedMps ?? 0;
+        document.getElementById("template-effector-terminal-radius-input").value = effector?.terminalRadiusM ?? 12;
+        document.getElementById("template-effector-flight-time-input").value = effector?.maxFlightTimeSec ?? 8;
+        document.getElementById("template-effector-effect-duration-input").value = effector?.effectDurationSec ?? 6;
+        document.getElementById("template-effector-jam-strength-input").value = effector?.jamStrengthDb ?? 8;
+        document.getElementById("template-effector-domains-input").value = this.kernel.ensureArray(effector?.affectedDomains || []).join(", ");
         document.getElementById("template-c2-enabled").checked = !!c2;
         document.getElementById("template-c2-capacity-input").value = c2?.trackCapacity ?? 0;
         document.getElementById("template-c2-latency-input").value = c2?.processingLatencySec ?? 0.25;
-        document.getElementById("template-json-editor").value = JSON.stringify(template, null, 2);
+        this.renderTemplateSubcomponentEditor(template);
+        this.syncTemplateJsonEditorFromDraft(true);
       }
 
       saveSelectedTemplateForm() {
@@ -8008,76 +9274,23 @@
           return;
         }
         const oldTemplateId = template.id;
-        const allTemplateIds = new Set(this.state.currentScenario.templates.map((item) => item.id).filter((id) => id !== oldTemplateId));
-        const nextTemplateId = this.buildUniqueId(document.getElementById("template-id-input").value || oldTemplateId, allTemplateIds);
-        const roles = document.getElementById("template-roles-input").value
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean);
-        const firstSensor = (template.components.sensors || [])[0] || {};
-        const firstEffector = (template.components.effectors || [])[0] || {};
-        const firstC2 = template.components.c2 || {};
-        const extraSensors = (template.components.sensors || []).slice(1);
-        const extraEffectors = (template.components.effectors || []).slice(1);
-        const sensorEnabled = document.getElementById("template-sensor-enabled").checked;
-        const effectorEnabled = document.getElementById("template-effector-enabled").checked;
-        const c2Enabled = document.getElementById("template-c2-enabled").checked;
-        template.id = nextTemplateId;
-        template.name = document.getElementById("template-name-input").value.trim() || nextTemplateId;
-        template.category = document.getElementById("template-category-input").value.trim() || "Generic";
-        template.defaultRoles = roles;
-        template.components.health.maxHealth = Number(document.getElementById("template-health-input").value || 0);
-        template.components.health.assetValuePts = Number(document.getElementById("template-asset-value-input").value || 0);
-        template.components.health.isHQ = document.getElementById("template-ishq-input").checked;
-        template.components.resistance.kineticResistance = Number(document.getElementById("template-resistance-input").value || 0);
-        template.components.signature.radarSignatureDb = Number(document.getElementById("template-signature-input").value || 0);
-        template.components.movement = document.getElementById("template-movement-enabled").checked ? {
-          speedMps: Number(document.getElementById("template-speed-input").value || 0),
-          stepSec: Number(document.getElementById("template-step-input").value || 1),
-          waypointToleranceM: Number(document.getElementById("template-waypoint-tolerance-input").value || 10)
-        } : null;
-        template.components.sensors = sensorEnabled ? [{
-          id: document.getElementById("template-sensor-id-input").value.trim() || "Sensor-1",
-          name: document.getElementById("template-sensor-name-input").value.trim() || "Sensor",
-          type: document.getElementById("template-sensor-type-input").value.trim() || "Radar",
-          maxRangeM: Number(document.getElementById("template-sensor-range-input").value || 0),
-          headingDeg: Number(document.getElementById("template-sensor-heading-input").value || 0),
-          horizontalFovDeg: Number(document.getElementById("template-sensor-hfov-input").value || 360),
-          verticalFovDeg: Number(document.getElementById("template-sensor-vfov-input").value || 180),
-          transmitPowerDb: Number(firstSensor.transmitPowerDb ?? 53),
-          noiseFloorDb: Number(firstSensor.noiseFloorDb ?? -94),
-          noiseSigmaDb: Number(firstSensor.noiseSigmaDb ?? 1.2),
-          detectionThresholdDb: Number(document.getElementById("template-sensor-threshold-input").value || 17),
-          scanIntervalSec: Number(document.getElementById("template-sensor-scan-input").value || 1),
-          classification: this.kernel.deepClone(firstSensor.classification || { canClassify: true, latencySec: 0.25, accuracyBase: 0.8 }),
-          identification: this.kernel.deepClone(firstSensor.identification || { canIdentify: true, latencySec: 0.35, accuracyBase: 0.72 })
-        }].concat(extraSensors) : [];
-        template.components.effectors = effectorEnabled ? [{
-          id: document.getElementById("template-effector-id-input").value.trim() || "Effector-1",
-          name: document.getElementById("template-effector-name-input").value.trim() || "Effector",
-          type: document.getElementById("template-effector-type-input").value.trim() || "Kinetic",
-          maxRangeM: Number(document.getElementById("template-effector-range-input").value || 0),
-          basePk: Number(document.getElementById("template-effector-basepk-input").value || 0),
-          basePe: Number(document.getElementById("template-effector-basepe-input").value || 0),
-          damagePoints: Number(document.getElementById("template-effector-damage-input").value || 0),
-          ammoCapacity: Number(document.getElementById("template-effector-ammo-input").value || 0),
-          slewRateSec: Number(document.getElementById("template-effector-slew-input").value || 0.2),
-          cooldownSec: Number(document.getElementById("template-effector-cooldown-input").value || 1.5),
-          projectileSpeedMps: Number(document.getElementById("template-effector-speed-input").value || 0)
-        }].concat(extraEffectors) : [];
-        template.components.c2 = c2Enabled ? {
-          trackCapacity: Number(document.getElementById("template-c2-capacity-input").value || firstC2.trackCapacity || 0),
-          processingLatencySec: Number(document.getElementById("template-c2-latency-input").value || firstC2.processingLatencySec || 0.25)
-        } : null;
-        if (oldTemplateId !== nextTemplateId) {
+        const nextTemplate = this.buildTemplateDraftSnapshot(template, { enforceUniqueId: true });
+        const index = this.state.currentScenario.templates.findIndex((item) => item.id === oldTemplateId);
+        if (index < 0) {
+          this.setStatus("Selected template no longer exists");
+          return;
+        }
+        this.state.currentScenario.templates[index] = nextTemplate;
+        if (oldTemplateId !== nextTemplate.id) {
           this.state.currentScenario.instances.forEach((instance) => {
             if (instance.templateId === oldTemplateId) {
-              instance.templateId = nextTemplateId;
+              instance.templateId = nextTemplate.id;
             }
           });
-          this.state.selectedTemplateId = nextTemplateId;
+          this.syncWizardTemplateRefs(oldTemplateId, nextTemplate.id);
         }
-        this.updateScenarioState("Saved template " + template.name);
+        this.state.selectedTemplateId = nextTemplate.id;
+        this.updateScenarioState("Saved template " + nextTemplate.name);
         this.uiManager.showScreen("templates");
       }
 
@@ -8086,13 +9299,13 @@
         if (!template) {
           return;
         }
-        const duplicate = this.kernel.deepClone(template);
+        const duplicate = this.buildTemplateDraftSnapshot(template);
         const existingIds = new Set(this.state.currentScenario.templates.map((item) => item.id));
-        duplicate.id = this.buildUniqueId(template.id + "-Copy", existingIds);
-        duplicate.name = template.name + " Copy";
+        duplicate.id = this.buildUniqueId(duplicate.id + "-Copy", existingIds);
+        duplicate.name = duplicate.name + " Copy";
         this.state.currentScenario.templates.push(duplicate);
         this.state.selectedTemplateId = duplicate.id;
-        this.updateScenarioState("Duplicated template " + template.name);
+        this.updateScenarioState("Duplicated template " + duplicate.name);
         this.uiManager.showScreen("templates");
       }
 
@@ -8102,8 +9315,9 @@
           return;
         }
         const usage = this.getTemplateUsage(template.id);
-        if (usage.length) {
-          this.setStatus("Cannot delete a template that is still used by instances");
+        const wizardUsage = this.getWizardTemplateBindingUsage(template.id);
+        if (usage.length || wizardUsage.length) {
+          this.setStatus("Cannot delete a template that is still used by instances or Scenario Editor bindings");
           return;
         }
         this.state.currentScenario.templates = this.state.currentScenario.templates.filter((item) => item.id !== template.id);
@@ -8118,6 +9332,7 @@
           return;
         }
         try {
+          this.syncTemplateJsonEditorFromDraft(false);
           const parsed = JSON.parse(document.getElementById("template-json-editor").value);
           if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
             throw new Error("Template JSON must be an object.");
@@ -8136,8 +9351,10 @@
                 instance.templateId = replacement.id;
               }
             });
-            this.state.selectedTemplateId = replacement.id;
+            this.syncWizardTemplateRefs(oldTemplateId, replacement.id);
           }
+          this.state.selectedTemplateId = replacement?.id || oldTemplateId;
+          this.state.templateJsonDirty = false;
           this.updateScenarioState("Applied advanced template JSON");
           this.uiManager.showScreen("templates");
         } catch (error) {
@@ -8151,14 +9368,16 @@
             scenarioName: "New Scenario",
             description: "Start from scratch, then add Blue assets, Red threat groups, and optional environment placeholders.",
             mapWidth: 1080,
-            blueName: "Blue Site",
-            blueX: 670,
-            blueY: 315,
-            blueZ: 20,
-            sensorRange: 420,
-            effectorRange: 230,
-            effectorAmmo: 3,
-            blueIsHQ: true,
+            blueAssets: [
+              {
+                name: "Blue Site",
+                templateRef: "preset:blue-site",
+                posX: 670,
+                posY: 315,
+                posZ: 20,
+                isHQ: true
+              }
+            ],
             threatGroups: [],
             ghost: false,
             clutter: false
@@ -8167,17 +9386,20 @@
             scenarioName: "Editor Baseline",
             description: "Single-UAS baseline built from the quick-start wizard.",
             mapWidth: 1080,
-            blueName: "Blue Site 01",
-            blueX: 670,
-            blueY: 315,
-            blueZ: 20,
-            sensorRange: 420,
-            effectorRange: 230,
-            effectorAmmo: 3,
-            blueIsHQ: true,
+            blueAssets: [
+              {
+                name: "Blue Site 01",
+                templateRef: "preset:blue-site",
+                posX: 670,
+                posY: 315,
+                posZ: 20,
+                isHQ: true
+              }
+            ],
             threatGroups: [
               {
                 templateName: "Red Recon Strike UAS",
+                templateRef: "preset:red-uas",
                 instancePrefix: "Red UAS",
                 profile: "recon-strike",
                 count: 1,
@@ -8202,17 +9424,20 @@
             scenarioName: "Editor Lock Refire",
             description: "Two threats to review locked engagements and autonomous refire behavior.",
             mapWidth: 1080,
-            blueName: "Blue Lock Site",
-            blueX: 650,
-            blueY: 315,
-            blueZ: 20,
-            sensorRange: 460,
-            effectorRange: 240,
-            effectorAmmo: 5,
-            blueIsHQ: true,
+            blueAssets: [
+              {
+                name: "Blue Lock Site",
+                templateRef: "preset:blue-site",
+                posX: 650,
+                posY: 315,
+                posZ: 20,
+                isHQ: true
+              }
+            ],
             threatGroups: [
               {
                 templateName: "Red Attack UAS",
+                templateRef: "preset:red-uas",
                 instancePrefix: "Raid UAS",
                 profile: "attack",
                 count: 2,
@@ -8237,17 +9462,28 @@
             scenarioName: "Editor TEWA Priority",
             description: "Two defended assets and mixed Red threats for TEWA priority review.",
             mapWidth: 1080,
-            blueName: "Blue HQ Node",
-            blueX: 700,
-            blueY: 275,
-            blueZ: 20,
-            sensorRange: 500,
-            effectorRange: 250,
-            effectorAmmo: 4,
-            blueIsHQ: true,
+            blueAssets: [
+              {
+                name: "Blue HQ Node",
+                templateRef: "preset:blue-site",
+                posX: 700,
+                posY: 275,
+                posZ: 20,
+                isHQ: true
+              },
+              {
+                name: "Water Tank",
+                templateRef: "preset:asset",
+                posX: 680,
+                posY: 415,
+                posZ: 10,
+                isHQ: false
+              }
+            ],
             threatGroups: [
               {
                 templateName: "Red Bomber UAS",
+                templateRef: "preset:red-uas",
                 instancePrefix: "Bomber",
                 profile: "bomber",
                 count: 1,
@@ -8266,6 +9502,7 @@
               },
               {
                 templateName: "Red ISR UAS",
+                templateRef: "preset:red-uas",
                 instancePrefix: "ISR Decoy",
                 profile: "isr",
                 count: 1,
@@ -8291,15 +9528,10 @@
         document.getElementById("wizard-preset").value = preset;
         document.getElementById("wizard-scenario-name").value = values.scenarioName;
         document.getElementById("wizard-scenario-description").value = values.description;
-        document.getElementById("wizard-blue-name").value = values.blueName;
-        document.getElementById("wizard-blue-x").value = values.blueX;
-        document.getElementById("wizard-blue-y").value = values.blueY;
-        document.getElementById("wizard-blue-z").value = values.blueZ;
-        document.getElementById("wizard-sensor-range").value = values.sensorRange;
-        document.getElementById("wizard-effector-range").value = values.effectorRange;
-        document.getElementById("wizard-effector-ammo").value = values.effectorAmmo;
         document.getElementById("map-width-input").value = values.mapWidth || 1080;
-        document.getElementById("wizard-blue-ishq").checked = values.blueIsHQ;
+        this.state.wizardBlueAssets = (values.blueAssets || []).map((asset) => this.createWizardBlueAsset(asset));
+        this.state.activeWizardBlueAssetId = this.state.wizardBlueAssets[0]?.localId || null;
+        this.renderWizardBlueAssets();
         this.state.wizardThreatGroups = (values.threatGroups || []).map((group) => this.createWizardThreatGroup(group));
         this.state.activeWizardThreatGroupId = this.state.wizardThreatGroups[0]?.localId || null;
         this.renderWizardThreatGroups();
@@ -8307,10 +9539,158 @@
         document.getElementById("wizard-clutter-enabled").checked = values.clutter;
       }
 
+      createWizardBlueAsset(overrides = {}) {
+        const asset = {
+          localId: "blue-asset-" + this.state.nextWizardBlueAssetId,
+          name: "Blue Asset",
+          templateRef: "preset:blue-site",
+          posX: 670,
+          posY: 315,
+          posZ: 20,
+          isHQ: false
+        };
+        this.state.nextWizardBlueAssetId += 1;
+        return {
+          ...asset,
+          ...this.kernel.deepClone(overrides)
+        };
+      }
+
+      getWizardBlueTemplateOptions() {
+        const templateOptions = this.state.currentScenario.templates
+          .filter((template) => {
+            const roles = this.kernel.ensureArray(template.defaultRoles || []);
+            return !roles.includes("UAS");
+          })
+          .map((template) => ({
+            value: "template:" + template.id,
+            label: template.name + " (Current Template)"
+          }));
+        return [
+          { value: "preset:blue-site", label: "Preset: Blue Site" },
+          { value: "preset:sensor-node", label: "Preset: Sensor Node" },
+          { value: "preset:effector-node", label: "Preset: Effector Node" },
+          { value: "preset:asset", label: "Preset: Defended Asset" },
+          ...templateOptions
+        ];
+      }
+
+      renderWizardBlueAssets() {
+        const container = document.getElementById("wizard-blue-asset-list");
+        const assets = this.state.wizardBlueAssets;
+        if (!assets.length) {
+          container.innerHTML = "<div class=\"empty-state\">No Blue assets yet. Add one to define template binding and placement.</div>";
+          return;
+        }
+        const templateOptions = this.getWizardBlueTemplateOptions();
+        container.innerHTML = assets.map((asset, index) => (
+          "<div class=\"threat-group-card" + (this.state.activeWizardBlueAssetId === asset.localId ? " active" : "") + "\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">" +
+            "<div class=\"threat-group-header\">" +
+              "<div>" +
+                "<h4>Blue Asset " + escapeHtml(String(index + 1)) + "</h4>" +
+                "<div class=\"threat-group-subtitle\">" + escapeHtml(asset.name || "Blue Asset") + " | " + escapeHtml(templateOptions.find((option) => option.value === asset.templateRef)?.label || asset.templateRef) + (asset.isHQ ? " | HQ" : "") + "</div>" +
+              "</div>" +
+              "<div class=\"toolbar-row\">" +
+                "<button class=\"button-link wizard-select-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Select</button>" +
+                "<button class=\"button-link wizard-pick-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Pick On Map</button>" +
+                "<button class=\"button-link wizard-remove-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Remove Asset</button>" +
+              "</div>" +
+            "</div>" +
+            "<div class=\"form-grid tight\">" +
+              "<div class=\"field-stack\"><label>Name</label><input data-blue-asset-field=\"name\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"text\" value=\"" + escapeHtml(asset.name) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Template</label><select data-blue-asset-field=\"templateRef\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">" +
+                templateOptions.map((option) => (
+                  "<option value=\"" + escapeHtml(option.value) + "\"" + (asset.templateRef === option.value ? " selected" : "") + ">" + escapeHtml(option.label) + "</option>"
+                )).join("") +
+              "</select></div>" +
+              "<div class=\"field-stack\"><label>X</label><input data-blue-asset-field=\"posX\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.posX)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Y</label><input data-blue-asset-field=\"posY\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.posY)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Z</label><input data-blue-asset-field=\"posZ\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.posZ)) + "\"></div>" +
+              "<div class=\"field-stack inline-check\"><input data-blue-asset-field=\"isHQ\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"checkbox\"" + (asset.isHQ ? " checked" : "") + "><label>Mark as HQ / defended primary asset</label></div>" +
+            "</div>" +
+          "</div>"
+        )).join("");
+
+        container.querySelectorAll("[data-blue-asset-field]").forEach((element) => {
+          const eventName = element.type === "checkbox" || element.tagName === "SELECT" ? "change" : "input";
+          element.addEventListener(eventName, () => {
+            const value = element.type === "checkbox" ? element.checked : element.value;
+            this.updateWizardBlueAssetField(element.dataset.blueAssetId, element.dataset.blueAssetField, value, { rerender: eventName !== "input" });
+          });
+          if (eventName === "input") {
+            element.addEventListener("change", () => {
+              const value = element.type === "checkbox" ? element.checked : element.value;
+              this.updateWizardBlueAssetField(element.dataset.blueAssetId, element.dataset.blueAssetField, value, { rerender: true });
+            });
+          }
+        });
+        container.querySelectorAll(".wizard-remove-blue-asset-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.removeWizardBlueAsset(button.dataset.blueAssetId);
+          });
+        });
+        container.querySelectorAll(".wizard-select-blue-asset-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.state.activeWizardBlueAssetId = button.dataset.blueAssetId;
+            this.renderWizardBlueAssets();
+            this.setStatus("Blue asset selected");
+          });
+        });
+        container.querySelectorAll(".wizard-pick-blue-asset-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.state.activeWizardBlueAssetId = button.dataset.blueAssetId;
+            this.state.mapInteraction = { mode: "blue-asset-position", blueAssetId: button.dataset.blueAssetId };
+            this.renderWizardBlueAssets();
+            this.updateMapSelectionChip();
+            this.setStatus("Click the map to place Blue asset");
+          });
+        });
+      }
+
+      addWizardBlueAsset(overrides = {}) {
+        const asset = this.createWizardBlueAsset(overrides);
+        this.state.wizardBlueAssets.push(asset);
+        this.state.activeWizardBlueAssetId = asset.localId;
+        this.renderWizardBlueAssets();
+        this.refreshWizardSummary();
+        this.setStatus("Blue asset added");
+      }
+
+      removeWizardBlueAsset(localId) {
+        this.state.wizardBlueAssets = this.state.wizardBlueAssets.filter((asset) => asset.localId !== localId);
+        if (this.state.activeWizardBlueAssetId === localId) {
+          this.state.activeWizardBlueAssetId = this.state.wizardBlueAssets[0]?.localId || null;
+        }
+        this.renderWizardBlueAssets();
+        this.refreshWizardSummary();
+        this.setStatus("Blue asset removed");
+      }
+
+      updateWizardBlueAssetField(localId, field, value, options = {}) {
+        const asset = this.state.wizardBlueAssets.find((item) => item.localId === localId);
+        if (!asset) {
+          return;
+        }
+        const rerender = options.rerender !== false;
+        const numericFields = new Set(["posX", "posY", "posZ"]);
+        if (field === "isHQ") {
+          asset.isHQ = !!value;
+        } else if (numericFields.has(field)) {
+          asset[field] = Number.isFinite(Number(value)) ? Number(value) : asset[field];
+        } else {
+          asset[field] = value;
+        }
+        if (rerender) {
+          this.renderWizardBlueAssets();
+        }
+        this.refreshWizardSummary();
+      }
+
       createWizardThreatGroup(overrides = {}) {
         const group = {
           localId: "threat-group-" + this.state.nextWizardThreatGroupId,
           templateName: "Red UAS",
+          templateRef: "preset:red-uas",
           instancePrefix: "Red UAS",
           profile: "recon-strike",
           count: 1,
@@ -8332,6 +9712,22 @@
           ...group,
           ...this.kernel.deepClone(overrides)
         };
+      }
+
+      getWizardRedTemplateOptions() {
+        const templateOptions = this.state.currentScenario.templates
+          .filter((template) => {
+            const roles = this.kernel.ensureArray(template.defaultRoles || []);
+            return roles.includes("UAS") || String(template.category || "").toUpperCase() === "UAS";
+          })
+          .map((template) => ({
+            value: "template:" + template.id,
+            label: template.name + " (Current Template)"
+          }));
+        return [
+          { value: "preset:red-uas", label: "Preset: Red UAS" },
+          ...templateOptions
+        ];
       }
 
       getWizardThreatProfileDefaults(profile) {
@@ -8394,12 +9790,13 @@
           container.innerHTML = "<div class=\"empty-state\">No threat groups yet. Add one to define a Red template, count, and route.</div>";
           return;
         }
+        const templateOptions = this.getWizardRedTemplateOptions();
         container.innerHTML = groups.map((group, index) => (
           "<div class=\"threat-group-card" + (this.state.activeWizardThreatGroupId === group.localId ? " active" : "") + "\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
             "<div class=\"threat-group-header\">" +
               "<div>" +
                 "<h4>Threat Group " + escapeHtml(String(index + 1)) + "</h4>" +
-                "<div class=\"threat-group-subtitle\">" + escapeHtml(group.templateName || "Red UAS") + " | " + escapeHtml(group.routePattern) + " pattern | " + escapeHtml(String(group.count)) + " instance(s)</div>" +
+                "<div class=\"threat-group-subtitle\">" + escapeHtml(group.templateName || "Red UAS") + " | " + escapeHtml(templateOptions.find((option) => option.value === group.templateRef)?.label || group.templateRef) + " | " + escapeHtml(group.routePattern) + " pattern | " + escapeHtml(String(group.count)) + " instance(s)</div>" +
               "</div>" +
               "<div class=\"toolbar-row\">" +
                 "<button class=\"button-link wizard-select-group-btn\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">Select</button>" +
@@ -8410,6 +9807,11 @@
             "</div>" +
             "<div class=\"form-grid tight\">" +
               "<div class=\"field-stack\"><label>Template Name</label><input data-group-field=\"templateName\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"text\" value=\"" + escapeHtml(group.templateName) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Template</label><select data-group-field=\"templateRef\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
+                templateOptions.map((option) => (
+                  "<option value=\"" + escapeHtml(option.value) + "\"" + (group.templateRef === option.value ? " selected" : "") + ">" + escapeHtml(option.label) + "</option>"
+                )).join("") +
+              "</select></div>" +
               "<div class=\"field-stack\"><label>Instance Prefix</label><input data-group-field=\"instancePrefix\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\" type=\"text\" value=\"" + escapeHtml(group.instancePrefix) + "\"></div>" +
               "<div class=\"field-stack\"><label>Threat Profile</label><select data-group-field=\"profile\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
                 "<option value=\"recon-strike\"" + (group.profile === "recon-strike" ? " selected" : "") + ">Recon Strike</option>" +
@@ -8510,6 +9912,24 @@
         return Number.isFinite(value) ? value : fallback;
       }
 
+      resolveWizardTemplateRef(templateRef, fallbackPreset, options = {}) {
+        const normalizedRef = String(templateRef || fallbackPreset || "").trim();
+        if (normalizedRef.startsWith("template:")) {
+          const templateId = normalizedRef.slice("template:".length);
+          const match = this.state.currentScenario.templates.find((template) => template.id === templateId);
+          if (match) {
+            return this.kernel.deepClone(match);
+          }
+          if (options.strict) {
+            throw new Error("Scenario Editor references missing template " + templateId);
+          }
+        }
+        const preset = normalizedRef.startsWith("preset:")
+          ? normalizedRef.slice("preset:".length)
+          : (fallbackPreset || "asset");
+        return this.kernel.deepClone(this.buildTemplatePreset(preset));
+      }
+
       isWizardBuildPending() {
         try {
           const wizardScenario = this.buildScenarioFromWizardInputs();
@@ -8535,16 +9955,6 @@
       buildScenarioFromWizardInputs() {
         const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Editor Draft";
         const description = document.getElementById("wizard-scenario-description").value.trim();
-        const blueName = document.getElementById("wizard-blue-name").value.trim() || "Blue Site";
-        const blueX = this.getWizardInputNumber("wizard-blue-x", 670);
-        const blueY = this.getWizardInputNumber("wizard-blue-y", 315);
-        const blueZ = this.getWizardInputNumber("wizard-blue-z", 20);
-        const blueTemplate = this.buildTemplatePreset("blue-site");
-        blueTemplate.name = blueName + " Template";
-        blueTemplate.components.health.isHQ = document.getElementById("wizard-blue-ishq").checked;
-        blueTemplate.components.sensors[0].maxRangeM = this.getWizardInputNumber("wizard-sensor-range", 420);
-        blueTemplate.components.effectors[0].maxRangeM = this.getWizardInputNumber("wizard-effector-range", 230);
-        blueTemplate.components.effectors[0].ammoCapacity = this.getWizardInputNumber("wizard-effector-ammo", 3);
 
         const scenario = {
           metadata: {
@@ -8581,41 +9991,62 @@
           networks: [],
           powerGrids: [],
           rosters: [],
-          templates: [
-            {
-              ...blueTemplate,
-              id: "Template-Blue-Site"
-            }
-          ],
-          instances: [
-            {
-              id: "Blue-Site-01",
-              templateId: "Template-Blue-Site",
-              name: blueName,
-              side: "Blue",
-              roles: ["Asset", "Sensor", "Effector", "C2"],
-              networkId: null,
-              connectedPowerGridId: null,
-              posX: blueX,
-              posY: blueY,
-              posZ: blueZ,
-              missionWaypoints: []
-            }
-          ]
+          templates: [],
+          instances: []
         };
 
+        const templateIds = new Set();
+        const instanceIds = new Set();
+        const blueAssets = this.state.wizardBlueAssets.length
+          ? this.state.wizardBlueAssets
+          : [{ name: "Blue Site", templateRef: "preset:blue-site", posX: 670, posY: 315, posZ: 20, isHQ: true }];
+        blueAssets.forEach((asset, assetIndex) => {
+          const blueTemplate = this.resolveWizardTemplateRef(asset.templateRef, "blue-site", { strict: true });
+          blueTemplate.id = this.buildUniqueId("Template-Blue-" + String(assetIndex + 1).padStart(2, "0"), templateIds);
+          templateIds.add(blueTemplate.id);
+          blueTemplate.name = (asset.name || blueTemplate.name || "Blue Asset") + " Template";
+          blueTemplate.components = blueTemplate.components || {};
+          blueTemplate.components.health = blueTemplate.components.health || { maxHealth: 100, assetValuePts: 40, isHQ: false };
+          blueTemplate.components.health.isHQ = !!asset.isHQ;
+          scenario.templates.push(blueTemplate);
+          const defaultRoles = this.kernel.ensureArray(blueTemplate.defaultRoles || []);
+          const roles = defaultRoles.length ? defaultRoles : ["Asset"];
+          const instanceId = this.buildUniqueId("Blue-Asset-" + String(assetIndex + 1).padStart(2, "0"), instanceIds);
+          instanceIds.add(instanceId);
+          scenario.instances.push({
+            id: instanceId,
+            templateId: blueTemplate.id,
+            name: asset.name || ("Blue Asset " + (assetIndex + 1)),
+            side: "Blue",
+            roles,
+            networkId: null,
+            connectedPowerGridId: null,
+            posX: Number(asset.posX || 670),
+            posY: Number(asset.posY || 315),
+            posZ: Number(asset.posZ || 20),
+            missionWaypoints: []
+          });
+        });
+
+        const primaryBlueInstance = scenario.instances.find((instance) => {
+          const template = scenario.templates.find((item) => item.id === instance.templateId);
+          return instance.side === "Blue" && template?.components?.health?.isHQ;
+        }) || scenario.instances.find((instance) => instance.side === "Blue") || null;
+        const primaryBlueTemplateId = primaryBlueInstance?.templateId || null;
+
         this.state.wizardThreatGroups.forEach((group, groupIndex) => {
-          const redTemplate = this.buildTemplatePreset("red-uas");
-          redTemplate.name = group.templateName || ("Red Group " + (groupIndex + 1));
+          const redTemplate = this.resolveWizardTemplateRef(group.templateRef, "red-uas", { strict: true });
+          redTemplate.name = group.templateName || redTemplate.name || ("Red Group " + (groupIndex + 1));
           redTemplate.components.health.maxHealth = Number(group.health || 90);
           redTemplate.components.signature.radarSignatureDb = Number(group.signature || -14);
           redTemplate.components.movement.speedMps = Number(group.speed || 35);
           redTemplate.missionProfile = group.profile === "isr"
             ? { type: "Geographic", targetTemplateId: null }
             : (group.profile === "attack"
-              ? { type: "SpecificAsset", targetTemplateId: "Template-Blue-Site" }
+              ? { type: "SpecificAsset", targetTemplateId: primaryBlueTemplateId }
               : { type: "MaxDamage", targetTemplateId: null });
-          const templateId = "Template-Red-Group-" + String(groupIndex + 1).padStart(2, "0");
+          const templateId = this.buildUniqueId("Template-Red-Group-" + String(groupIndex + 1).padStart(2, "0"), templateIds);
+          templateIds.add(templateId);
           scenario.templates.push({
             ...redTemplate,
             id: templateId
@@ -8633,12 +10064,14 @@
               startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
               endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0) * 0.2;
             }
+            const instanceId = this.buildUniqueId("Red-G" + String(groupIndex + 1) + "-" + String(index + 1).padStart(2, "0"), instanceIds);
+            instanceIds.add(instanceId);
             scenario.instances.push({
-              id: "Red-G" + String(groupIndex + 1) + "-" + String(index + 1).padStart(2, "0"),
+              id: instanceId,
               templateId,
               name: (group.instancePrefix || ("Threat " + (groupIndex + 1))) + " " + (index + 1),
               side: "Red",
-              roles: ["UAS"],
+              roles: this.kernel.ensureArray(redTemplate.defaultRoles || []).length ? this.kernel.ensureArray(redTemplate.defaultRoles || []) : ["UAS"],
               networkId: null,
               connectedPowerGridId: null,
               posX: Number(group.startX || 90),
@@ -8654,36 +10087,6 @@
             });
           }
         });
-
-        if (document.getElementById("wizard-preset").value === "tewa-priority") {
-          scenario.templates.push({
-            id: "Template-Blue-Asset",
-            name: "Blue Water Tank",
-            category: "Asset",
-            defaultRoles: ["Asset"],
-            components: {
-              health: { maxHealth: 110, assetValuePts: 24, isHQ: false },
-              resistance: { kineticResistance: 0.08 },
-              signature: { radarSignatureDb: -8 },
-              sensors: [],
-              effectors: [],
-              c2: null
-            }
-          });
-          scenario.instances.push({
-            id: "Blue-Asset-02",
-            templateId: "Template-Blue-Asset",
-            name: "Water Tank",
-            side: "Blue",
-            roles: ["Asset"],
-            networkId: null,
-            connectedPowerGridId: null,
-            posX: blueX - 20,
-            posY: blueY + 140,
-            posZ: 10,
-            missionWaypoints: []
-          });
-        }
 
         const blueRosterItems = scenario.instances
           .filter((instance) => instance.side === "Blue")
@@ -8724,6 +10127,7 @@
           const redCount = scenario.instances.filter((instance) => instance.side === "Red").length;
           const cards = [
             { label: "Templates", value: scenario.templates.length },
+            { label: "Blue Assets", value: this.state.wizardBlueAssets.length || blueCount },
             { label: "Threat Groups", value: this.state.wizardThreatGroups.length },
             { label: "Blue / Red", value: blueCount + " / " + redCount },
             { label: "Blockers", value: validation.issues.errors.length },
@@ -8767,11 +10171,13 @@
           this.renderTemplateBuilder();
           this.renderRosterEditor();
           this.renderTerrainEditor();
+          this.renderWizardBlueAssets();
+          this.renderWizardThreatGroups();
           this.refreshWizardSummary();
           this.renderScenarioSnapshot();
           this.renderSelectedObjectEditor();
           this.refreshExportPreview();
-          this.uiManager.showScreen("templates");
+          this.uiManager.showScreen("wizard");
           this.setStatus("Scenario editor build complete");
         } catch (error) {
           this.setStatus("Scenario editor build failed: " + String(error && error.message ? error.message : error));
@@ -8982,6 +10388,8 @@
           this.renderTemplateBuilder();
           this.renderRosterEditor();
           this.renderTerrainEditor();
+          this.renderWizardBlueAssets();
+          this.renderWizardThreatGroups();
           this.refreshWizardSummary();
           this.renderScenarioSnapshot();
           this.renderSelectedObjectEditor();
@@ -9058,7 +10466,8 @@
           this.updateMonteCarloReport(this.state.monteCarloRows);
           this.renderFailureDrivers();
           this.refreshExportPreview();
-          this.uiManager.showScreen("analysis");
+          this.uiManager.closeAllSideTrays();
+          this.uiManager.showScreen("report");
           this.setStatus("Monte Carlo complete");
         } catch (error) {
           this.setStatus("Monte Carlo failed");
@@ -9126,6 +10535,7 @@
           { label: "HQ Survived", value: report.hqSurvived ? "Yes" : "No" },
           { label: "Weighted Score", value: report.weightedSurvivalScore },
           { label: "Successful Strikes", value: report.successfulStrikes ?? 0 },
+          { label: "Spoof / Cyber", value: (report.spoofEvents ?? 0) + " / " + (report.cyberEvents ?? 0) },
           { label: "Destroyed", value: report.targetDestroyed ? "Yes" : "No" },
           { label: "Kill Time", value: report.killTimeSec ?? "-" }
         ] : [
@@ -9138,6 +10548,7 @@
           { label: "HQ Survived", value: "-" },
           { label: "Weighted Score", value: "-" },
           { label: "Successful Strikes", value: "-" },
+          { label: "Spoof / Cyber", value: "-" },
           { label: "Destroyed", value: "-" },
           { label: "Kill Time", value: "-" }
         ];
@@ -9245,12 +10656,14 @@
           { label: "Assessment Snapshots", value: report.assessmentSnapshotCount || 0 },
           { label: "First Detection", value: report.firstDetectionTimeSec ?? "-" },
           { label: "Track Status", value: report.finalTrackStatus || "-" },
-          { label: "Intent", value: report.finalIntentStatus || "-" }
+          { label: "Intent", value: report.finalIntentStatus || "-" },
+          { label: "Spoof / Cyber", value: (report.spoofEvents ?? 0) + " / " + (report.cyberEvents ?? 0) }
         ] : [
           { label: "Assessment Snapshots", value: "-" },
           { label: "First Detection", value: "-" },
           { label: "Track Status", value: "-" },
-          { label: "Intent", value: "-" }
+          { label: "Intent", value: "-" },
+          { label: "Spoof / Cyber", value: "-" }
         ];
         container.innerHTML = summary.map((metric) => (
           "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
@@ -9298,6 +10711,8 @@
           ["Weighted survival score", report.weightedSurvivalScore],
           ["Threats destroyed", report.threatsDestroyed],
           ["Successful strikes", report.successfulStrikes ?? 0],
+          ["Spoof events", report.spoofEvents ?? 0],
+          ["Cyber events", report.cyberEvents ?? 0],
           ["Shots fired", report.shotsFired],
           ["Event count", report.eventCount],
           ["Assessment snapshots", report.assessmentSnapshotCount || 0],
