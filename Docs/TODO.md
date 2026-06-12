@@ -55,6 +55,7 @@ The current working prototype now includes:
 - [ ] Finish the sided-track / Red telemetry refactor and confirm Blue systems only read `blueTracks` while Red telemetry populates `redTracks`.
 - [ ] Verify Red fallback hierarchy in-browser so `Networked` stays primary, `Loiter` is allowed when untasked, and fallback only appears after jam or C2 destruction.
 - [ ] Verify interceptor guidance split in-browser so command-guided launchers stay locked and autonomous launchers release cleanly.
+- [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range.
 - [ ] Finish the UI terminology cleanup across the shell, drawers, hero copy, and scenario naming.
 - [ ] Convert the roster screen into an instance manager in the Scenario Wizard and verify single-instance map placement.
 - [ ] Replace the baseline scenario with the FOB defense swarm-attack layout and verify terrain/placement load cleanly.
@@ -195,6 +196,7 @@ Do not implement until after the first vertical slice works.
 - [ ] Terrain authoring is first-pass polygon capture only; there is still no rerouting, pathfinding, or richer terrain library workflow.
 - [ ] EW/cyber now covers first-pass jamming, navigation spoofing, and telemetry injection, but richer band modeling, operator workflows, and doctrine-aware cyber effects remain deferred.
 - [ ] The projectile model still lacks explicit lead-prediction / intercept-point solving, and target UAS do not yet perform evasive velocity changes that can force true misses or near-misses.
+- [ ] Effectors still do not have a true orientation/FOV model; `slewRateSec` is only a delay today, not turret traverse or aim-cone behavior.
 - [ ] The new focused playtests for multispectrum / spoofing / cyber have been authored, but they still need a full interactive expected-results pass.
 - [x] A deterministic playtest sweep with seed `12345` now passes the key checks for `playtest_01` through `playtest_11`.
 
