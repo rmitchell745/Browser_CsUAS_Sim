@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="data:,">
-  <title>Browser CsUAS Sim v2.2</title>
+  <title>C-sUAS Tactical Simulator</title>
   <style>
     :root {
       --bg-top: #080212;
@@ -1027,6 +1027,11 @@
       box-shadow: 0 0 22px rgba(80, 216, 255, 0.18);
     }
 
+    .tutorial-btn {
+      border-color: var(--warning);
+      color: var(--warning);
+    }
+
     .selection-chip {
       display: inline-flex;
       align-items: center;
@@ -1068,12 +1073,10 @@
   <div class="app-shell">
     <header class="hero">
       <div>
-        <h1>Browser CsUAS Sim v2.2</h1>
+        <h1>C-sUAS Tactical Simulator</h1>
         <p>
-          Single-file browser prototype for a component-system discrete event simulation.
-          The current slice runs one hardcoded Red UAS against one Blue sensor / effector site,
-          then pushes detections through tracking, classification, C2, firing, damage, logging,
-          and Monte Carlo reporting.
+          Discrete-event Monte Carlo simulation for Counter-sUAS kill web analysis. Build templates,
+          design tactical scenarios, and evaluate system resilience across multi-domain environments.
         </p>
       </div>
     </header>
@@ -1091,20 +1094,19 @@
     </section>
 
     <div class="side-tray">
-      <button class="tray-button" id="open-scenario-sidebar-btn">Scenario Editor</button>
-      <button class="tray-button" id="open-template-sidebar-btn">Template Wizard</button>
-      <button class="tray-button" id="open-roster-sidebar-btn">Rosters</button>
+      <button class="tray-button" id="open-scenario-sidebar-btn">Scenario Wizard</button>
+      <button class="tray-button" id="open-template-sidebar-btn">Template Editor</button>
       <button class="tray-button" id="open-analysis-sidebar-btn">Debrief</button>
-      <button class="tray-button" id="open-export-sidebar-btn">Export</button>
+      <button class="tray-button" id="open-export-sidebar-btn">Raw Data / Export</button>
+      <button class="tray-button tutorial-btn" id="open-tutorial-btn">Tutorial</button>
     </div>
 
     <nav class="nav-strip">
       <button class="nav-button active" data-screen="dashboard">Scenario Dashboard</button>
-      <button class="nav-button" data-screen="wizard">Scenario Editor</button>
-      <button class="nav-button" data-screen="templates">Template Builder</button>
+      <button class="nav-button" data-screen="wizard">Scenario Wizard</button>
+      <button class="nav-button" data-screen="templates">Template Editor</button>
       <button class="nav-button" data-screen="run">Run Scenario</button>
       <button class="nav-button" data-screen="report">Report Viewer</button>
-      <button class="nav-button" data-screen="analysis">Version / Limits</button>
       <button class="nav-button" data-screen="export">Raw Data / Export</button>
     </nav>
 
@@ -1143,9 +1145,9 @@
           <div class="panel">
             <h2>Workflow Status</h2>
             <div class="placeholder-list">
-              <div class="placeholder-card">Template Builder is live for scenario-local template editing.</div>
-              <div class="placeholder-card">Scenario Editor now drives scratch-first layout, with optional starter patterns for quick setup.</div>
-              <div class="placeholder-card">Version / Limits screen now summarizes current gaps and near-term feature work.</div>
+              <div class="placeholder-card">Template Editor is live for scenario-local template editing.</div>
+              <div class="placeholder-card">Scenario Wizard now drives scratch-first layout, with optional starter patterns for quick setup.</div>
+              <div class="placeholder-card">Template Editor now handles capability editing, subcomponents, and helper-driven bundle setup.</div>
               <div class="placeholder-card">Environment, terrain, and deep debrief analytics remain future workflow expansions.</div>
             </div>
           </div>
@@ -1183,7 +1185,7 @@
         <div class="panel">
           <div class="sidebar-header">
             <div>
-              <h2>Scenario Editor</h2>
+              <h2>Scenario Wizard</h2>
               <p class="panel-caption">
                 Tier 3 workflow: terrain and environment, Blue placement, Red threat layout, and logical assignment. Presets remain optional.
               </p>
@@ -1191,20 +1193,22 @@
             <button class="sidebar-close" data-close-sidebar="wizard">Close</button>
           </div>
           <div class="controls" style="margin-top: 12px;">
-            <div class="field">
-              <label for="wizard-preset">Starter Pattern</label>
-              <select id="wizard-preset">
+              <div class="field">
+                <label for="wizard-preset">Generator Pattern</label>
+                <select id="wizard-preset">
                 <option value="blank-scratch">Blank From Scratch</option>
                 <option value="baseline-single">Single-UAS Baseline</option>
                 <option value="lock-refire">Lock / Refire Two-Threat</option>
                 <option value="tewa-priority">TEWA Priority Review</option>
               </select>
+              </div>
+              <button id="wizard-load-demo-btn">Load Demo Scenario</button>
+              <button id="wizard-load-scratch-btn">Load Scratch Scenario</button>
+              <button id="wizard-load-preset-btn">Load Generator Pattern</button>
+              <button id="wizard-preview-btn">Preview Editor Layout</button>
+              <button id="wizard-build-btn">Generate From Wizard</button>
             </div>
-            <button id="wizard-load-preset-btn">Load Starter</button>
-            <button id="wizard-preview-btn">Preview Editor Layout</button>
-            <button id="wizard-build-btn">Build Scenario From Editor</button>
           </div>
-        </div>
 
         <div class="screen-grid">
           <div class="stack">
@@ -1228,7 +1232,7 @@
                 <button class="button-link wizard-jump-btn" data-wizard-target="wizard-blue-panel">Blue</button>
                 <button class="button-link wizard-jump-btn" data-wizard-target="wizard-red-panel">Red</button>
                 <button class="button-link wizard-jump-btn" data-wizard-target="wizard-review-panel">Review</button>
-                <button class="button-link" id="open-roster-inline-btn" type="button">Networks / Power</button>
+<button class="button-link" id="open-roster-inline-btn" type="button" style="display:none;">Instances / Networks / Power</button>
               </div>
             </div>
 
@@ -1260,7 +1264,7 @@
               <div id="terrain-object-list" style="margin-top:12px;"></div>
             </div>
 
-            <div class="panel" id="wizard-blue-panel">
+            <div class="panel" id="wizard-blue-panel" style="display:none;">
               <h3>2. Blue Assets</h3>
               <div class="controls" style="margin-top: 12px;">
                 <button id="wizard-add-blue-asset-btn">Add Blue Asset</button>
@@ -1268,7 +1272,7 @@
               <div class="threat-group-list" id="wizard-blue-asset-list"></div>
             </div>
 
-            <div class="panel" id="wizard-red-panel">
+            <div class="panel" id="wizard-red-panel" style="display:none;">
               <h3>3. Red Threat Groups</h3>
               <p class="panel-caption">
                 Each group owns its own Red template profile, instance count, and route pattern. Use multiple groups when threats should differ by type, route, or spacing.
@@ -1292,12 +1296,50 @@
               <ul class="report-list">
                 <li><span>Output shape</span><strong>Current template + instance JSON</strong></li>
                 <li><span>Use case</span><strong>Map-centric scenario layout and quick spatial iteration</strong></li>
-                <li><span>Next step</span><strong>Use Template Wizard for major capability edits and Rosters for force packages, power, and C2 network setup</strong></li>
+                <li><span>Next step</span><strong>Use Template Editor for major capability edits and the Scenario Wizard for instance placement plus hidden infrastructure review</strong></li>
               </ul>
             </div>
             <div class="panel">
               <h3>Selected Object</h3>
               <div id="selected-object-editor"></div>
+            </div>
+<div class="panel" id="wizard-roster-panel">
+              <h3>Instance Manager</h3>
+              <p class="panel-caption">
+                Every roster entry represents one concrete instance. Choose a template, add the instance, then select it for map placement.
+              </p>
+              <div class="controls">
+                <div class="field">
+                  <label for="instance-side-select">Side</label>
+                  <select id="instance-side-select">
+                    <option value="Blue">Blue</option>
+                    <option value="Red">Red</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="instance-template-select">Template</label>
+                  <select id="instance-template-select"></select>
+                </div>
+                <button id="add-instance-btn">Add Instance</button>
+              </div>
+              <div class="analysis-grid" id="roster-summary"></div>
+              <div id="roster-item-list" style="margin-top:12px;"></div>
+              <div class="screen-grid" style="margin-top:12px;">
+                <div class="panel">
+                  <h3>Implicit C2 Networks</h3>
+                  <div class="controls" style="display:none;">
+                    <button id="add-network-btn">Add Network</button>
+                  </div>
+                  <div id="network-list"></div>
+                </div>
+                <div class="panel">
+                  <h3>Implicit Power Grids</h3>
+                  <div class="controls" style="display:none;">
+                    <button id="add-power-grid-btn">Add Power Grid</button>
+                  </div>
+                  <div id="power-grid-list"></div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1309,9 +1351,9 @@
         <div class="panel">
           <div class="sidebar-header">
             <div>
-              <h2>Template Wizard</h2>
+              <h2>Template Editor</h2>
               <p class="panel-caption">
-                Tier 1 workflow: helper-driven template design and major capability editing. The Scenario Editor only exposes quick geographic and assignment fields.
+                Tier 1 workflow: helper-driven template design and major capability editing. The Scenario Wizard only exposes quick geographic and assignment fields.
               </p>
             </div>
             <button class="sidebar-close" data-close-sidebar="templates">Close</button>
@@ -1639,6 +1681,13 @@
                     </select>
                   </div>
                   <div class="field-stack">
+                    <label for="template-effector-guidance-input">Guidance Type</label>
+                    <select id="template-effector-guidance-input">
+                      <option value="Command">Command</option>
+                      <option value="Autonomous">Autonomous</option>
+                    </select>
+                  </div>
+                  <div class="field-stack">
                     <label for="template-effector-range-input">Max Range (m)</label>
                     <input id="template-effector-range-input" type="number">
                   </div>
@@ -1737,7 +1786,7 @@
           <div class="badge"><span>Playback</span><strong id="playback-text">Idle</strong></div>
           <div class="badge"><span>Queue</span><strong id="queue-text">0</strong></div>
           <div class="badge"><span>Last seed</span><strong id="seed-text">-</strong></div>
-          <div class="badge"><span>Scenario</span><strong id="scenario-text">Baseline Vertical Slice</strong></div>
+          <div class="badge"><span>Scenario</span><strong id="scenario-text">C-sUAS Tactical Simulator</strong></div>
         </div>
         <div id="run-reminder"></div>
       </div>
@@ -1851,61 +1900,6 @@
             </thead>
             <tbody id="monte-carlo-table-body"></tbody>
           </table>
-        </div>
-      </div>
-    </section>
-
-    <section class="screen workspace-sidebar" id="screen-analysis">
-      <div class="stack">
-        <div class="panel">
-          <div class="sidebar-header">
-            <div>
-              <h2>Rosters / Infrastructure</h2>
-              <p class="panel-caption">
-                Tier 2 workflow: roster review plus read-only hidden infrastructure status. Per-side C2 networks and power grids are now implicit runtime models.
-              </p>
-            </div>
-            <button class="sidebar-close" data-close-sidebar="analysis">Close</button>
-          </div>
-        </div>
-        <div class="panel">
-          <h3>Roster Builder</h3>
-          <div class="controls">
-            <div class="field">
-              <label for="roster-side-select">Side</label>
-              <select id="roster-side-select">
-                <option value="Blue">Blue</option>
-                <option value="Red">Red</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="roster-template-select">Template</label>
-              <select id="roster-template-select"></select>
-            </div>
-            <div class="field">
-              <label for="roster-quantity-input">Quantity</label>
-              <input id="roster-quantity-input" type="number" min="1" max="24" value="1">
-            </div>
-            <button id="add-roster-item-btn">Add Roster Item</button>
-          </div>
-          <div class="analysis-grid" id="roster-summary"></div>
-          <div id="roster-item-list" style="margin-top:12px;"></div>
-        </div>
-        <div class="screen-grid">
-          <div class="panel">
-            <h3>Implicit C2 Networks</h3>
-            <div class="controls" style="display:none;">
-              <button id="add-network-btn">Add Network</button>
-            </div>
-            <div id="network-list"></div>
-          </div>
-          <div class="panel">
-            <h3>Implicit Power Grids</h3>
-            <div class="controls" style="display:none;">
-              <button id="add-power-grid-btn">Add Power Grid</button>
-            </div>
-            <div id="power-grid-list"></div>
-          </div>
         </div>
       </div>
     </section>
@@ -2235,6 +2229,20 @@
           : "Kinetic";
       }
 
+      function normalizeDeliveryModel(model, effectorType) {
+        const rawModel = String(model || "").trim();
+        if (["Ballistic", "Guided", "Instant"].includes(rawModel)) {
+          return rawModel;
+        }
+        if (effectorType === "Interceptor") {
+          return "Guided";
+        }
+        if (effectorType === "Kinetic") {
+          return "Ballistic";
+        }
+        return "Instant";
+      }
+
       function normalizeEffector(effector, index) {
         const projectileSpeedMps = Number(
           effector.projectileSpeedMps
@@ -2258,6 +2266,8 @@
           maxFlightTimeSec: Number(effector.maxFlightTimeSec ?? effector.maxFlightTime_sec ?? 8),
           effectDurationSec: Number(effector.effectDurationSec ?? effector.effectDuration_sec ?? 6),
           jamStrengthDb: Number(effector.jamStrengthDb ?? effector.jammingPowerDb ?? 8),
+          deliveryModel: normalizeDeliveryModel(effector.deliveryModel, normalizeEffectorType(effector.type)),
+          guidanceType: ["Autonomous", "Command"].includes(effector.guidanceType) ? effector.guidanceType : "Command",
           affectedDomains: ensureArray(effector.affectedDomains).length
             ? ensureArray(effector.affectedDomains)
             : ({
@@ -2296,7 +2306,7 @@
       function normalizeScenario(inputScenario) {
         const scenario = deepClone(inputScenario || {});
         scenario.metadata = scenario.metadata || {};
-        scenario.metadata.name = scenario.metadata.name || scenario.name || "Baseline Vertical Slice";
+        scenario.metadata.name = scenario.metadata.name || scenario.name || "C-sUAS Tactical Simulator";
         scenario.metadata.description = scenario.metadata.description || "";
         scenario.config = scenario.config || {};
         scenario.config.maxTimeSec = Number(scenario.config.maxTimeSec ?? 45);
@@ -2436,7 +2446,7 @@
         }
 
         if (!scenario.instances.length) {
-          addIssue("error", "At least one instance is required.", "Use the Scenario Editor or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
+          addIssue("error", "At least one instance is required.", "Use the Scenario Wizard or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
         }
 
         const templateIds = new Set();
@@ -2654,6 +2664,22 @@
             });
           }
         });
+        blueAssets.forEach(({ instance: blueInstance }) => {
+          scenario.terrainObjects.forEach((terrain) => {
+            if (
+              terrain.interferenceType === "Block"
+              && terrain.areaPolygon.length >= 3
+              && pointInPolygon({ x: blueInstance.posX, y: blueInstance.posY }, terrain.areaPolygon)
+              && Number(terrain.heightZ || 0) >= Number(blueInstance.posZ || 0)
+            ) {
+              addIssue("warning", "Blocking terrain " + terrain.id + " overlaps Blue asset " + blueInstance.id + " at or above asset altitude.", "Lower the terrain height, move the asset, or treat the polygon as a non-blocking visual shell if it is meant to represent FOB walls.", {
+                targetScreen: "wizard",
+                targetId: terrain.id,
+                targetLabel: "Open terrain"
+              });
+            }
+          });
+        });
         if (scenario.environment.placeholderGhostTrack.enabled) {
           addIssue("note", "Ghost track placeholder is enabled; it is a track-only environment stub.", "Use this for workflow testing, not as a physical object model.", {
             targetScreen: "wizard",
@@ -2757,11 +2783,11 @@
       function buildBaselineScenario() {
         return normalizeScenario({
           metadata: {
-            name: "Baseline Vertical Slice",
-            description: "One Blue C-sUAS site engages one Red UAS along a straight waypoint route."
+            name: "FOB Defense (Swarm Attack)",
+            description: "Blue defends a forward operating base against a Red recon drone and a three-drone kamikaze swarm."
           },
           config: {
-            maxTimeSec: 45,
+            maxTimeSec: 70,
             trackStaleAfterSec: 4,
             attackRunRangeM: 240,
             projectedPathToleranceM: 50
@@ -2790,107 +2816,386 @@
           networks: [],
           powerGrids: [],
           rosters: [],
+          terrainObjects: [
+            {
+              id: "Terrain-Woods",
+              label: "North Woods",
+              interferenceType: "Noise",
+              clutterPenaltyDb: 7,
+              heightZ: 28,
+              areaPolygon: [
+                { x: 150, y: 120 },
+                { x: 310, y: 110 },
+                { x: 335, y: 255 },
+                { x: 185, y: 285 }
+              ]
+            },
+            {
+              id: "Terrain-Village",
+              label: "Village",
+              interferenceType: "Block",
+              clutterPenaltyDb: 4,
+              heightZ: 18,
+              areaPolygon: [
+                { x: 410, y: 120 },
+                { x: 560, y: 120 },
+                { x: 575, y: 250 },
+                { x: 425, y: 255 }
+              ]
+            },
+            {
+              id: "Terrain-Hill",
+              label: "East Hill",
+              interferenceType: "Noise",
+              clutterPenaltyDb: 3,
+              heightZ: 95,
+              areaPolygon: [
+                { x: 745, y: 180 },
+                { x: 900, y: 145 },
+                { x: 950, y: 310 },
+                { x: 770, y: 335 }
+              ]
+            },
+            {
+              id: "Terrain-FOB-Walls",
+              label: "FOB Walls",
+              interferenceType: "Block",
+              clutterPenaltyDb: 0,
+              heightZ: 12,
+              areaPolygon: [
+                { x: 520, y: 260 },
+                { x: 720, y: 260 },
+                { x: 720, y: 420 },
+                { x: 520, y: 420 }
+              ]
+            }
+          ],
           templates: [
             {
-              id: "Template-Blue-CUAS-Site",
-              name: "Blue CUAS Site",
-              defaultRoles: ["Asset", "Sensor", "Effector", "C2"],
+              id: "Template-Blue-C2-Node",
+              name: "C2 Node",
+              defaultRoles: ["Asset", "C2"],
               components: {
-                health: { maxHealth: 120, assetValuePts: 100, isHQ: true },
+                health: { maxHealth: 130, assetValuePts: 120, isHQ: true },
                 resistance: { kineticResistance: 0.15 },
-                signature: { radarSignatureDb: -2 },
-                sensors: [
-                  {
-                    id: "Sensor-Blue-EO-RF-1",
-                    name: "Blue EO/RF Sensor",
-                    type: "EO_IR",
-                    maxRangeM: 420,
-                    horizontalFovDeg: 140,
-                    verticalFovDeg: 90,
-                    headingDeg: 180,
-                    transmitPowerDb: 53,
-                    noiseFloorDb: -94,
-                    noiseSigmaDb: 1.2,
-                    detectionThresholdDb: 17,
-                    scanIntervalSec: 1,
-                    classification: {
-                      canClassify: true,
-                      latencySec: 0.25,
-                      accuracyBase: 0.84
-                    },
-                    identification: {
-                      canIdentify: true,
-                      latencySec: 0.35,
-                      accuracyBase: 0.76
-                    }
-                  }
-                ],
-                effectors: [
-                  {
-                    id: "Effector-Blue-Kinetic-1",
-                    name: "Interceptor Launcher",
-                    type: "Kinetic",
-                    maxRangeM: 230,
-                    basePk: 0.74,
-                    damagePoints: 150,
-                    ammoCapacity: 3,
-                    slewRateSec: 0.2,
-                    cooldownSec: 2,
-                    projectileSpeedMps: 900
-                  }
-                ],
-                c2: {
-                  trackCapacity: 8,
-                  processingLatencySec: 0.3
-                }
+                signature: { radarSignatureDb: -6 },
+                sensors: [],
+                effectors: [],
+                c2: { trackCapacity: 10, processingLatencySec: 0.25 }
               }
             },
             {
-              id: "Template-Red-UAS-Generic",
-              name: "Red Recon Strike UAS",
+              id: "Template-Blue-Early-Warning",
+              name: "Early Warning Radar",
+              defaultRoles: ["Sensor"],
+              components: {
+                health: { maxHealth: 90, assetValuePts: 22, isHQ: false },
+                resistance: { kineticResistance: 0.08 },
+                signature: { radarSignatureDb: -4 },
+                sensors: [
+                  {
+                    id: "Sensor-Blue-EWR-1",
+                    name: "Early Warning Radar",
+                    type: "Radar",
+                    maxRangeM: 2000,
+                    horizontalFovDeg: 360,
+                    verticalFovDeg: 120,
+                    headingDeg: 0,
+                    transmitPowerDb: 57,
+                    noiseFloorDb: -94,
+                    noiseSigmaDb: 1.1,
+                    detectionThresholdDb: 16,
+                    scanIntervalSec: 1,
+                    classification: { canClassify: true, latencySec: 0.25, accuracyBase: 0.82 },
+                    identification: { canIdentify: true, latencySec: 0.35, accuracyBase: 0.75 }
+                  }
+                ],
+                effectors: [],
+                c2: null
+              }
+            },
+            {
+              id: "Template-Blue-Point-Defense",
+              name: "Point Defense Gun",
+              defaultRoles: ["Effector"],
+              components: {
+                health: { maxHealth: 80, assetValuePts: 18, isHQ: false },
+                resistance: { kineticResistance: 0.18 },
+                signature: { radarSignatureDb: -5 },
+                sensors: [],
+                effectors: [
+                  {
+                    id: "Effector-Blue-PDG-1",
+                    name: "Point Defense Gun",
+                    type: "Kinetic",
+                    maxRangeM: 600,
+                    basePk: 0.72,
+                    damagePoints: 110,
+                    ammoCapacity: 8,
+                    slewRateSec: 0.15,
+                    cooldownSec: 1.5,
+                    projectileSpeedMps: 900,
+                    guidanceType: "Command"
+                  }
+                ],
+                c2: null
+              }
+            },
+            {
+              id: "Template-Blue-Adaptive-Jammer",
+              name: "Adaptive Jammer",
+              defaultRoles: ["Effector"],
+              components: {
+                health: { maxHealth: 70, assetValuePts: 16, isHQ: false },
+                resistance: { kineticResistance: 0.1 },
+                signature: { radarSignatureDb: -8 },
+                sensors: [],
+                effectors: [
+                  {
+                    id: "Effector-Blue-Jammer-1",
+                    name: "Adaptive Jammer",
+                    type: "Jammer",
+                    maxRangeM: 800,
+                    basePe: 0.66,
+                    damagePoints: 0,
+                    ammoCapacity: 4,
+                    slewRateSec: 0.2,
+                    cooldownSec: 3,
+                    effectDurationSec: 8,
+                    jamStrengthDb: 12,
+                    affectedDomains: ["Sensor", "Network", "C2", "Navigation"]
+                  }
+                ],
+                c2: null
+              }
+            },
+            {
+              id: "Template-Red-Recon-Drone",
+              name: "Recon Drone",
+              defaultRoles: ["UAS", "Sensor"],
+              missionProfile: {
+                type: "Geographic",
+                targetTemplateId: null
+              },
+              components: {
+                health: { maxHealth: 70, assetValuePts: 10, isHQ: false },
+                resistance: { kineticResistance: 0.15 },
+                signature: { radarSignatureDb: -16, acousticSignatureDb: -18, rfEmissionDb: -18 },
+                vulnerability: { commsResilience: 0.45, navResilience: 0.55, cyberResilience: 0.5 },
+                payload: { impactDamagePoints: 0, selfDestructOnImpact: false },
+                capability: {
+                  usesGPS: true,
+                  usesNetwork: true,
+                  usesRF: true,
+                  requiresPower: false,
+                  requiresC2: true,
+                  canOperateAutonomously: true
+                },
+                movement: {
+                  speedMps: 24,
+                  stepSec: 1,
+                  waypointToleranceM: 10
+                },
+                sensors: [
+                  {
+                    id: "Sensor-Red-Recon-1",
+                    name: "Recon EO Sensor",
+                    type: "EO_IR",
+                    maxRangeM: 1600,
+                    horizontalFovDeg: 300,
+                    verticalFovDeg: 120,
+                    headingDeg: 0,
+                    transmitPowerDb: 49,
+                    noiseFloorDb: -95,
+                    noiseSigmaDb: 1.0,
+                    detectionThresholdDb: 16,
+                    scanIntervalSec: 1,
+                    classification: { canClassify: true, latencySec: 0.25, accuracyBase: 0.78 },
+                    identification: { canIdentify: true, latencySec: 0.35, accuracyBase: 0.7 }
+                  }
+                ],
+                effectors: []
+              }
+            },
+            {
+              id: "Template-Red-C2-Node",
+              name: "Red C2 Node",
+              defaultRoles: ["C2", "Asset"],
+              components: {
+                health: { maxHealth: 95, assetValuePts: 15, isHQ: false },
+                resistance: { kineticResistance: 0.1 },
+                signature: { radarSignatureDb: -10 },
+                sensors: [],
+                effectors: [],
+                c2: { trackCapacity: 8, processingLatencySec: 0.25 }
+              }
+            },
+            {
+              id: "Template-Red-Swarm-Kamikaze",
+              name: "Kamikaze Drone",
               defaultRoles: ["UAS"],
               missionProfile: {
                 type: "MaxDamage",
                 targetTemplateId: null
               },
               components: {
-                health: { maxHealth: 90, assetValuePts: 8, isHQ: false },
-                resistance: { kineticResistance: 0.18 },
-                signature: { radarSignatureDb: -14 },
+                health: { maxHealth: 85, assetValuePts: 12, isHQ: false },
+                resistance: { kineticResistance: 0.12 },
+                signature: { radarSignatureDb: -12, acousticSignatureDb: -15, rfEmissionDb: -10 },
+                vulnerability: { commsResilience: 0.5, navResilience: 0.48, cyberResilience: 0.44 },
+                payload: { impactDamagePoints: 140, selfDestructOnImpact: true },
+                capability: {
+                  usesGPS: true,
+                  usesNetwork: true,
+                  usesRF: true,
+                  requiresPower: false,
+                  requiresC2: true,
+                  canOperateAutonomously: true
+                },
                 movement: {
-                  speedMps: 35,
+                  speedMps: 40,
                   stepSec: 1,
                   waypointToleranceM: 10
-                }
+                },
+                sensors: [],
+                effectors: []
               }
             }
           ],
           instances: [
             {
-              id: "Blue-Site-01",
-              templateId: "Template-Blue-CUAS-Site",
-              name: "Blue Site 01",
+              id: "Blue-C2-01",
+              templateId: "Template-Blue-C2-Node",
+              name: "C2 Node",
               side: "Blue",
-              roles: ["Asset", "Sensor", "Effector", "C2"],
-              posX: 670,
-              posY: 315,
+              roles: ["Asset", "C2"],
+              posX: 580,
+              posY: 330,
               posZ: 20,
               missionWaypoints: []
             },
+            { id: "Blue-EWR-01", templateId: "Template-Blue-Early-Warning", name: "Early Warning Radar", side: "Blue", roles: ["Sensor"], posX: 520, posY: 310, posZ: 24, missionWaypoints: [] },
+            { id: "Blue-PDG-01", templateId: "Template-Blue-Point-Defense", name: "Point Defense Gun 01", side: "Blue", roles: ["Effector"], posX: 555, posY: 360, posZ: 18, missionWaypoints: [] },
+            { id: "Blue-PDG-02", templateId: "Template-Blue-Point-Defense", name: "Point Defense Gun 02", side: "Blue", roles: ["Effector"], posX: 610, posY: 365, posZ: 18, missionWaypoints: [] },
+            { id: "Blue-Jammer-01", templateId: "Template-Blue-Adaptive-Jammer", name: "Adaptive Jammer", side: "Blue", roles: ["Effector"], posX: 640, posY: 300, posZ: 18, missionWaypoints: [] },
             {
-              id: "Red-UAS-01",
-              templateId: "Template-Red-UAS-Generic",
-              name: "Red UAS 01",
+              id: "Red-Recon-01",
+              templateId: "Template-Red-Recon-Drone",
+              name: "Recon Drone",
+              side: "Red",
+              roles: ["UAS", "Sensor"],
+              posX: 75,
+              posY: 120,
+              posZ: 140,
+              missionWaypoints: [
+                { x: 240, y: 170, z: 140 },
+                { x: 360, y: 220, z: 120 },
+                { x: 470, y: 260, z: 110 }
+              ]
+            },
+            {
+              id: "Red-C2-01",
+              templateId: "Template-Red-C2-Node",
+              name: "Red C2 Node",
+              side: "Red",
+              roles: ["C2", "Asset"],
+              posX: 115,
+              posY: 80,
+              posZ: 28,
+              missionWaypoints: []
+            },
+            {
+              id: "Red-Swarm-01",
+              templateId: "Template-Red-Swarm-Kamikaze",
+              name: "Swarm Group 01",
               side: "Red",
               roles: ["UAS"],
-              posX: 90,
-              posY: 315,
-              posZ: 120,
+              posX: 40,
+              posY: 500,
+              posZ: 150,
               missionWaypoints: [
-                { x: 980, y: 315, z: 120 }
+                { x: 290, y: 450, z: 135 },
+                { x: 470, y: 390, z: 110 },
+                { x: 610, y: 335, z: 90 }
+              ]
+            },
+            {
+              id: "Red-Swarm-02",
+              templateId: "Template-Red-Swarm-Kamikaze",
+              name: "Swarm Group 02",
+              side: "Red",
+              roles: ["UAS"],
+              posX: 65,
+              posY: 560,
+              posZ: 150,
+              missionWaypoints: [
+                { x: 305, y: 500, z: 135 },
+                { x: 505, y: 425, z: 110 },
+                { x: 655, y: 355, z: 90 }
+              ]
+            },
+            {
+              id: "Red-Swarm-03",
+              templateId: "Template-Red-Swarm-Kamikaze",
+              name: "Swarm Group 03",
+              side: "Red",
+              roles: ["UAS"],
+              posX: 110,
+              posY: 615,
+              posZ: 150,
+              missionWaypoints: [
+                { x: 345, y: 545, z: 135 },
+                { x: 540, y: 465, z: 110 },
+                { x: 690, y: 360, z: 90 }
               ]
             }
           ]
+        });
+      }
+
+      function buildDemoScenario() {
+        return buildBaselineScenario();
+      }
+
+      function buildScratchScenario() {
+        return normalizeScenario({
+          metadata: {
+            name: "Blank Scratch Scenario",
+            description: "Empty starting point for terrain and object authoring."
+          },
+          config: {
+            maxTimeSec: 55,
+            trackStaleAfterSec: 4,
+            attackRunRangeM: 240,
+            projectedPathToleranceM: 50
+          },
+          environment: {
+            baseNoiseDb: 1.8,
+            mapWidthMeters: 1080,
+            backgroundImageBase64: "",
+            placeholderGhostTrack: {
+              enabled: false,
+              spawnTimeSec: 7,
+              posX: 505,
+              posY: 182,
+              posZ: 110,
+              label: "Ghost Track Placeholder"
+            },
+            placeholderClutterField: {
+              enabled: false,
+              centerX: 410,
+              centerY: 430,
+              radiusM: 100,
+              label: "Clutter Placeholder",
+              note: "Visual placeholder for future clutter field behavior."
+            }
+          },
+          networks: [],
+          powerGrids: [],
+          rosters: [],
+          terrainObjects: [],
+          templates: [],
+          instances: []
         });
       }
 
@@ -2899,11 +3204,28 @@
       }
 
       function getTrack(world, trackId) {
-        return world.tracks[trackId] || null;
+        return world.blueTracks?.[trackId] || world.redTracks?.[trackId] || null;
+      }
+
+      function getTracksForSide(world, side) {
+        if (side === "Red") {
+          return Object.values(world.redTracks || {});
+        }
+        if (side === "Blue") {
+          return Object.values(world.blueTracks || {});
+        }
+        return [];
+      }
+
+      function getAllTracks(world) {
+        return [
+          ...Object.values(world.blueTracks || {}),
+          ...Object.values(world.redTracks || {})
+        ];
       }
 
       function getTracksForObject(world, objectId) {
-        return Object.values(world.tracks).filter((track) => track.realObjectId === objectId);
+        return getAllTracks(world).filter((track) => track.realObjectId === objectId);
       }
 
       function getSensor(world, objectId, sensorId) {
@@ -3804,7 +4126,7 @@
               status: object.runtime.operationalStatus
             };
           }),
-          tracks: Object.values(world.tracks).map((track) => ({
+          tracks: getAllTracks(world).map((track) => ({
             id: track.id,
             x: track.position ? track.position.x : null,
             y: track.position ? track.position.y : null,
@@ -3848,7 +4170,7 @@
           const healthFraction = clamp((object.runtime.health || 0) / maxHealth, 0, 1);
           return sum + (healthFraction * Math.max(0, Number(object.components.health.assetValuePts || 0)));
         }, 0);
-        const primaryTrack = Object.values(world.tracks)
+        const primaryTrack = getAllTracks(world)
           .sort((left, right) => (right.lastUpdateTimeSec || 0) - (left.lastUpdateTimeSec || 0))[0] || null;
 
         return {
@@ -3899,7 +4221,10 @@
             logs: deepClone(world.logs),
             assessmentSnapshots: deepClone(world.assessmentSnapshots),
             frames: deepClone(world.frames),
-            tracks: deepClone(world.tracks)
+            tracks: {
+              blue: deepClone(world.blueTracks || {}),
+              red: deepClone(world.redTracks || {})
+            }
           }
         };
       }
@@ -4094,8 +4419,8 @@
         }
 
         spawnGhostTrack(event, world, services) {
-          const trackId = "Track-" + world.nextTrackId++;
-          world.tracks[trackId] = {
+          const trackId = "Blue-Track-" + world.nextBlueTrackId++;
+          world.blueTracks[trackId] = {
             id: trackId,
             realObjectId: null,
             trackType: "Ghost",
@@ -4153,7 +4478,7 @@
 
           services.captureFrame(world, event.time, "ghost-track");
 
-          const track = world.tracks[trackId];
+          const track = world.blueTracks[trackId];
           track.agingToken += 1;
           services.events.scheduleDelay(event.time, track.staleAfterSec, {
             type: "track.age",
@@ -4347,28 +4672,95 @@
             movementReason = "waypoint";
             object.runtime.behaviorState = "Route";
             if (object.side === "Red") {
-              setObjectControlMode(world, object, "AutonomousFallback", event.time, services, "route-follow");
+              setObjectControlMode(world, object, "Networked", event.time, services, "route-follow");
             }
           }
 
           if (!movementTarget && object.side === "Red" && object.roles.includes("UAS")) {
             const missionProfile = object.runtime.missionProfile || object.missionProfile || { type: "Geographic" };
-            if (missionProfile.type === "Geographic") {
-              if (object.runtime.behaviorState !== "Loiter") {
+            if (object.runtime.controlMode === "Jammed/Severed") {
+              const heuristicTarget = findMissionHeuristicTarget(world, object);
+              if (heuristicTarget) {
+                object.runtime.behaviorTargetId = heuristicTarget.id;
+                object.runtime.behaviorState = "Attack Run";
+                setObjectControlMode(world, object, object.components.capability.canOperateAutonomously ? "AutonomousFallback" : "HeuristicFallback", event.time, services, "control-lost");
+                movementTarget = deepClone(heuristicTarget.runtime.position);
+                movementReason = "attack-run";
+                services.logger.record(
+                  world,
+                  event.time,
+                  "movement",
+                  object.name + " entered fallback attack run toward " + heuristicTarget.name,
+                  {
+                    objectId: object.id,
+                    targetId: heuristicTarget.id,
+                    missionProfileType: missionProfile.type,
+                    targetTemplateId: missionProfile.targetTemplateId || null
+                  }
+                );
+              }
+              return;
+            }
+            if (mission.currentWaypointIndex >= mission.waypoints.length) {
+              if (missionProfile.type === "Geographic") {
+                if (object.runtime.behaviorState !== "Loiter") {
+                  object.runtime.behaviorState = "Loiter";
+                  object.runtime.behaviorTargetId = null;
+                  services.logger.record(
+                    world,
+                    event.time,
+                    "movement",
+                    object.name + " entered geographic loiter",
+                    {
+                      objectId: object.id,
+                      reason: "route-complete"
+                    }
+                  );
+                }
+                return;
+              }
+
+              const heuristicTarget = findMissionHeuristicTarget(world, object);
+              if (heuristicTarget) {
+                object.runtime.behaviorTargetId = heuristicTarget.id;
+                object.runtime.behaviorState = "Attack Run";
+                setObjectControlMode(
+                  world,
+                  object,
+                  object.components.capability.canOperateAutonomously ? "AutonomousFallback" : "HeuristicFallback",
+                  event.time,
+                  services,
+                  "mission-complete"
+                );
+                movementTarget = deepClone(heuristicTarget.runtime.position);
+                movementReason = "attack-run";
+                services.logger.record(
+                  world,
+                  event.time,
+                  "movement",
+                  object.name + " initiated mission-complete attack run toward " + heuristicTarget.name,
+                  {
+                    objectId: object.id,
+                    targetId: heuristicTarget.id,
+                    missionProfileType: missionProfile.type,
+                    targetTemplateId: missionProfile.targetTemplateId || null
+                  }
+                );
+              } else if (object.runtime.behaviorState !== "Loiter") {
                 object.runtime.behaviorState = "Loiter";
                 object.runtime.behaviorTargetId = null;
                 services.logger.record(
                   world,
                   event.time,
                   "movement",
-                  object.name + " entered geographic loiter",
+                  object.name + " entered loiter while awaiting a valid target",
                   {
                     objectId: object.id,
-                    reason: "route-complete"
+                    reason: "no-attack-target"
                   }
                 );
+                return;
               }
-              return;
             }
 
             const heuristicTarget = findMissionHeuristicTarget(world, object);
@@ -4464,6 +4856,10 @@
               if (shooter) {
                 clearEffectorAssignment(shooter, object.runtime.interceptorChild.sourceEffectorId, world);
               }
+              const interceptorTrack = getTrack(world, object.runtime.interceptorChild.targetTrackId);
+              if (object.runtime.interceptorChild.guidanceType === "Autonomous" && interceptorTrack) {
+                interceptorTrack.interceptorsInbound = Math.max(0, (interceptorTrack.interceptorsInbound || 1) - 1);
+              }
               world.metrics.interceptorAborts += 1;
               removeRuntimeObject(world, object.id);
               services.captureFrame(world, event.time, "interceptor-terrain-collision");
@@ -4490,6 +4886,33 @@
           if (object.runtime.interceptorChild) {
             const childState = object.runtime.interceptorChild;
             const target = getObject(world, childState.targetObjectId);
+            const track = getTrack(world, childState.targetTrackId);
+            if (childState.guidanceType === "Command" && (!track || track.status !== "Active" || track.trackQuality < 0.60)) {
+              const shooter = getObject(world, childState.sourceShooterId);
+              if (shooter) {
+                clearEffectorAssignment(shooter, childState.sourceEffectorId, world);
+              }
+              if (childState.guidanceType === "Autonomous" && track) {
+                track.interceptorsInbound = Math.max(0, (track.interceptorsInbound || 1) - 1);
+              }
+              world.metrics.interceptorAborts += 1;
+              services.logger.record(
+                world,
+                event.time,
+                "effector",
+                object.name + " interceptor aborted due to loss of fire control track",
+                {
+                  objectId: object.id,
+                  shooterId: childState.sourceShooterId,
+                  targetId: childState.targetObjectId,
+                  trackId: childState.targetTrackId,
+                  guidanceType: childState.guidanceType
+                }
+              );
+              removeRuntimeObject(world, object.id);
+              services.captureFrame(world, event.time, "interceptor-abort");
+              return;
+            }
             if (target) {
               const terminalDistanceM = distance3D(object.runtime.position, target.runtime.position);
               if (terminalDistanceM <= childState.terminalRadiusM) {
@@ -4519,11 +4942,16 @@
                     effectivePk: childState.effectivePk,
                     interceptorId: object.id,
                     sourceEffectorId: childState.sourceEffectorId,
-                    effectMode: "kinetic-child"
+                    effectMode: "guided-child"
                   }
                 });
                 services.captureFrame(world, event.time, "interceptor-terminal");
                 return;
+              }
+            }
+            if (!target) {
+              if (childState.guidanceType === "Autonomous" && track) {
+                track.interceptorsInbound = Math.max(0, (track.interceptorsInbound || 1) - 1);
               }
             }
           } else if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
@@ -4755,10 +5183,12 @@
                 world,
                 event.time,
                 "detection",
-                host.name + " generated a detection candidate on " + target.name,
+                host.name + " (" + sensor.name + ") generated a detection candidate on " + target.name,
                 {
                   observerId: host.id,
                   sensorId: sensor.id,
+                  sensorName: sensor.name,
+                  sensorType: sensor.type,
                   targetId: target.id,
                   rangeM: round(rangeM, 2),
                   confidence: round(confidence, 2),
@@ -4842,14 +5272,15 @@
           }
           clearExpiredRuntimeEffects(world, target, event.time, services);
 
-          let track = Object.values(world.tracks).find((candidate) =>
+          const trackCollection = observer.side === "Red" ? world.redTracks : world.blueTracks;
+          let track = Object.values(trackCollection).find((candidate) =>
             candidate.realObjectId === target.id
             && candidate.owningSide === observer.side
             && candidate.status === "Active"
           );
 
           if (!track) {
-            const trackId = "Track-" + world.nextTrackId++;
+            const trackId = (observer.side === "Red" ? "Red-Track-" + world.nextRedTrackId++ : "Blue-Track-" + world.nextBlueTrackId++);
             track = {
               id: trackId,
               realObjectId: target.id,
@@ -4879,7 +5310,7 @@
                 lastThreatDistanceXYM: null
               }
             };
-            world.tracks[trackId] = track;
+            trackCollection[trackId] = track;
             world.metrics.tracksCreated += 1;
             services.logger.record(
               world,
@@ -5484,7 +5915,7 @@
         }
 
         buildThreatPicture(world, c2Object) {
-          return Object.values(world.tracks)
+          return getTracksForSide(world, c2Object.side)
             .filter((track) => {
               if (
                 !track
@@ -5492,6 +5923,7 @@
                 || track.trackType === "Ghost"
                 || track.identificationStatus !== "Hostile"
                 || track.owningSide !== c2Object.side
+                || (track.interceptorsInbound > 0)
               ) {
                 return false;
               }
@@ -5607,7 +6039,7 @@
               continue;
             }
 
-            Object.values(world.tracks)
+            getTracksForSide(world, c2Object.side)
               .filter((track) => track.owningSide === c2Object.side && this.needsSensorCue(track))
               .forEach((track) => {
                 this.cueSensor(world, c2Object, track, event.time, services);
@@ -5650,7 +6082,7 @@
                   world,
                   event.time,
                   "c2",
-                  c2Object.name + " ordered engagement against " + track.id,
+                  c2Object.name + " ordered engagement against " + entry.target.name + " (" + track.id + ")",
                   {
                     c2ObjectId: c2Object.id,
                     trackId: track.id,
@@ -5728,6 +6160,10 @@
           return true;
         }
 
+        getDeliveryModel(effector) {
+          return normalizeDeliveryModel(effector?.deliveryModel, normalizeEffectorType(effector?.type));
+        }
+
         getEffectMode(effector) {
           const effectorType = String(effector?.type || "").toUpperCase();
           if (effectorType === "JAMMER") {
@@ -5742,7 +6178,7 @@
           if (effectorType === "DIRECTEDENERGY") {
             return "directed-energy";
           }
-          return "kinetic-child";
+          return this.getDeliveryModel(effector) === "Guided" ? "guided-child" : "ballistic";
         }
 
         computeNonKineticProbability(world, effector, target, rangeM) {
@@ -5785,12 +6221,12 @@
           return 0;
         }
 
-        spawnChildInterceptor(world, shooter, effector, track, target, effectivePk, timeSec, services) {
+        spawnGuidedMunition(world, shooter, effector, track, target, effectivePk, timeSec, services) {
           const interceptorId = "Interceptor-" + world.objectIds.length + "-" + Math.floor(timeSec * 10);
           const childObject = {
             id: interceptorId,
             templateId: "Runtime-Child-Interceptor",
-            name: shooter.name + " Child Interceptor",
+            name: shooter.name + " Guided Munition",
             side: shooter.side,
             roles: ["InterceptorChild"],
             missionProfile: normalizeMissionProfile({}),
@@ -5830,9 +6266,9 @@
                 currentWaypointIndex: 0,
                 waypoints: []
               },
-              missionProfile: normalizeMissionProfile({}),
-              behaviorState: "Pursuit",
-              behaviorTargetId: target.id,
+            missionProfile: normalizeMissionProfile({}),
+            behaviorState: "Pursuit",
+            behaviorTargetId: target.id,
               lastCueLogTrackId: null,
               controlMode: "AutonomousFallback",
               c2AssignedTargetId: null,
@@ -5846,12 +6282,13 @@
                 networkId: null,
                 powerGridId: null
               },
-              interceptorChild: {
-                parentLauncherId: shooter.id,
-                sourceEffectorId: effector.id,
+            interceptorChild: {
+              parentLauncherId: shooter.id,
+              sourceEffectorId: effector.id,
                 sourceShooterId: shooter.id,
                 targetTrackId: track.id,
                 targetObjectId: target.id,
+                guidanceType: effector.guidanceType || "Command",
                 aimOffsetXY: shooter.side === "Blue" && target.runtime.telemetrySpoofed
                   ? deepClone(target.runtime.telemetryOffsetXY || { x: 0, y: 0 })
                   : null,
@@ -5869,12 +6306,15 @@
           if (effectorState) {
             effectorState.inFlightChildId = interceptorId;
           }
+          if ((effector.guidanceType || "Command") === "Autonomous" && track) {
+            track.interceptorsInbound = (track.interceptorsInbound || 0) + 1;
+          }
           world.metrics.interceptorLaunches += 1;
           services.logger.record(
             world,
             timeSec,
             "effector",
-            shooter.name + " launched child interceptor at " + target.name,
+            shooter.name + " launched guided munition at " + target.name,
             {
               shooterId: shooter.id,
               effectorId: effector.id,
@@ -5889,6 +6329,10 @@
             priority: EVENT_PRIORITIES.movement,
             payload: { objectId: interceptorId }
           }, { enforceMinimumDelay: true });
+        }
+
+        spawnChildInterceptor(world, shooter, effector, track, target, effectivePk, timeSec, services) {
+          return this.spawnGuidedMunition(world, shooter, effector, track, target, effectivePk, timeSec, services);
         }
 
         fire(event, world, services) {
@@ -6007,6 +6451,46 @@
                 effectMode
               }
             });
+          } else if (effectMode === "ballistic") {
+            const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
+            const ballisticRangeFactor = effector.maxRangeM > 0
+              ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0.15, 1)
+              : 0;
+            const effectivePk = clamp(
+              (Number(effector.basePk || 0.7) + world.randomization.pkBias) * ballisticRangeFactor * environmentFactor * targetModifier,
+              0,
+              0.98
+            );
+            const timeToImpactSec = Math.max(0.05, rangeM / Math.max(1, Number(effector.projectileSpeedMps || 900)));
+            services.logger.record(
+              world,
+              event.time,
+              "effector",
+              shooter.name + " fired ballistic projectile at " + target.name,
+              {
+                shooterId: shooter.id,
+                trackId: track.id,
+                targetId: target.id,
+                effectivePk: round(effectivePk, 2),
+                rangeM: round(rangeM, 2),
+                flightTimeSec: round(timeToImpactSec, 2)
+              }
+            );
+            services.events.schedule({
+              time: round(event.time + timeToImpactSec, 3),
+              type: "effect.resolve",
+              priority: EVENT_PRIORITIES.effect,
+              payload: {
+                shooterId: shooter.id,
+                targetId: target.id,
+                trackId: track.id,
+                damagePoints: effector.damagePoints,
+                effectivePk,
+                interceptorId: null,
+                sourceEffectorId: effector.id,
+                effectMode: "ballistic"
+              }
+            });
           } else {
             const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
             // Guided child interceptors already prove kinematic closure by reaching terminal range,
@@ -6018,10 +6502,10 @@
                 (effector.basePk + world.randomization.pkBias) * interceptorRangeFactor * environmentFactor * targetModifier,
                 guidedTerminalFloor * environmentFactor * clamp(0.85 + (0.15 * targetModifier), 0.85, 1)
               ),
-              0,
-              0.98
-            );
-            this.spawnChildInterceptor(world, shooter, effector, track, target, effectivePk, event.time, services);
+                0,
+                0.98
+              );
+            this.spawnGuidedMunition(world, shooter, effector, track, target, effectivePk, event.time, services);
           }
 
           services.events.scheduleDelay(event.time, effector.cooldownSec, {
@@ -6040,7 +6524,7 @@
           const target = getObject(world, event.payload.targetId);
           const track = getTrack(world, event.payload.trackId);
           const shooter = getObject(world, event.payload.shooterId);
-          const effectMode = event.payload.effectMode || "kinetic-child";
+          const effectMode = event.payload.effectMode || "guided-child";
           if (!target || !track) {
             if (event.payload.interceptorId) {
               removeRuntimeObject(world, event.payload.interceptorId);
@@ -6117,7 +6601,9 @@
                     shooterId: event.payload.shooterId,
                     targetId: target.id,
                     trackId: track.id,
-                    spoofedOffset: deepClone(target.runtime.spoofedOffset)
+                    effect: {
+                      offset: deepClone(target.runtime.spoofedOffset)
+                    }
                   }
                 );
               } else if (effectMode === "cyber") {
@@ -6209,7 +6695,9 @@
             world,
             event.time,
             "effect",
-            hit ? "Child interceptor hit " + target.name : "Child interceptor missed " + target.name,
+            effectMode === "ballistic"
+              ? (hit ? "Ballistic projectile hit " + target.name : "Ballistic projectile missed " + target.name)
+              : (hit ? "Guided munition hit " + target.name : "Guided munition missed " + target.name),
             {
               shooterId: event.payload.shooterId,
               targetId: target.id,
@@ -6219,6 +6707,13 @@
               interceptorId: event.payload.interceptorId || null
             }
           );
+          if (event.payload.interceptorId) {
+            const childState = getObject(world, event.payload.interceptorId)?.runtime?.interceptorChild || null;
+            const interceptorTrack = childState ? getTrack(world, childState.targetTrackId) : null;
+            if (childState?.guidanceType === "Autonomous" && interceptorTrack) {
+              interceptorTrack.interceptorsInbound = Math.max(0, (interceptorTrack.interceptorsInbound || 1) - 1);
+            }
+          }
           if (event.payload.interceptorId) {
             removeRuntimeObject(world, event.payload.interceptorId);
           }
@@ -6256,6 +6751,11 @@
           }
 
           if (effectorState.inFlightChildId && getObject(world, effectorState.inFlightChildId)) {
+            if (effector.guidanceType === "Command") {
+              return;
+            }
+            effectorState.inFlightChildId = null;
+            clearEffectorAssignment(shooter, effector.id, world);
             return;
           }
 
@@ -6264,7 +6764,7 @@
           const activeTrack = activeTrackId ? getTrack(world, activeTrackId) : null;
           const activeTarget = activeTargetId ? getObject(world, activeTargetId) : null;
           effectorState.inFlightChildId = null;
-          if (this.canContinueEngagement(world, shooter, effector, activeTrack, activeTarget, event.time)) {
+          if (effector.type !== "Interceptor" && this.canContinueEngagement(world, shooter, effector, activeTrack, activeTarget, event.time)) {
             services.logger.record(
               world,
               event.time,
@@ -6510,7 +7010,9 @@
                 behaviorState: "Route",
                 behaviorTargetId: null,
                 lastCueLogTrackId: null,
-                controlMode: template.components.capability.requiresC2 ? "C2Directed" : "AutonomousFallback",
+                controlMode: instance.side === "Red"
+                  ? (template.components.capability.requiresC2 ? "Networked" : "AutonomousFallback")
+                  : (template.components.capability.requiresC2 ? "C2Directed" : "AutonomousFallback"),
                 c2AssignedTargetId: null
                 ,
                 jammedUntilSec: 0,
@@ -6615,8 +7117,10 @@
             objects,
             objectIds,
             infrastructure,
-            tracks: {},
-            nextTrackId: 1,
+            blueTracks: {},
+            redTracks: {},
+            nextBlueTrackId: 1,
+            nextRedTrackId: 1,
             logs: [],
             assessmentSnapshots: [],
             frames: [],
@@ -6671,6 +7175,8 @@
         normalizeScenario,
         validateScenario,
         buildBaselineScenario,
+        buildDemoScenario,
+        buildScratchScenario,
         createCsvRow,
         rowsToCsv,
         SimulationManager,
@@ -7268,11 +7774,10 @@
           templates: document.getElementById("screen-templates"),
           run: document.getElementById("screen-run"),
           report: document.getElementById("screen-report"),
-          analysis: document.getElementById("screen-analysis"),
           export: document.getElementById("screen-export")
         };
         this.mainScreen = this.screens.run;
-        this.sidebarIds = ["wizard", "templates", "report", "analysis", "export"];
+        this.sidebarIds = ["wizard", "templates", "report", "export"];
       }
 
       closeAllSideTrays() {
@@ -7303,7 +7808,6 @@
           button.classList.toggle("active",
             (screenId === "wizard" && button.id === "open-scenario-sidebar-btn")
             || (screenId === "templates" && button.id === "open-template-sidebar-btn")
-            || (screenId === "analysis" && button.id === "open-roster-sidebar-btn")
             || (screenId === "export" && button.id === "open-export-sidebar-btn")
             || (screenId === "report" && button.id === "open-analysis-sidebar-btn")
           );
@@ -7327,7 +7831,8 @@
         this.renderer = new MapRenderer(document.getElementById("sim-canvas"));
         this.renderer.onViewportChange = () => this.renderCurrentView();
         this.state = {
-          currentScenario: this.kernel.buildBaselineScenario(),
+          currentScenario: this.kernel.buildDemoScenario(),
+          currentScenarioSource: "demo",
           singleRun: null,
           monteCarloRows: [],
           currentFrame: null,
@@ -7365,7 +7870,7 @@
         this.applyQueryParams();
         this.renderer.setScenario(this.state.currentScenario);
         this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
-        this.loadWizardPreset("blank-scratch");
+        this.loadWizardGeneratorPattern("blank-scratch");
         this.updateScenarioLabel();
         this.syncPlaceholderControls();
         this.clearResults();
@@ -7401,7 +7906,8 @@
           this.uiManager.showScreen("wizard");
         });
         document.getElementById("open-roster-inline-btn").addEventListener("click", () => {
-          this.uiManager.showScreen("analysis");
+          this.uiManager.showScreen("wizard");
+          document.getElementById("wizard-roster-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
         document.getElementById("load-scenario-header-btn").addEventListener("click", () => {
           document.getElementById("scenario-file-input").click();
@@ -7415,9 +7921,6 @@
         document.getElementById("open-template-library-inline-btn").addEventListener("click", () => {
           this.uiManager.showScreen("templates");
         });
-        document.getElementById("open-roster-sidebar-btn").addEventListener("click", () => {
-          this.uiManager.showScreen("analysis");
-        });
         document.getElementById("open-analysis-sidebar-btn").addEventListener("click", () => {
           this.uiManager.showScreen("report");
         });
@@ -7426,6 +7929,13 @@
         });
         document.getElementById("open-export-sidebar-btn").addEventListener("click", () => {
           this.uiManager.showScreen("export");
+        });
+        document.getElementById("open-tutorial-btn").addEventListener("click", () => {
+          console.log("Tutorial placeholder");
+          this.setStatus("Tutorial placeholder");
+        });
+        document.getElementById("add-instance-btn").addEventListener("click", () => {
+          this.addRosterInstance();
         });
         document.getElementById("run-monte-carlo-header-btn").addEventListener("click", () => {
           this.runMonteCarlo();
@@ -7457,10 +7967,18 @@
           this.importScenarioFile(event);
         });
 
+        document.getElementById("wizard-load-demo-btn").addEventListener("click", () => {
+          this.loadDemoScenario();
+        });
+
+        document.getElementById("wizard-load-scratch-btn").addEventListener("click", () => {
+          this.loadScratchScenario();
+        });
+
         document.getElementById("wizard-load-preset-btn").addEventListener("click", () => {
-          this.loadWizardPreset(document.getElementById("wizard-preset").value);
+          this.loadWizardGeneratorPattern(document.getElementById("wizard-preset").value);
           this.refreshWizardSummary();
-          this.setStatus("Starter pattern loaded");
+          this.setStatus("Generator pattern loaded");
         });
 
         document.getElementById("wizard-preview-btn").addEventListener("click", () => {
@@ -7469,7 +7987,7 @@
         });
 
         document.getElementById("wizard-build-btn").addEventListener("click", () => {
-          this.buildScenarioFromWizard();
+          this.generateScenarioFromWizard();
         });
 
         document.getElementById("wizard-add-threat-group-btn").addEventListener("click", () => {
@@ -7509,9 +8027,6 @@
         });
         document.getElementById("add-noise-terrain-btn").addEventListener("click", () => {
           this.addTerrainObject("Noise");
-        });
-        document.getElementById("add-roster-item-btn").addEventListener("click", () => {
-          this.addRosterItem();
         });
         document.getElementById("add-network-btn").addEventListener("click", () => {
           this.addNetwork();
@@ -7709,6 +8224,7 @@
           "template-effector-id-input",
           "template-effector-name-input",
           "template-effector-type-input",
+          "template-effector-guidance-input",
           "template-effector-range-input",
           "template-effector-basepk-input",
           "template-effector-basepe-input",
@@ -7761,11 +8277,19 @@
       }
 
       resetToBaselineScenario() {
-        this.state.currentScenario = this.kernel.buildBaselineScenario();
+        this.loadDemoScenario();
+        this.loadWizardGeneratorPattern("blank-scratch");
+        this.uiManager.closePanels();
+        this.setStatus("Demo scenario loaded");
+      }
+
+      loadDemoScenario() {
+        this.state.currentScenario = this.kernel.deepClone(this.kernel.buildDemoScenario());
+        this.state.currentScenarioSource = "demo";
         this.state.originalScenarioPayloadText = "";
         this.state.scenarioExportSource = "normalized";
         this.state.lastImportSummary = {
-          source: "Built-in baseline",
+          source: "Built-in demo",
           templateCount: this.state.currentScenario.templates.length,
           instanceCount: this.state.currentScenario.instances.length,
           normalizedChanged: false,
@@ -7773,7 +8297,6 @@
         };
         this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
         this.renderer.setScenario(this.state.currentScenario);
-        this.loadWizardPreset("blank-scratch");
         this.updateScenarioLabel();
         this.syncPlaceholderControls();
         this.clearResults();
@@ -7788,8 +8311,36 @@
         this.renderScenarioSnapshot();
         this.renderSelectedObjectEditor();
         this.refreshExportPreview();
-        this.uiManager.closePanels();
-        this.setStatus("Baseline scenario loaded");
+      }
+
+      loadScratchScenario() {
+        this.state.currentScenario = this.kernel.deepClone(this.kernel.buildScratchScenario());
+        this.state.currentScenarioSource = "scratch";
+        this.state.originalScenarioPayloadText = "";
+        this.state.scenarioExportSource = "normalized";
+        this.state.lastImportSummary = {
+          source: "Built-in scratch",
+          templateCount: this.state.currentScenario.templates.length,
+          instanceCount: this.state.currentScenario.instances.length,
+          normalizedChanged: false,
+          dirty: false
+        };
+        this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
+        this.renderer.setScenario(this.state.currentScenario);
+        this.updateScenarioLabel();
+        this.syncPlaceholderControls();
+        this.clearResults();
+        this.refreshValidationSummary();
+        this.refreshImportSummary();
+        this.renderTemplateBuilder();
+        this.renderRosterEditor();
+        this.renderTerrainEditor();
+        this.renderWizardBlueAssets();
+        this.renderWizardThreatGroups();
+        this.refreshWizardSummary();
+        this.renderScenarioSnapshot();
+        this.renderSelectedObjectEditor();
+        this.refreshExportPreview();
       }
 
       async importMapBackground(event) {
@@ -7970,7 +8521,6 @@
           "load-scenario-header-btn",
           "save-scenario-btn",
           "open-template-sidebar-btn",
-          "open-roster-sidebar-btn",
           "open-analysis-sidebar-btn",
           "open-export-sidebar-btn",
           "run-monte-carlo-header-btn",
@@ -7996,7 +8546,7 @@
           "apply-template-json-btn",
           "add-block-terrain-btn",
           "add-noise-terrain-btn",
-          "add-roster-item-btn",
+          "add-instance-btn",
           "add-network-btn",
           "add-power-grid-btn",
           "copy-export-preview-btn",
@@ -8379,30 +8929,44 @@
       }
 
       renderRosterEditor() {
-        const templateSelect = document.getElementById("roster-template-select");
+        const panel = document.getElementById("wizard-roster-panel");
+        const button = document.getElementById("open-roster-inline-btn");
+        if (panel) {
+          panel.style.display = "block";
+        }
+        if (button) {
+          button.style.display = "none";
+        }
+        const bluePanel = document.getElementById("wizard-blue-panel");
+        const redPanel = document.getElementById("wizard-red-panel");
+        if (bluePanel) {
+          bluePanel.style.display = "none";
+        }
+        if (redPanel) {
+          redPanel.style.display = "none";
+        }
+        const templateSelect = document.getElementById("instance-template-select");
+        const sideSelect = document.getElementById("instance-side-select");
         const templates = this.state.currentScenario.templates || [];
-        templateSelect.innerHTML = templates.map((template) => (
-          "<option value=\"" + escapeHtml(template.id) + "\">" + escapeHtml(template.name) + "</option>"
-        )).join("");
+        if (templateSelect) {
+          templateSelect.innerHTML = templates.map((template) => (
+            "<option value=\"" + escapeHtml(template.id) + "\">" + escapeHtml(template.name) + "</option>"
+          )).join("");
+        }
+        if (sideSelect && !sideSelect.value) {
+          sideSelect.value = "Blue";
+        }
 
-        const rosterRows = [];
-        (this.state.currentScenario.rosters || []).forEach((roster) => {
-          (roster.items || []).forEach((item, itemIndex) => {
-            rosterRows.push({
-              rosterId: roster.id,
-              side: roster.side,
-              itemIndex,
-              templateId: item.templateId,
-              quantity: item.quantity
-            });
-          });
-        });
+        const rosterRows = (this.state.currentScenario.instances || []).map((instance) => ({
+          instance,
+          template: templates.find((template) => template.id === instance.templateId) || null
+        }));
 
         document.getElementById("roster-summary").innerHTML = [
-          { label: "Rosters", value: (this.state.currentScenario.rosters || []).length },
-          { label: "Entries", value: rosterRows.length },
-          { label: "Blue Infra", value: "Implicit" },
-          { label: "Red Infra", value: "Implicit" }
+          { label: "Instances", value: rosterRows.length },
+          { label: "Blue", value: rosterRows.filter((row) => row.instance.side === "Blue").length },
+          { label: "Red", value: rosterRows.filter((row) => row.instance.side === "Red").length },
+          { label: "Templates", value: templates.length }
         ].map((card) => (
           "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.05rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
         )).join("");
@@ -8412,34 +8976,57 @@
           ? rosterRows.map((row) => (
               "<div class=\"timeline-card\">" +
                 "<div class=\"toolbar-row\" style=\"justify-content:space-between; align-items:flex-start;\">" +
-                  "<div><h4>" + escapeHtml(row.side) + " roster</h4><div class=\"summary-meta\">" + escapeHtml(row.rosterId) + "</div></div>" +
-                  "<button class=\"button-link remove-roster-item-btn\" data-roster-id=\"" + escapeHtml(row.rosterId) + "\" data-item-index=\"" + escapeHtml(String(row.itemIndex)) + "\">Remove</button>" +
+                  "<div><h4>" + escapeHtml(row.instance.name) + "</h4><div class=\"summary-meta\">" + escapeHtml(row.instance.id + " | " + row.instance.side) + "</div></div>" +
+                  "<div class=\"toolbar-row\">" +
+                    "<button class=\"button-link select-roster-instance-btn\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\">Select</button>" +
+                    "<button class=\"button-link pick-roster-instance-btn\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\">Pick On Map</button>" +
+                    "<button class=\"button-link remove-roster-instance-btn\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\">Remove</button>" +
+                  "</div>" +
                 "</div>" +
                 "<div class=\"form-grid tight\" style=\"margin-top:10px;\">" +
-                  "<div class=\"field-stack\"><label>Template</label><select class=\"roster-template-field\" data-roster-id=\"" + escapeHtml(row.rosterId) + "\" data-item-index=\"" + escapeHtml(String(row.itemIndex)) + "\">" +
+                  "<div class=\"field-stack\"><label>Template</label><select class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"templateId\">" +
                     templates.map((template) => (
-                      "<option value=\"" + escapeHtml(template.id) + "\"" + (template.id === row.templateId ? " selected" : "") + ">" + escapeHtml(template.name) + "</option>"
+                      "<option value=\"" + escapeHtml(template.id) + "\"" + (template.id === row.instance.templateId ? " selected" : "") + ">" + escapeHtml(template.name) + "</option>"
                     )).join("") +
                   "</select></div>" +
-                  "<div class=\"field-stack\"><label>Quantity</label><input class=\"roster-quantity-field\" data-roster-id=\"" + escapeHtml(row.rosterId) + "\" data-item-index=\"" + escapeHtml(String(row.itemIndex)) + "\" type=\"number\" min=\"1\" max=\"48\" value=\"" + escapeHtml(String(row.quantity)) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Side</label><select class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"side\">" +
+                    "<option value=\"Blue\"" + (row.instance.side === "Blue" ? " selected" : "") + ">Blue</option>" +
+                    "<option value=\"Red\"" + (row.instance.side === "Red" ? " selected" : "") + ">Red</option>" +
+                  "</select></div>" +
+                  "<div class=\"field-stack\"><label>Name</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"name\" type=\"text\" value=\"" + escapeHtml(row.instance.name) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>X</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"posX\" type=\"number\" value=\"" + escapeHtml(String(row.instance.posX)) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Y</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"posY\" type=\"number\" value=\"" + escapeHtml(String(row.instance.posY)) + "\"></div>" +
+                  "<div class=\"field-stack\"><label>Z</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"posZ\" type=\"number\" value=\"" + escapeHtml(String(row.instance.posZ)) + "\"></div>" +
                 "</div>" +
+                "<div class=\"summary-meta\" style=\"margin-top:8px;\">" + escapeHtml(row.template ? row.template.name : "Missing template") + "</div>" +
               "</div>"
             )).join("")
-          : "<div class=\"empty-state\">No roster items yet. Add Blue or Red force-package entries here.</div>";
+          : "<div class=\"empty-state\">No instances yet. Choose a template and add one to control placement directly.</div>";
 
-        rosterList.querySelectorAll(".remove-roster-item-btn").forEach((button) => {
+        rosterList.querySelectorAll(".select-roster-instance-btn").forEach((button) => {
           button.addEventListener("click", () => {
-            this.removeRosterItem(button.dataset.rosterId, Number(button.dataset.itemIndex));
+            this.selectRosterInstance(button.dataset.instanceId);
           });
         });
-        rosterList.querySelectorAll(".roster-template-field").forEach((select) => {
-          select.addEventListener("change", () => {
-            this.updateRosterItem(select.dataset.rosterId, Number(select.dataset.itemIndex), "templateId", select.value);
+        rosterList.querySelectorAll(".pick-roster-instance-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.selectRosterInstance(button.dataset.instanceId);
+            this.state.mapInteraction = { mode: "selected-object-move", instanceId: button.dataset.instanceId };
+            this.updateMapSelectionChip();
+            this.setStatus("Click the map to place the selected instance");
           });
         });
-        rosterList.querySelectorAll(".roster-quantity-field").forEach((input) => {
-          input.addEventListener("change", () => {
-            this.updateRosterItem(input.dataset.rosterId, Number(input.dataset.itemIndex), "quantity", input.value);
+        rosterList.querySelectorAll(".remove-roster-instance-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.removeRosterInstance(button.dataset.instanceId);
+          });
+        });
+        rosterList.querySelectorAll(".roster-instance-field").forEach((element) => {
+          element.addEventListener("change", () => {
+            this.updateRosterInstanceField(element.dataset.instanceId, element.dataset.instanceField, element.value);
+          });
+          element.addEventListener("input", () => {
+            this.updateRosterInstanceField(element.dataset.instanceId, element.dataset.instanceField, element.value, { rerender: false });
           });
         });
 
@@ -8464,39 +9051,79 @@
         )).join("");
       }
 
-      addRosterItem() {
-        const side = document.getElementById("roster-side-select").value;
-        const templateId = document.getElementById("roster-template-select").value;
-        const quantity = Math.max(1, Math.floor(Number(document.getElementById("roster-quantity-input").value || 1)));
+      addRosterInstance() {
+        const side = document.getElementById("instance-side-select").value;
+        const templateId = document.getElementById("instance-template-select").value;
         if (!templateId) {
           this.setStatus("Choose a template first");
           return;
         }
-        const roster = this.getOrCreateRoster(side);
-        roster.items.push({ templateId, quantity });
-        this.updateScenarioState("Added roster item");
-      }
-
-      updateRosterItem(rosterId, itemIndex, field, value) {
-        const roster = (this.state.currentScenario.rosters || []).find((candidate) => candidate.id === rosterId);
-        const item = roster?.items?.[itemIndex];
-        if (!item) {
+        const template = this.state.currentScenario.templates.find((candidate) => candidate.id === templateId);
+        if (!template) {
+          this.setStatus("Choose a valid template first");
           return;
         }
-        item[field] = field === "quantity"
-          ? Math.max(1, Math.floor(Number(value || 1)))
-          : value;
-        this.updateScenarioState("Updated roster item");
+        const existingNames = new Set((this.state.currentScenario.instances || []).map((item) => item.name));
+        const existingIds = new Set((this.state.currentScenario.instances || []).map((item) => item.id));
+        const instance = {
+          id: this.buildUniqueId(side + "-Instance", existingIds),
+          templateId,
+          name: this.buildUniqueId((template.name || "Instance") + " " + side, existingNames),
+          side,
+          origin: "roster",
+          roles: this.kernel.ensureArray(template.defaultRoles || []),
+          networkId: null,
+          connectedPowerGridId: null,
+          posX: side === "Blue" ? 600 : 100,
+          posY: side === "Blue" ? 320 : 220,
+          posZ: side === "Blue" ? 20 : 120,
+          missionWaypoints: []
+        };
+        this.state.currentScenario.instances.push(instance);
+        this.updateScenarioState("Added instance");
       }
 
-      removeRosterItem(rosterId, itemIndex) {
-        const roster = (this.state.currentScenario.rosters || []).find((candidate) => candidate.id === rosterId);
-        if (!roster) {
+      updateRosterInstanceField(instanceId, field, value, options = {}) {
+        const instance = (this.state.currentScenario.instances || []).find((candidate) => candidate.id === instanceId);
+        if (!instance) {
           return;
         }
-        roster.items.splice(itemIndex, 1);
-        this.state.currentScenario.rosters = this.state.currentScenario.rosters.filter((candidate) => candidate.items.length > 0);
-        this.updateScenarioState("Removed roster item");
+        const rerender = options.rerender !== false;
+        const numericFields = new Set(["posX", "posY", "posZ"]);
+        if (field === "templateId") {
+          instance.templateId = value;
+        } else if (field === "side") {
+          instance.side = value === "Red" ? "Red" : "Blue";
+        } else if (field === "name") {
+          instance.name = value || instance.name;
+        } else if (numericFields.has(field)) {
+          instance[field] = Number.isFinite(Number(value)) ? Number(value) : instance[field];
+        }
+        if (rerender) {
+          this.renderRosterEditor();
+        }
+        this.updateScenarioState("Updated instance");
+      }
+
+      removeRosterInstance(instanceId) {
+        const instances = this.state.currentScenario.instances || [];
+        const index = instances.findIndex((candidate) => candidate.id === instanceId);
+        if (index < 0) {
+          return;
+        }
+        instances.splice(index, 1);
+        this.updateScenarioState("Removed instance");
+      }
+
+      selectRosterInstance(instanceId) {
+        const instance = (this.state.currentScenario.instances || []).find((candidate) => candidate.id === instanceId);
+        if (!instance) {
+          return;
+        }
+        this.state.selectedMapEntity = instance;
+        this.renderer.setSelection(instance);
+        this.renderSelectedObjectEditor();
+        this.updateMapSelectionChip();
       }
 
       addNetwork() {
@@ -8819,6 +9446,8 @@
           id: "Effector-" + (index + 1),
           name: effectorType + " " + (index + 1),
           type: effectorType,
+          deliveryModel: effectorType === "Interceptor" ? "Guided" : (effectorType === "Kinetic" ? "Ballistic" : "Instant"),
+          guidanceType: effectorType === "Interceptor" ? "Command" : "Command",
           maxRangeM: effectorType === "Kinetic" ? 230 : 520,
           basePk: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 0.72 : 0,
           basePe: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 0 : 0.65,
@@ -9047,6 +9676,7 @@
         effector.id = document.getElementById("template-effector-id-input").value.trim() || effector.id || "Effector-1";
         effector.name = document.getElementById("template-effector-name-input").value.trim() || effector.name || "Effector";
         effector.type = document.getElementById("template-effector-type-input").value || "Kinetic";
+        effector.guidanceType = document.getElementById("template-effector-guidance-input").value || "Command";
         effector.maxRangeM = Number(document.getElementById("template-effector-range-input").value || 0);
         effector.basePk = Number(document.getElementById("template-effector-basepk-input").value || 0);
         effector.basePe = Number(document.getElementById("template-effector-basepe-input").value || 0);
@@ -9248,6 +9878,7 @@
         document.getElementById("template-effector-id-input").value = effector?.id || "";
         document.getElementById("template-effector-name-input").value = effector?.name || "";
         document.getElementById("template-effector-type-input").value = effector?.type || "";
+        document.getElementById("template-effector-guidance-input").value = effector?.guidanceType || "Command";
         document.getElementById("template-effector-range-input").value = effector?.maxRangeM ?? 0;
         document.getElementById("template-effector-basepk-input").value = effector?.basePk ?? 0;
         document.getElementById("template-effector-basepe-input").value = effector?.basePe ?? 0;
@@ -9317,7 +9948,7 @@
         const usage = this.getTemplateUsage(template.id);
         const wizardUsage = this.getWizardTemplateBindingUsage(template.id);
         if (usage.length || wizardUsage.length) {
-          this.setStatus("Cannot delete a template that is still used by instances or Scenario Editor bindings");
+          this.setStatus("Cannot delete a template that is still used by instances or Scenario Wizard bindings");
           return;
         }
         this.state.currentScenario.templates = this.state.currentScenario.templates.filter((item) => item.id !== template.id);
@@ -9362,7 +9993,7 @@
         }
       }
 
-      loadWizardPreset(preset) {
+      loadWizardGeneratorPattern(preset) {
         const presets = {
           "blank-scratch": {
             scenarioName: "New Scenario",
@@ -9537,6 +10168,10 @@
         this.renderWizardThreatGroups();
         document.getElementById("wizard-ghost-enabled").checked = values.ghost;
         document.getElementById("wizard-clutter-enabled").checked = values.clutter;
+      }
+
+      loadWizardPreset(preset) {
+        this.loadWizardGeneratorPattern(preset);
       }
 
       createWizardBlueAsset(overrides = {}) {
@@ -9921,7 +10556,7 @@
             return this.kernel.deepClone(match);
           }
           if (options.strict) {
-            throw new Error("Scenario Editor references missing template " + templateId);
+            throw new Error("Scenario Wizard references missing template " + templateId);
           }
         }
         const preset = normalizedRef.startsWith("preset:")
@@ -9932,6 +10567,9 @@
 
       isWizardBuildPending() {
         try {
+          if (this.state.currentScenarioSource !== "wizard-generated") {
+            return false;
+          }
           const wizardScenario = this.buildScenarioFromWizardInputs();
           return JSON.stringify(wizardScenario) !== JSON.stringify(this.state.currentScenario);
         } catch (error) {
@@ -9943,17 +10581,19 @@
         const wizardContainer = document.getElementById("wizard-reminder");
         const runContainer = document.getElementById("run-reminder");
         const needsBuild = this.isWizardBuildPending();
-        const reminderHtml = needsBuild
-          ? "<div class=\"attention-card\"><strong>Scenario editor changes are not active yet.</strong> Click <strong>Build Scenario From Editor</strong> before running if you want the current editor values to become the live scenario.</div>"
-          : "<div class=\"summary-meta\">Scenario editor draft matches the active scenario.</div>";
+        const reminderHtml = this.state.currentScenarioSource === "wizard-generated"
+          ? (needsBuild
+            ? "<div class=\"attention-card\"><strong>Scenario wizard changes are not active yet.</strong> Click <strong>Generate From Wizard</strong> before running if you want the current wizard values to become the live scenario.</div>"
+            : "<div class=\"summary-meta\">Scenario wizard draft matches the active generated scenario.</div>")
+          : "<div class=\"summary-meta\">Live scenario editing is separate from the generator draft. Use <strong>Generate From Wizard</strong> only when you want to replace the active scenario.</div>";
         wizardContainer.innerHTML = reminderHtml;
         runContainer.innerHTML = needsBuild
-          ? "<div class=\"attention-card\"><strong>Reminder:</strong> if you edited the Scenario Editor, click <strong>Build Scenario From Editor</strong> first. Running now uses the current active scenario, not the unsaved editor draft.</div>"
+          ? "<div class=\"attention-card\"><strong>Reminder:</strong> if you edited the Scenario Wizard, click <strong>Generate From Wizard</strong> first. Running now uses the current active scenario, not the unsaved wizard draft.</div>"
           : "";
       }
 
       buildScenarioFromWizardInputs() {
-        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Editor Draft";
+        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Wizard Draft";
         const description = document.getElementById("wizard-scenario-description").value.trim();
 
         const scenario = {
@@ -9991,7 +10631,7 @@
           networks: [],
           powerGrids: [],
           rosters: [],
-          templates: [],
+          templates: this.kernel.deepClone(this.state.currentScenario.templates || []),
           instances: []
         };
 
@@ -10151,11 +10791,12 @@
         try {
           const scenario = this.buildScenarioFromWizardInputs();
           this.state.currentScenario = scenario;
+          this.state.currentScenarioSource = "wizard-generated";
           this.state.originalScenarioPayloadText = "";
           this.state.scenarioExportSource = "normalized";
           document.getElementById("scenario-export-source").value = "normalized";
           this.state.lastImportSummary = {
-            source: "Scenario Editor",
+            source: "Scenario Wizard",
             templateCount: scenario.templates.length,
             instanceCount: scenario.instances.length,
             normalizedChanged: false,
@@ -10182,6 +10823,10 @@
         } catch (error) {
           this.setStatus("Scenario editor build failed: " + String(error && error.message ? error.message : error));
         }
+      }
+
+      generateScenarioFromWizard() {
+        this.buildScenarioFromWizard();
       }
 
       openIssueTarget(screenId, targetId) {
@@ -10363,7 +11008,7 @@
 
           const validation = this.kernel.validateScenario(parsed);
           const normalized = validation.scenario;
-          if (!normalized.metadata.name || normalized.metadata.name === "Baseline Vertical Slice") {
+          if (!normalized.metadata.name || normalized.metadata.name === "C-sUAS Tactical Simulator") {
             normalized.metadata.name = file.name.replace(/\.json$/i, "");
           }
           const normalizedChanged = JSON.stringify(parsed) !== JSON.stringify(normalized);
