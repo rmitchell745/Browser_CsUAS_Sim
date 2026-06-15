@@ -1,0 +1,189 @@
+{
+  "metadata": {
+    "name": "Playtest 12 - Multispectrum Detection",
+    "description": "Three Blue sensors observe two Red drones with different RF and acoustic signatures to verify radar, acoustic, and passive RF branching."
+  },
+  "config": {
+    "maxTimeSec": 22,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.4
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Radar-Site",
+      "name": "Blue Radar Site",
+      "defaultRoles": ["Asset", "Sensor", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 50, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -2 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Radar-1",
+            "name": "Blue Search Radar",
+            "type": "Radar",
+            "maxRangeM": 900,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 55,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.8,
+            "detectionThresholdDb": 16,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.3, "accuracyBase": 0.88 },
+            "identification": { "canIdentify": true, "latencySec": 0.4, "accuracyBase": 0.8 }
+          }
+        ],
+        "c2": { "trackCapacity": 10, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Blue-Acoustic-Site",
+      "name": "Blue Acoustic Site",
+      "defaultRoles": ["Asset", "Sensor"],
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 40, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -3 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Acoustic-1",
+            "name": "Blue Acoustic Array",
+            "type": "Acoustic",
+            "maxRangeM": 500,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 0,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.4,
+            "detectionThresholdDb": 2,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.4, "accuracyBase": 0.7 },
+            "identification": { "canIdentify": false, "latencySec": 0.5, "accuracyBase": 0.55 }
+          }
+        ]
+      }
+    },
+    {
+      "id": "Template-Blue-RF-Site",
+      "name": "Blue RF Passive Site",
+      "defaultRoles": ["Asset", "Sensor"],
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 40, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -3 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-RF-1",
+            "name": "Blue Passive RF Array",
+            "type": "RF_Passive",
+            "maxRangeM": 700,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 0,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.8,
+            "detectionThresholdDb": 10,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.3, "accuracyBase": 0.8 },
+            "identification": { "canIdentify": false, "latencySec": 0.4, "accuracyBase": 0.65 }
+          }
+        ]
+      }
+    },
+    {
+      "id": "Template-Red-Radio-Emitter",
+      "name": "Red RF Emitter",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": { "maxHealth": 80, "assetValuePts": 8, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 61, "rfEmissionDb": 30 },
+        "vulnerability": { "commsResilience": 0.2, "navResilience": 0.5, "cyberResilience": 0.5 },
+        "capability": { "usesRF": true, "usesNetwork": true, "requiresC2": true, "canOperateAutonomously": false, "lostLinkBehavior": "Hover/Loiter" },
+        "movement": { "speedMps": 17, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    },
+    {
+      "id": "Template-Red-Radio-Silent",
+      "name": "Red Radio Silent Drone",
+      "defaultRoles": ["UAS"],
+      "components": {
+        "health": { "maxHealth": 80, "assetValuePts": 8, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 63, "rfEmissionDb": 6 },
+        "vulnerability": { "commsResilience": 0.25, "navResilience": 0.5, "cyberResilience": 0.5 },
+        "capability": { "usesRF": false, "usesNetwork": false, "requiresC2": false, "canOperateAutonomously": true, "lostLinkBehavior": "ContinueDeadReckoning" },
+        "movement": { "speedMps": 17, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Radar-Site-01",
+      "templateId": "Template-Blue-Radar-Site",
+      "name": "Blue Radar Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "C2"],
+      "posX": 620,
+      "posY": 280,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Acoustic-Site-01",
+      "templateId": "Template-Blue-Acoustic-Site",
+      "name": "Blue Acoustic Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor"],
+      "posX": 620,
+      "posY": 340,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-RF-Site-01",
+      "templateId": "Template-Blue-RF-Site",
+      "name": "Blue RF Passive Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor"],
+      "posX": 620,
+      "posY": 400,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Emitter-01",
+      "templateId": "Template-Red-Radio-Emitter",
+      "name": "Red Emitter 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 220,
+      "posY": 280,
+      "posZ": 120,
+      "missionWaypoints": [
+        { "x": 980, "y": 280, "z": 120 }
+      ]
+    },
+    {
+      "id": "Red-Silent-01",
+      "templateId": "Template-Red-Radio-Silent",
+      "name": "Red Silent 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 220,
+      "posY": 400,
+      "posZ": 120,
+      "missionWaypoints": [
+        { "x": 980, "y": 400, "z": 120 }
+      ]
+    }
+  ]
+}

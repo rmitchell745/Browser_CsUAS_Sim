@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "name": "Playtest 15 - Cyber Telemetry Spoof",
+    "description": "A Blue cyber site corrupts Red telemetry, shifting Blue track position and Red operator navigation at the same time."
+  },
+  "config": {
+    "maxTimeSec": 28,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 220,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.3
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Cyber-Site",
+      "name": "Blue Cyber Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": { "maxHealth": 110, "assetValuePts": 60, "isHQ": false },
+        "resistance": { "kineticResistance": 0.12 },
+        "signature": { "radarSignatureDb": -2 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Cyber-Radar-1",
+            "name": "Blue Cyber Radar",
+            "type": "Radar",
+            "maxRangeM": 900,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 56,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.8,
+            "detectionThresholdDb": 16,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.25, "accuracyBase": 0.9 },
+            "identification": { "canIdentify": true, "latencySec": 0.3, "accuracyBase": 0.82 }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Cyber-1",
+            "name": "Blue Telemetry Injector",
+            "type": "Cyber",
+            "maxRangeM": 700,
+            "basePe": 0.95,
+            "damagePoints": 0,
+            "ammoCapacity": 1,
+            "slewRateSec": 0.1,
+            "cooldownSec": 6,
+            "projectileSpeedMps": 0,
+            "effectDurationSec": 12,
+            "jamStrengthDb": 0,
+            "affectedDomains": ["Track", "Telemetry", "C2"]
+          }
+        ],
+        "c2": { "trackCapacity": 8, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Blue-Cyber-HQ",
+      "name": "Blue Cyber HQ",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": { "maxHealth": 140, "assetValuePts": 120, "isHQ": true },
+        "resistance": { "kineticResistance": 0.2 },
+        "signature": { "radarSignatureDb": -1 }
+      }
+    },
+    {
+      "id": "Template-Red-Cyber-Striker",
+      "name": "Red Cyber Target Striker",
+      "defaultRoles": ["UAS"],
+      "missionProfile": {
+        "type": "SpecificAsset",
+        "targetTemplateId": "Template-Blue-Cyber-HQ"
+      },
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 9, "isHQ": false },
+        "resistance": { "kineticResistance": 0.12 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 57, "rfEmissionDb": 27 },
+        "vulnerability": { "commsResilience": 0.35, "navResilience": 0.45, "cyberResilience": 0.08 },
+        "capability": {
+          "usesRF": true,
+          "usesNetwork": true,
+          "requiresPower": true,
+          "requiresC2": true,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Cyber-Site-01",
+      "templateId": "Template-Blue-Cyber-Site",
+      "name": "Blue Cyber Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 640,
+      "posY": 320,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Cyber-HQ-01",
+      "templateId": "Template-Blue-Cyber-HQ",
+      "name": "Blue Cyber HQ 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 860,
+      "posY": 320,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Cyber-Striker-01",
+      "templateId": "Template-Red-Cyber-Striker",
+      "name": "Red Cyber Striker 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 250,
+      "posY": 320,
+      "posZ": 120,
+      "missionWaypoints": []
+    }
+  ]
+}

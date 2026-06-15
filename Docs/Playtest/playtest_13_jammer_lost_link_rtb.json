@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "name": "Playtest 13 - Jammer Lost-Link RTB",
+  "description": "A Blue jammer deterministically forces a Red C2-dependent striker into lost-link RTB behavior after a communications attack."
+  },
+  "config": {
+    "maxTimeSec": 15,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 220,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.2
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Jammer-RTB",
+      "name": "Blue RTB Jammer Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 60, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -2 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Jammer-RTB-1",
+            "name": "Blue Passive RF Jam Sensor",
+            "type": "RF_Passive",
+            "maxRangeM": 850,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 0,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.7,
+            "detectionThresholdDb": 9,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.25, "accuracyBase": 0.86 },
+            "identification": { "canIdentify": true, "latencySec": 0.3, "accuracyBase": 0.8 }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Jammer-RTB-1",
+            "name": "Blue RTB Jammer",
+            "type": "Jammer",
+            "maxRangeM": 650,
+            "basePe": 2,
+            "damagePoints": 0,
+            "ammoCapacity": 1,
+            "slewRateSec": 0.1,
+            "cooldownSec": 12,
+            "projectileSpeedMps": 0,
+            "effectDurationSec": 12,
+            "jamStrengthDb": 16,
+            "affectedDomains": ["Network", "C2", "Sensor"]
+          }
+        ],
+        "c2": { "trackCapacity": 8, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Blue-RTB-HQ",
+      "name": "Blue RTB HQ",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": { "maxHealth": 150, "assetValuePts": 120, "isHQ": true },
+        "resistance": { "kineticResistance": 0.2 },
+        "signature": { "radarSignatureDb": -1 }
+      }
+    },
+    {
+      "id": "Template-Red-RTB-Striker",
+      "name": "Red RTB Striker",
+      "defaultRoles": ["UAS"],
+      "missionProfile": {
+        "type": "SpecificAsset",
+        "targetTemplateId": "Template-Blue-RTB-HQ"
+      },
+      "components": {
+        "health": { "maxHealth": 95, "assetValuePts": 10, "isHQ": false },
+        "resistance": { "kineticResistance": 0.12 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 58, "rfEmissionDb": 28 },
+        "vulnerability": { "commsResilience": 0.1, "navResilience": 0.65, "cyberResilience": 0.5 },
+        "capability": {
+          "usesRF": true,
+          "usesNetwork": true,
+          "requiresPower": true,
+          "requiresC2": true,
+          "canOperateAutonomously": false,
+          "lostLinkBehavior": "RTB"
+        },
+        "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Jammer-RTB-01",
+      "templateId": "Template-Blue-Jammer-RTB",
+      "name": "Blue RTB Jammer Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 660,
+      "posY": 320,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-RTB-HQ-01",
+      "templateId": "Template-Blue-RTB-HQ",
+      "name": "Blue RTB HQ 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 840,
+      "posY": 320,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-RTB-Striker-01",
+      "templateId": "Template-Red-RTB-Striker",
+      "name": "Red RTB Striker 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 260,
+      "posY": 320,
+      "posZ": 120,
+      "missionWaypoints": []
+    }
+  ]
+}

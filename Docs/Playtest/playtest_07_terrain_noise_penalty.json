@@ -1,7 +1,7 @@
 {
   "metadata": {
     "name": "Playtest 07 - Terrain Noise Penalty",
-    "description": "A noise terrain polygon degrades RF sensing so first detection is delayed until geometry improves through the clutter field."
+  "description": "A noise terrain polygon degrades radar sensing so first detection is delayed until geometry improves through the clutter field."
   },
   "config": {
     "maxTimeSec": 38,
@@ -47,7 +47,7 @@
           {
             "id": "Sensor-Blue-RF-Noise-1",
             "name": "Marginal RF Sensor",
-            "type": "RF",
+            "type": "Radar",
             "maxRangeM": 700,
             "horizontalFovDeg": 360,
             "verticalFovDeg": 120,

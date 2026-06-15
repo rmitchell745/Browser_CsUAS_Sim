@@ -2084,6 +2084,11 @@
         return diff;
       }
 
+      function normalizeHeadingDeg(heading) {
+        const normalized = Number(heading || 0) % 360;
+        return normalized < 0 ? normalized + 360 : normalized;
+      }
+
       function ensureArray(value) {
         return Array.isArray(value) ? value : [];
       }
@@ -2388,7 +2393,9 @@
               movement: components.movement ? {
                 speedMps: Number(components.movement.speedMps ?? components.movement.maxSpeed_mps ?? 0),
                 stepSec: Number(components.movement.stepSec ?? 1),
-                waypointToleranceM: Number(components.movement.waypointToleranceM ?? 10)
+                waypointToleranceM: Number(components.movement.waypointToleranceM ?? 10),
+                maxAccel: Number(components.movement.maxAccel ?? components.movement.maxAccel_mps2 ?? 9999),
+                turnRate_dps: Number(components.movement.turnRate_dps ?? components.movement.turnRateDps ?? 360)
               } : null,
               sensors: ensureArray(components.sensors).map(normalizeSensor),
               effectors: ensureArray(components.effectors).map(normalizeEffector),
@@ -3414,6 +3421,46 @@
             target.name + " was destroyed",
             { targetId: target.id, trackId: track ? track.id : null, sourceMode: payload.sourceMode || null }
           );
+
+          const explosiveYield = String(
+            target.components?.payload?.explosiveYield
+            ?? target.components?.health?.explosiveYield
+            ?? ""
+          ).trim().toLowerCase();
+          const blastProfile = ({
+            high: { radiusM: 100, damagePoints: 500 },
+            medium: { radiusM: 50, damagePoints: 100 },
+            low: { radiusM: 20, damagePoints: 25 }
+          }[explosiveYield] || null);
+          if (blastProfile) {
+            const blastOrigin = target.runtime.position || { x: 0, y: 0, z: 0 };
+            const affectedObjectIds = world.objectIds.slice();
+            affectedObjectIds.forEach((objectId) => {
+              if (objectId === target.id) {
+                return;
+              }
+              const affectedObject = getObject(world, objectId);
+              if (!affectedObject || affectedObject.runtime.destroyed) {
+                return;
+              }
+              if (distance3D(blastOrigin, affectedObject.runtime.position) > blastProfile.radiusM) {
+                return;
+              }
+              services.events.schedule({
+                time: round(timeSec + 0.1, 3),
+                type: "damage.resolve",
+                priority: EVENT_PRIORITIES.damage,
+                payload: {
+                  targetId: affectedObject.id,
+                  trackId: null,
+                  hit: true,
+                  damagePoints: blastProfile.damagePoints,
+                  sourceObjectId: target.id,
+                  sourceMode: "secondary-explosion"
+                }
+              });
+            });
+          }
         } else {
           services.logger.record(
             world,
@@ -3642,25 +3689,56 @@
         return false;
       }
 
-      function getTerrainIntersection(world, start, end, altitudeZ = 0, filterFn = null) {
+      function getTerrainCentroid(terrain) {
+        if (!terrain?.areaPolygon || terrain.areaPolygon.length < 3) {
+          return null;
+        }
+        const centroid = terrain.areaPolygon.reduce((accumulator, point) => ({
+          x: accumulator.x + Number(point.x || 0),
+          y: accumulator.y + Number(point.y || 0)
+        }), { x: 0, y: 0 });
+        return {
+          x: centroid.x / terrain.areaPolygon.length,
+          y: centroid.y / terrain.areaPolygon.length
+        };
+      }
+
+      function getTerrainIntersection(world, start, end, filterFn = null) {
         const terrainObjects = getActiveTerrainObjects(world);
         return terrainObjects.find((terrain) => {
           if (typeof filterFn === "function" && !filterFn(terrain)) {
             return false;
           }
-          if (!(altitudeZ <= Number(terrain.heightZ || 0))) {
+          const terrainCenter = getTerrainCentroid(terrain);
+          if (!terrainCenter) {
+            return false;
+          }
+          const total2DDistance = Math.max(distance2D(start, end), 1e-6);
+          const distanceToObstacle = distance2D(start, terrainCenter);
+          const losZAtObstacle = Number(start.z || 0)
+            + ((Number(end.z || 0) - Number(start.z || 0)) * (distanceToObstacle / total2DDistance));
+          if (!(losZAtObstacle < Number(terrain.heightZ || 0))) {
             return false;
           }
           return segmentIntersectsPolygon2D(start, end, terrain.areaPolygon);
         }) || null;
       }
 
-      function getTerrainNoisePenalty(world, start, end, altitudeZ = 0) {
+      function getTerrainNoisePenalty(world, start, end) {
         return getActiveTerrainObjects(world)
           .filter((terrain) => terrain.interferenceType === "Noise")
-          .filter((terrain) => altitudeZ <= Number(terrain.heightZ || 0))
-          .filter((terrain) => segmentIntersectsPolygon2D(start, end, terrain.areaPolygon))
-          .reduce((sum, terrain) => sum + Number(terrain.clutterPenaltyDb || 0), 0);
+          .filter((terrain) => {
+            const terrainCenter = getTerrainCentroid(terrain);
+            if (!terrainCenter) {
+              return false;
+            }
+            const total2DDistance = Math.max(distance2D(start, end), 1e-6);
+            const distanceToObstacle = distance2D(start, terrainCenter);
+            const losZAtObstacle = Number(start.z || 0)
+              + ((Number(end.z || 0) - Number(start.z || 0)) * (distanceToObstacle / total2DDistance));
+            return losZAtObstacle < Number(terrain.heightZ || 0) && segmentIntersectsPolygon2D(start, end, terrain.areaPolygon);
+          })
+          .reduce((sum, terrain) => sum + (Number(terrain.clutterPenaltyDb || 0) * 0.55), 0);
       }
 
       function createAssessmentStageState() {
@@ -4582,6 +4660,7 @@
               const lostLinkBehavior = normalizeLostLinkBehavior(object.components.capability?.lostLinkBehavior);
               if (lostLinkBehavior === "Hover/Loiter") {
                 object.runtime.behaviorState = "Loiter";
+                object.runtime.currentSpeedMps = 0;
                 services.events.scheduleDelay(event.time, movement.stepSec, {
                   type: "movement.step",
                   priority: EVENT_PRIORITIES.movement,
@@ -4706,6 +4785,7 @@
                 if (object.runtime.behaviorState !== "Loiter") {
                   object.runtime.behaviorState = "Loiter";
                   object.runtime.behaviorTargetId = null;
+                  object.runtime.currentSpeedMps = 0;
                   services.logger.record(
                     world,
                     event.time,
@@ -4749,6 +4829,7 @@
               } else if (object.runtime.behaviorState !== "Loiter") {
                 object.runtime.behaviorState = "Loiter";
                 object.runtime.behaviorTargetId = null;
+                object.runtime.currentSpeedMps = 0;
                 services.logger.record(
                   world,
                   event.time,
@@ -4799,6 +4880,7 @@
           if (!movementTarget) {
             if (object.runtime.behaviorState !== "Complete") {
               object.runtime.behaviorState = "Complete";
+              object.runtime.currentSpeedMps = 0;
               services.logger.record(
                 world,
                 event.time,
@@ -4811,33 +4893,75 @@
           }
 
           const remainingDistance = distance3D(navigationOrigin, movementTarget);
+          const desiredHeadingDeg = remainingDistance > 0.001
+            ? angleDeg(navigationOrigin, movementTarget)
+            : Number.isFinite(object.runtime.currentHeadingDeg) ? object.runtime.currentHeadingDeg : 0;
+          const currentHeadingDeg = Number.isFinite(object.runtime.currentHeadingDeg)
+            ? object.runtime.currentHeadingDeg
+            : desiredHeadingDeg;
+          const turnLimitDeg = Math.max(0, Number(movement.turnRate_dps ?? movement.turnRateDps ?? 360)) * movement.stepSec;
+          const headingDeltaDeg = clamp(smallestAngleDifference(desiredHeadingDeg, currentHeadingDeg), -turnLimitDeg, turnLimitDeg);
+          const nextHeadingDeg = normalizeHeadingDeg(currentHeadingDeg + headingDeltaDeg);
+
+          const desiredSpeedMps = Math.max(0, Number(movement.speedMps || 0));
+          const currentSpeedMps = Number.isFinite(object.runtime.currentSpeedMps)
+            ? Number(object.runtime.currentSpeedMps)
+            : 0;
+          const accelLimitMps = Math.max(0, Number(movement.maxAccel ?? movement.maxAccelMps2 ?? 9999)) * movement.stepSec;
+          const speedDeltaMps = clamp(desiredSpeedMps - currentSpeedMps, -accelLimitMps, accelLimitMps);
+          const nextSpeedMps = Math.max(0, currentSpeedMps + speedDeltaMps);
+          const travelDistance = nextSpeedMps * movement.stepSec;
+          const headingRad = nextHeadingDeg * (Math.PI / 180);
+          let nextPosition = {
+            x: current.x + (Math.cos(headingRad) * travelDistance),
+            y: current.y + (Math.sin(headingRad) * travelDistance),
+            z: current.z
+          };
           if (remainingDistance > 0.001) {
-            object.runtime.currentHeadingDeg = round(angleDeg(navigationOrigin, movementTarget), 2);
-            syncFpvSensorHeading(object, object.runtime.currentHeadingDeg);
+            const verticalRatio = clamp(travelDistance / Math.max(remainingDistance, 1e-6), 0, 1);
+            nextPosition.z = current.z + ((movementTarget.z - current.z) * verticalRatio);
           }
 
-          let nextPosition = null;
-          if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
+          const distanceAfterStep = distance3D(nextPosition, movementTarget);
+          if (distanceAfterStep <= movement.waypointToleranceM) {
             nextPosition = { x: movementTarget.x, y: movementTarget.y, z: movementTarget.z };
             if (movementReason === "waypoint") {
               mission.currentWaypointIndex += 1;
             }
-          } else {
-            const ratio = stepDistance / remainingDistance;
-            nextPosition = {
-              x: current.x + ((movementTarget.x - navigationOrigin.x) * ratio),
-              y: current.y + ((movementTarget.y - navigationOrigin.y) * ratio),
-              z: current.z + ((movementTarget.z - navigationOrigin.z) * ratio)
-            };
           }
 
+          if (
+            movementReason === "rtb"
+            && distance3D(nextPosition, object.runtime.initialPosition || nextPosition) <= movement.waypointToleranceM
+          ) {
+            object.runtime.position = nextPosition;
+            object.runtime.currentSpeedMps = 0;
+            object.runtime.behaviorState = "Loiter";
+            object.runtime.behaviorTargetId = null;
+            services.logger.record(
+              world,
+              event.time,
+              "movement",
+              object.name + " completed RTB and is holding near launch point",
+              {
+                objectId: object.id,
+                movementReason
+              }
+            );
+            services.captureFrame(world, event.time, "movement");
+            return;
+          }
+
+          object.runtime.currentHeadingDeg = round(nextHeadingDeg, 2);
+          object.runtime.currentSpeedMps = round(nextSpeedMps, 2);
+          syncFpvSensorHeading(object, object.runtime.currentHeadingDeg);
+
           const blockingTerrain = getTerrainIntersection(
-            world,
-            current,
-            nextPosition,
-            Math.max(current.z || 0, nextPosition.z || 0),
-            (terrain) => terrain.interferenceType === "Block"
-          );
+                world,
+                current,
+                nextPosition,
+                (terrain) => terrain.interferenceType === "Block"
+              );
           if (blockingTerrain) {
             world.metrics.terrainCollisions += 1;
             services.logger.record(
@@ -4954,7 +5078,7 @@
                 track.interceptorsInbound = Math.max(0, (track.interceptorsInbound || 1) - 1);
               }
             }
-          } else if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
+          } else if (distanceAfterStep <= movement.waypointToleranceM) {
             const strikeTargetId = object.runtime.behaviorTargetId;
             const strikeTarget = strikeTargetId ? getObject(world, strikeTargetId) : null;
             const impactDamagePoints = Number(object.components.payload?.impactDamagePoints || 0);
@@ -5114,7 +5238,6 @@
                 world,
                 hostPosition,
                 targetPosition,
-                Math.max(hostPosition.z || 0, targetPosition.z || 0),
                 (terrain) => terrain.interferenceType === "Block"
               );
               if (blockingTerrain) {
@@ -5136,13 +5259,13 @@
               let noiseDb = null;
               if (isOpticalSensor(sensor)) {
                 confidence = clamp(1 - Math.pow((rangeM / Math.max(1, sensor.maxRangeM)), 2), 0, 0.99);
-                const visualPenalty = getTerrainNoisePenalty(world, hostPosition, targetPosition, Math.max(hostPosition.z || 0, targetPosition.z || 0)) * 0.01;
+                const visualPenalty = getTerrainNoisePenalty(world, hostPosition, targetPosition) * 0.01;
                 confidence = clamp(confidence - visualPenalty, 0, 0.99);
                 if (confidence <= 0.1) {
                   return;
                 }
               } else {
-                const terrainNoiseDb = getTerrainNoisePenalty(world, hostPosition, targetPosition, Math.max(hostPosition.z || 0, targetPosition.z || 0));
+                const terrainNoiseDb = getTerrainNoisePenalty(world, hostPosition, targetPosition);
                 const networkNoiseDb = isAcousticSensor(sensor) ? 0 : getNetworkState(world, host.side, event.time).noisePenaltyDb;
                 const pathLossDb = 20 * Math.log10(Math.max(1, rangeM));
                 if (isAcousticSensor(sensor)) {
@@ -6182,12 +6305,16 @@
         }
 
         computeNonKineticProbability(world, effector, target, rangeM) {
-          const rangeFactor = effector.maxRangeM > 0
+          const effectMode = this.getEffectMode(effector);
+          const baseRangeFactor = effector.maxRangeM > 0
             ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0, 1)
+            : 0;
+          const rangeFloor = effectMode === "jammer" ? 0.9 : 0.45;
+          const rangeFactor = effector.maxRangeM > 0
+            ? clamp(rangeFloor + ((1 - rangeFloor) * baseRangeFactor), rangeFloor, 1)
             : 0;
           const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
           const vulnerability = target.components.vulnerability || normalizeVulnerability({}, target.components.resistance);
-          const effectMode = this.getEffectMode(effector);
           if (effectMode === "jammer") {
             return clamp(
               (Number(effector.basePe || 0.55) + world.randomization.pkBias)
@@ -6246,7 +6373,9 @@
               movement: {
                 speedMps: Math.max(50, Number(effector.projectileSpeedMps || 250)),
                 stepSec: 0.1,
-                waypointToleranceM: Math.max(1, Number(effector.terminalRadiusM || 12))
+                waypointToleranceM: Math.max(1, Number(effector.terminalRadiusM || 12)),
+                maxAccel: Number(effector.maxAccel ?? effector.maxAccelMps2 ?? 9999),
+                turnRate_dps: Number(effector.turnRate_dps ?? effector.turnRateDps ?? 720)
               },
               sensors: [],
               effectors: [],
@@ -6255,6 +6384,8 @@
             runtime: {
               position: deepClone(shooter.runtime.position),
               initialPosition: deepClone(shooter.runtime.position),
+              currentSpeedMps: 0,
+              currentHeadingDeg: round(angleDeg(shooter.runtime.position, target.runtime.position), 2),
               health: 1,
               operationalStatus: "In Flight",
               destroyed: false,
@@ -6418,8 +6549,16 @@
             });
           } else if (effectMode === "directed-energy") {
             const targetModifier = clamp(1 - Number(target.components.resistance.kineticResistance || 0), 0.2, 1);
+            const targetSpeedMps = Number.isFinite(target.runtime.currentSpeedMps)
+              ? Number(target.runtime.currentSpeedMps)
+              : magnitude3D(getVelocityVector(track, target));
+            const maxTargetSpeedMps = Number(effector.effectorMaxTargetSpeed_mps || effector.effectorMaxTargetSpeedMps || 25);
             const effectivePk = clamp(
-              (Number(effector.basePk || 0.7) + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
+              (Number(effector.basePk || 0.7) + world.randomization.pkBias)
+                * rangeFactor
+                * environmentFactor
+                * targetModifier
+                * (targetSpeedMps > maxTargetSpeedMps ? 0.5 : 1),
               0,
               0.98
             );
@@ -6433,7 +6572,9 @@
                 trackId: track.id,
                 targetId: target.id,
                 effectivePk: round(effectivePk, 2),
-                rangeM: round(rangeM, 2)
+                rangeM: round(rangeM, 2),
+                targetSpeedMps: round(targetSpeedMps, 2),
+                maxTargetSpeedMps
               }
             );
             services.events.schedule({
@@ -6453,15 +6594,34 @@
             });
           } else if (effectMode === "ballistic") {
             const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
+            const projectileSpeedMps = Math.max(1, Number(effector.projectileSpeedMps || 900));
+            const targetSpeedMps = Number.isFinite(target.runtime.currentSpeedMps)
+              ? Number(target.runtime.currentSpeedMps)
+              : magnitude3D(getVelocityVector(track, target));
+            const targetHeadingDeg = Number.isFinite(target.runtime.currentHeadingDeg)
+              ? Number(target.runtime.currentHeadingDeg)
+              : (Number.isFinite(track?.headingDeg) ? Number(track.headingDeg) : angleDeg(shooter.runtime.position, target.runtime.position));
+            const targetHeadingRad = targetHeadingDeg * (Math.PI / 180);
+            let projectedTargetPosition = deepClone(target.runtime.position);
+            let leadRangeM = distance3D(shooter.runtime.position, projectedTargetPosition);
+            let timeToImpactSec = Math.max(0.05, leadRangeM / projectileSpeedMps);
+            for (let iteration = 0; iteration < 2; iteration += 1) {
+              projectedTargetPosition = {
+                x: Number(target.runtime.position.x || 0) + (Math.cos(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
+                y: Number(target.runtime.position.y || 0) + (Math.sin(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
+                z: Number(target.runtime.position.z || 0)
+              };
+              leadRangeM = distance3D(shooter.runtime.position, projectedTargetPosition);
+              timeToImpactSec = Math.max(0.05, leadRangeM / projectileSpeedMps);
+            }
             const ballisticRangeFactor = effector.maxRangeM > 0
-              ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0.15, 1)
+              ? clamp(0.55 + (0.45 * (1 - Math.pow((leadRangeM / effector.maxRangeM), 2))), 0.55, 1)
               : 0;
             const effectivePk = clamp(
               (Number(effector.basePk || 0.7) + world.randomization.pkBias) * ballisticRangeFactor * environmentFactor * targetModifier,
               0,
               0.98
             );
-            const timeToImpactSec = Math.max(0.05, rangeM / Math.max(1, Number(effector.projectileSpeedMps || 900)));
             services.logger.record(
               world,
               event.time,
@@ -6472,7 +6632,7 @@
                 trackId: track.id,
                 targetId: target.id,
                 effectivePk: round(effectivePk, 2),
-                rangeM: round(rangeM, 2),
+                rangeM: round(leadRangeM, 2),
                 flightTimeSec: round(timeToImpactSec, 2)
               }
             );
@@ -6525,7 +6685,9 @@
           const track = getTrack(world, event.payload.trackId);
           const shooter = getObject(world, event.payload.shooterId);
           const effectMode = event.payload.effectMode || "guided-child";
-          if (!target || !track) {
+          const trackId = track ? track.id : event.payload.trackId || null;
+          const isNonKineticEffect = ["jammer", "spoofer", "cyber"].includes(effectMode);
+          if (!target || (!track && !isNonKineticEffect)) {
             if (event.payload.interceptorId) {
               removeRuntimeObject(world, event.payload.interceptorId);
             }
@@ -6551,7 +6713,7 @@
               {
                 shooterId: event.payload.shooterId,
                 targetId: target.id,
-                trackId: track.id,
+                trackId,
                 hit,
                 effectivePe: round(event.payload.effectivePk, 2)
               }
@@ -6573,7 +6735,7 @@
                   {
                     shooterId: event.payload.shooterId,
                     targetId: target.id,
-                    trackId: track.id
+                    trackId
                   }
                 );
                 services.logger.record(
@@ -6584,7 +6746,7 @@
                   {
                     shooterId: event.payload.shooterId,
                     targetId: target.id,
-                    trackId: track.id,
+                    trackId,
                     navResilience: round(target.components.vulnerability.navResilience, 2)
                   }
                 );
@@ -6600,13 +6762,16 @@
                   {
                     shooterId: event.payload.shooterId,
                     targetId: target.id,
-                    trackId: track.id,
+                    trackId,
                     effect: {
                       offset: deepClone(target.runtime.spoofedOffset)
                     }
                   }
                 );
               } else if (effectMode === "cyber") {
+                target.runtime.spoofedOffset = buildRandomOffset(services, 420, true);
+                target.runtime.spoofedUntilSec = Math.max(target.runtime.spoofedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
+                target.runtime.spoofRestored = false;
                 target.runtime.telemetrySpoofed = true;
                 target.runtime.telemetryOffsetXY = buildRandomOffset(services, 650, false);
                 target.runtime.telemetrySpoofedUntilSec = Math.max(target.runtime.telemetrySpoofedUntilSec || 0, event.time + Number(event.payload.effectDurationSec || 6));
@@ -6619,7 +6784,7 @@
                   {
                     shooterId: event.payload.shooterId,
                     targetId: target.id,
-                    trackId: track.id,
+                    trackId,
                     telemetryOffsetXY: deepClone(target.runtime.telemetryOffsetXY)
                   }
                 );
@@ -7023,6 +7188,17 @@
                 telemetrySpoofedUntilSec: 0
               }
             };
+
+            if (object.components.movement) {
+              const firstWaypoint = object.runtime.mission.waypoints[0] || null;
+              object.runtime.currentSpeedMps = 0;
+              object.runtime.currentHeadingDeg = firstWaypoint
+                ? round(angleDeg(object.runtime.position, firstWaypoint), 2)
+                : 0;
+            } else {
+              object.runtime.currentSpeedMps = null;
+              object.runtime.currentHeadingDeg = null;
+            }
 
             (object.components.sensors || []).forEach((sensor) => {
               object.runtime.sensorStates[sensor.id] = {

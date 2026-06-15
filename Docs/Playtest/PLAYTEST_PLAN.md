@@ -23,6 +23,10 @@ Use these files with `Load Scenario JSON`, then run:
 9. `playtest_09_child_interceptor_timeout.json`
 10. `playtest_10_red_fallback_behavior.json`
 11. `playtest_11_owa_terminal_impact.json`
+12. `playtest_12_multispectrum_detection.json`
+13. `playtest_13_jammer_lost_link_rtb.json`
+14. `playtest_14_spoofer_meaconing.json`
+15. `playtest_15_cyber_telemetry_spoof.json`
 
 ## Scenario 1: Baseline Single Kill Chain
 
@@ -170,10 +174,10 @@ File:
 `playtest_07_terrain_noise_penalty.json`
 
 Purpose:
-- Verify a `Noise` terrain polygon can suppress or delay RF detection without blocking geometry outright.
+- Verify a `Noise` terrain polygon can suppress or delay radar detection without blocking geometry outright.
 
 Single-run expectations:
-- The Blue RF site eventually detects the Red UAS.
+- The Blue radar site eventually detects the Red UAS.
 - Detection is materially delayed by the clutter field.
 - Detection log entries show `sensorMode = "em"`.
 - No engagement occurs in this stripped-down sensing scenario.
@@ -277,10 +281,96 @@ Pass criteria:
 - `weightedSurvivalScore` drops below `1`.
 - The event log shows `sourceMode = "owa-impact"` on the Blue asset destruction record.
 
+## Scenario 12: Multispectrum Detection
+
+File:
+`playtest_12_multispectrum_detection.json`
+
+Purpose:
+- Verify radar, acoustic, and passive RF sensors use different detection branches.
+- Verify a radio-emitting Red drone can be seen by passive RF while a radio-silent Red drone is not detected through that branch.
+
+Single-run expectations:
+- The radar site detects both Red drones.
+- The passive RF site only contributes to the emitting Red drone.
+- The acoustic site can contribute to either drone when geometry is favorable.
+- The event log shows detections from more than one sensor family.
+
+Monte Carlo suggestion:
+- Skip Monte Carlo unless you are tuning detection timing across seeds.
+
+Pass criteria:
+- The passive RF sensor never logs a detection against `Red Silent 01`.
+- The event log shows at least one detection from `Blue Acoustic Array` and one from `Blue Passive RF Array`.
+
+## Scenario 13: Jammer Lost-Link RTB
+
+File:
+`playtest_13_jammer_lost_link_rtb.json`
+
+Purpose:
+- Verify a jammer hit forces `Jammed/Severed`, reduces navigation resilience, and drives lost-link RTB behavior.
+
+Single-run expectations:
+- The Blue jammer detects and jams the Red striker.
+- The event log shows `successfully jammed` and `forced ... to downgrade navigation systems`.
+- The Red striker transitions into jammed control state and begins RTB behavior instead of continuing its attack run.
+
+Monte Carlo suggestion:
+- 10 iterations
+
+Pass criteria:
+- `ewEvents` is greater than `0`.
+- The event log contains the lost-link protocol message and a control-state transition driven by jamming.
+- The Blue HQ survives.
+
+## Scenario 14: Spoofer Meaconing
+
+File:
+`playtest_14_spoofer_meaconing.json`
+
+Purpose:
+- Verify a spoofer hit injects a navigation offset and physically pulls the Red striker away from its intended target path.
+
+Single-run expectations:
+- The Blue spoofer detects and identifies the Red striker.
+- The event log shows `successfully meaconed`.
+- The Red striker deviates from the direct route to the Blue HQ while the spoof effect is active.
+
+Monte Carlo suggestion:
+- 10 iterations
+
+Pass criteria:
+- `spoofEvents` is greater than `0`.
+- The event log records a spoofed offset payload.
+- The Blue HQ survives in the baseline single run.
+
+## Scenario 15: Cyber Telemetry Spoof
+
+File:
+`playtest_15_cyber_telemetry_spoof.json`
+
+Purpose:
+- Verify a cyber hit corrupts both Blue track position and Red operator navigation through telemetry injection.
+
+Single-run expectations:
+- The Blue cyber site detects and identifies the Red striker.
+- The event log shows `successfully injected false telemetry`.
+- Follow-on track updates use corrupted geometry while the Red striker also steers using the fake telemetry origin.
+
+Monte Carlo suggestion:
+- 10 iterations
+
+Pass criteria:
+- `cyberEvents` is greater than `0`.
+- The event log contains the telemetry injection message and later telemetry restore message.
+- The scenario completes without kinetic effects being required.
+
 ## Notes For Review
 
 - The TEWA payload estimate remains heuristic. Review it from the event log, not as ground truth.
 - Terrain authoring is still first-pass polygon capture only; there is no rerouting or pathfinding.
-- OWA payloads are currently authored through JSON fields on `components.payload`, not through a dedicated UI form.
+- OWA payloads and EW/cyber vulnerability fields are now available in the Template Wizard common form, but there is still no dedicated doctrine workflow UI.
 - The event log is quieter than raw assessment cadence. Use report JSON `assessmentSnapshots` when you need retained per-cycle refresh/skip detail.
+- The new multispectrum and deception scenarios are intended as focused feature checks; capture actual timing/behavior notes after an interactive browser pass before using them as hard deterministic regressions.
 - If a scenario behaves unexpectedly, export the event log JSON immediately after the run so the exact event ordering is preserved.

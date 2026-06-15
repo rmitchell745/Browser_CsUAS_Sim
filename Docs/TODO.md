@@ -64,6 +64,9 @@ The current working prototype now includes:
 - [ ] Tune the first-pass Blue sensor-cueing loop so ISR tasking closes assessment gaps without repeatedly cueing the same track.
 - [ ] Tune first-pass jammer, spoofer, and cyber strengths / durations so network degradation and deception are visible but not overwhelming in baseline playtests.
 - [ ] Run the focused playtest package `playtest_03`, `05`, `07`, `08`, `10`, `12`, and `14` after the refactor and capture the new expected-result notes.
+- [ ] Reconcile the failing playtests against the current kernel: decide per scenario whether to tune physics/doctrine in `index.html` or update the playtest geometry/expectations in `Docs/Playtest/PLAYTEST_PLAN.md` for `playtest_01`, `05`, `06`, `07`, `08`, `09`, `10`, `12`, `13`, `14`, and `15`.
+- [ ] Keep `playtest_07` on the radar-based noise path, not passive RF, so it stays aligned with the intended terrain-noise regression.
+- [ ] Recheck `playtest_13` lost-link RTB under the current kinematics if it remains slow or non-terminating in the browser pass.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
 ---

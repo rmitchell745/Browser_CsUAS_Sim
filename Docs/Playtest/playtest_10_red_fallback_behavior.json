@@ -24,8 +24,8 @@
         "sensors": [
           {
             "id": "Sensor-Blue-Fallback-RF-1",
-            "name": "Blue Fallback RF Sensor",
-            "type": "RF",
+            "name": "Blue Fallback Passive RF Sensor",
+            "type": "RF_Passive",
             "maxRangeM": 650,
             "horizontalFovDeg": 360,
             "verticalFovDeg": 120,
@@ -43,7 +43,7 @@
           {
             "id": "Effector-Blue-Fallback-EW-1",
             "name": "Fallback Jammer",
-            "type": "EW",
+            "type": "Jammer",
             "maxRangeM": 900,
             "basePe": 1,
             "damagePoints": 0,
@@ -75,13 +75,15 @@
       "defaultRoles": ["Asset", "Sensor", "C2"],
       "components": {
         "health": { "maxHealth": 110, "assetValuePts": 40, "isHQ": false },
-        "resistance": { "kineticResistance": 0.12, "networkResistance": 0 },
-        "signature": { "radarSignatureDb": -3 },
+        "resistance": { "kineticResistance": 0.12 },
+        "signature": { "radarSignatureDb": -3, "acousticSignatureDb": 52, "rfEmissionDb": 24 },
+        "vulnerability": { "commsResilience": 0.2, "navResilience": 0.5, "cyberResilience": 0.6 },
+        "capability": { "usesRF": true, "usesNetwork": true, "requiresPower": true, "requiresC2": false, "canOperateAutonomously": true, "lostLinkBehavior": "ContinueDeadReckoning" },
         "sensors": [
           {
             "id": "Sensor-Red-Fallback-RF-1",
-            "name": "Red Fallback RF Sensor",
-            "type": "RF",
+            "name": "Red Fallback Passive RF Sensor",
+            "type": "RF_Passive",
             "maxRangeM": 800,
             "horizontalFovDeg": 360,
             "verticalFovDeg": 120,
@@ -108,13 +110,16 @@
       },
       "components": {
         "health": { "maxHealth": 100, "assetValuePts": 9, "isHQ": false },
-        "resistance": { "kineticResistance": 0.15, "networkResistance": 0 },
-        "signature": { "radarSignatureDb": -10 },
+        "resistance": { "kineticResistance": 0.15 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 57, "rfEmissionDb": 24 },
+        "vulnerability": { "commsResilience": 0.15, "navResilience": 0.55, "cyberResilience": 0.5 },
         "capability": {
           "usesNetwork": true,
+          "usesRF": true,
           "requiresPower": true,
           "requiresC2": true,
-          "canOperateAutonomously": true
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "RTB"
         },
         "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
       }
@@ -129,13 +134,16 @@
       },
       "components": {
         "health": { "maxHealth": 100, "assetValuePts": 9, "isHQ": false },
-        "resistance": { "kineticResistance": 0.15, "networkResistance": 0 },
-        "signature": { "radarSignatureDb": -11 },
+        "resistance": { "kineticResistance": 0.15 },
+        "signature": { "radarSignatureDb": -11, "acousticSignatureDb": 56, "rfEmissionDb": 22 },
+        "vulnerability": { "commsResilience": 0.15, "navResilience": 0.55, "cyberResilience": 0.5 },
         "capability": {
           "usesNetwork": true,
+          "usesRF": true,
           "requiresPower": true,
           "requiresC2": true,
-          "canOperateAutonomously": false
+          "canOperateAutonomously": false,
+          "lostLinkBehavior": "Hover/Loiter"
         },
         "movement": { "speedMps": 24, "stepSec": 1, "waypointToleranceM": 10 }
       }

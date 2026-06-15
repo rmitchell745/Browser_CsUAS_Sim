@@ -1,0 +1,132 @@
+{
+  "metadata": {
+    "name": "Playtest 14 - Spoofer Meaconing",
+    "description": "A Blue spoofer injects a false navigation offset and pulls a Red striker away from its intended attack path."
+  },
+  "config": {
+    "maxTimeSec": 26,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 220,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.2
+  },
+  "templates": [
+    {
+      "id": "Template-Blue-Spoofer-Site",
+      "name": "Blue Spoofer Site",
+      "defaultRoles": ["Asset", "Sensor", "Effector", "C2"],
+      "components": {
+        "health": { "maxHealth": 100, "assetValuePts": 60, "isHQ": false },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -2 },
+        "sensors": [
+          {
+            "id": "Sensor-Blue-Spoofer-1",
+            "name": "Blue Passive RF Spoofer Sensor",
+            "type": "RF_Passive",
+            "maxRangeM": 900,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 0,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 0.8,
+            "detectionThresholdDb": 9,
+            "scanIntervalSec": 1,
+            "classification": { "canClassify": true, "latencySec": 0.25, "accuracyBase": 0.88 },
+            "identification": { "canIdentify": true, "latencySec": 0.35, "accuracyBase": 0.82 }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Spoofer-1",
+            "name": "Blue Navigation Spoofer",
+            "type": "Spoofer",
+            "maxRangeM": 650,
+            "basePe": 0.95,
+            "damagePoints": 0,
+            "ammoCapacity": 2,
+            "slewRateSec": 0.1,
+            "cooldownSec": 5,
+            "projectileSpeedMps": 0,
+            "effectDurationSec": 10,
+            "jamStrengthDb": 0,
+            "affectedDomains": ["Navigation"]
+          }
+        ],
+        "c2": { "trackCapacity": 8, "processingLatencySec": 0.2 }
+      }
+    },
+    {
+      "id": "Template-Blue-Spoofer-HQ",
+      "name": "Blue Spoofer HQ",
+      "defaultRoles": ["Asset"],
+      "components": {
+        "health": { "maxHealth": 140, "assetValuePts": 120, "isHQ": true },
+        "resistance": { "kineticResistance": 0.2 },
+        "signature": { "radarSignatureDb": -1 }
+      }
+    },
+    {
+      "id": "Template-Red-Spoofed-Striker",
+      "name": "Red Spoofed Striker",
+      "defaultRoles": ["UAS"],
+      "missionProfile": {
+        "type": "SpecificAsset",
+        "targetTemplateId": "Template-Blue-Spoofer-HQ"
+      },
+      "components": {
+        "health": { "maxHealth": 90, "assetValuePts": 9, "isHQ": false },
+        "resistance": { "kineticResistance": 0.12 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 57, "rfEmissionDb": 28 },
+        "vulnerability": { "commsResilience": 0.35, "navResilience": 0.1, "cyberResilience": 0.5 },
+        "capability": {
+          "usesRF": true,
+          "usesNetwork": true,
+          "requiresPower": true,
+          "requiresC2": true,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "movement": { "speedMps": 23, "stepSec": 1, "waypointToleranceM": 10 }
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Spoofer-Site-01",
+      "templateId": "Template-Blue-Spoofer-Site",
+      "name": "Blue Spoofer Site 01",
+      "side": "Blue",
+      "roles": ["Asset", "Sensor", "Effector", "C2"],
+      "posX": 640,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Spoofer-HQ-01",
+      "templateId": "Template-Blue-Spoofer-HQ",
+      "name": "Blue Spoofer HQ 01",
+      "side": "Blue",
+      "roles": ["Asset"],
+      "posX": 840,
+      "posY": 300,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Spoofed-Striker-01",
+      "templateId": "Template-Red-Spoofed-Striker",
+      "name": "Red Spoofed Striker 01",
+      "side": "Red",
+      "roles": ["UAS"],
+      "posX": 250,
+      "posY": 300,
+      "posZ": 120,
+      "missionWaypoints": []
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "name": "Playtest 08 - EW Network Degradation",
-    "description": "A Blue EW site repeatedly jams a Red node and drives visible hidden-network jam and restore events."
+    "description": "A Blue jammer site repeatedly jams a Red node and drives visible hidden-network jam and restore events."
   },
   "config": {
     "maxTimeSec": 24,
@@ -24,8 +24,8 @@
         "sensors": [
           {
             "id": "Sensor-Blue-EW-RF-1",
-            "name": "Blue EW RF Sensor",
-            "type": "RF",
+            "name": "Blue EW Passive RF Sensor",
+            "type": "RF_Passive",
             "maxRangeM": 650,
             "horizontalFovDeg": 360,
             "verticalFovDeg": 120,
@@ -43,7 +43,7 @@
           {
             "id": "Effector-Blue-EW-1",
             "name": "Blue Stand-In Jammer",
-            "type": "EW",
+            "type": "Jammer",
             "maxRangeM": 520,
             "basePe": 0.92,
             "damagePoints": 0,
@@ -65,8 +65,10 @@
       "defaultRoles": ["UAS"],
       "components": {
         "health": { "maxHealth": 90, "assetValuePts": 8, "isHQ": false },
-        "resistance": { "kineticResistance": 0.1, "networkResistance": 0 },
-        "signature": { "radarSignatureDb": -10 },
+        "resistance": { "kineticResistance": 0.1 },
+        "signature": { "radarSignatureDb": -10, "acousticSignatureDb": 58, "rfEmissionDb": 26 },
+        "vulnerability": { "commsResilience": 0.15, "navResilience": 0.5, "cyberResilience": 0.6 },
+        "capability": { "usesRF": true, "usesNetwork": true, "requiresC2": true, "canOperateAutonomously": false, "lostLinkBehavior": "Hover/Loiter" },
         "movement": { "speedMps": 16, "stepSec": 1, "waypointToleranceM": 10 }
       }
     }
