@@ -53,6 +53,7 @@ The current working prototype now includes:
 
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
 - [ ] Finish the sided-track / Red telemetry refactor and confirm Blue systems only read `blueTracks` while Red telemetry populates `redTracks`.
+- [ ] Review the extracted `src/` tree and wire module imports only after the split is approved; keep `index.html` as the runnable shell for now.
 - [ ] Verify Red fallback hierarchy in-browser so `Networked` stays primary, `Loiter` is allowed when untasked, and fallback only appears after jam or C2 destruction.
 - [ ] Verify interceptor guidance split in-browser so command-guided launchers stay locked and autonomous launchers release cleanly.
 - [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range.

@@ -1,0 +1,6 @@
+{
+  "name": "Blank Scratch Scenario",
+  "description": "Built-in scratch scenario source reference extracted from buildScratchScenario.",
+  "source": "buildScratchScenario",
+  "status": "placeholder"
+}
