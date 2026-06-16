@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// v2.4 threat ranking is track-centric: TEWA uses track geometry and kinematic
+// estimates rather than reading target truth positions where avoidable.
       class C2System {
         needsSensorCue(track) {
           return track
@@ -109,7 +111,7 @@
                 ? Number(projectedAsset.components.health.assetValuePts || 1)
                 : 1;
               const currentThreatDistanceXYM = projectedAsset
-                ? distance2D(track.position || target.runtime.position, projectedAsset.runtime.position)
+                ? (track.position ? distance2D(track.position, projectedAsset.runtime.position) : (track.effectiveThreatDistanceXYM ?? Infinity))
                 : (track.effectiveThreatDistanceXYM ?? Infinity);
               const ttiSec = speedMps > 0
                 ? Math.max(0.1, currentThreatDistanceXYM / speedMps)

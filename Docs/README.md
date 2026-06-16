@@ -1,27 +1,34 @@
-# Browser CsUAS Sim v2.00
+# C-sUAS Tactical Simulator
 
-This repository currently contains a browser-only component-system Counter-small UAS discrete event simulation prototype with a three-tier authoring workflow and tactical workstation UI.
+This repository currently contains a browser-only component-system Counter-small UAS discrete event simulation prototype with a three-tier authoring workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
+
+Current review version: `v2.4`
 
 ## Current prototype
 
 - Single-file `index.html`
 - Tactical workstation shell centered on the live map
 - Local scenario JSON import/export for the current template + instance format
-- `Scenario Editor` drawer for terrain/environment, Blue placement, Red threat layout, and spatial assignment
-- `Template Wizard` drawer with helper placeholders plus detailed scenario-local template editing and selected-template JSON editing
-- `Rosters / Infrastructure` drawer for Tier 2 force-package summary plus read-only hidden per-side network / power status
+- `Scenario Wizard` drawer for terrain/environment, Blue placement, Red threat layout, and spatial assignment
+- `Template Editor` drawer with helper placeholders plus detailed scenario-local template editing and selected-template JSON editing
+- `Instance Manager` drawer content inside the Scenario Wizard for per-instance control plus read-only hidden per-side network / power status
 - `Debrief` drawer with event timeline and top failure-driver surfaces
 - `Export` drawer with scenario/report/log/Monte Carlo export previews
-- Sample baseline scenario with one Blue site and one Red UAS
+- Sample baseline scenario with a Blue FOB defense package versus a Red swarm attack
 - Discrete event queue with movement, sensing, tracking, classification, identification, intent, C2, firing, effect, and damage resolution
 - Spawned child interceptor runtime objects for launcher effects
 - First-pass terrain polygons with LOS blocking, RF/noise penalties, and collision checks
 - Hidden single network and single power grid per side, with Red C2-directed behavior plus autonomous / heuristic fallback
-- First-pass EW jamming that degrades RF sensing and hidden network state
+- Multispectrum signatures for radar, acoustic, and passive RF sensing
+- First-pass jammer, navigation spoofer, and telemetry-cyber effect resolution with hidden network degradation
+- Dynamic environment anomaly/clutter scheduling in the runnable kernel
+- Same-side-only telemetry spoof impact on track observation, ballistic lead, and C2/effectors
+- Endurance depletion and crash behavior for movers with finite `maxEnduranceSec`
+- Template common-form editing for vulnerability, payload, and lost-link behavior fields
 - Terminal one-way attack drone impact resolution through `components.payload.impactDamagePoints`
 - XY-only TEWA projected-target association with hysteresis-based threat drop
 - Stateful classification, identification, and intent refresh with retained assessment snapshots in single-run report JSON
-- Ghost-track placeholder spawning and clutter-field placeholder overlays
+- Transitioning environment model: the runnable kernel now uses dynamic anomalies/clutter, while some UI/debug surfaces still preserve placeholder-era labels for compatibility
 - Scenario validation grouped into blockers, warnings, and scenario-quality notes with editor jump-links
 - Track aging and stale track drop behavior
 - Event log, single-run report, worker-backed Monte Carlo aggregation, and flat CSV export with dynamic ammo columns and weighted survival metrics
@@ -32,12 +39,12 @@ This repository currently contains a browser-only component-system Counter-small
 
 1. Open `index.html` directly in a browser.
 2. Use `Load Scenario JSON` to import a local scenario file, or keep the built-in baseline scenario.
-3. Use `Scenario Editor` when you want to create or adjust a runnable scenario without hand-editing JSON.
-4. Use `Build Scenario From Editor` before running if the current editor draft differs from the active scenario.
-5. Use `Template Wizard` for major capability edits, helper-oriented template work, and selected-template JSON edits.
-6. Use `Rosters / Infrastructure` for Tier 2 force-package review plus hidden per-side infrastructure status.
+3. Use `Scenario Wizard` when you want to create or adjust a runnable scenario without hand-editing JSON.
+4. Use `Build Scenario From Wizard` before running if the current wizard draft differs from the active scenario.
+5. Use `Template Editor` for major capability edits, helper-oriented template work, and selected-template JSON edits.
+6. Use the `Instance Manager` inside the Scenario Wizard for per-instance placement and review plus hidden per-side infrastructure status.
 7. Review the validation panel before running to catch blockers, warnings, and quality notes.
-8. Use `Run Single Scenario` to execute the detailed vertical slice and animate the resulting frames on the canvas.
+8. Use `Run Single Scenario` to execute the current scenario and animate the resulting frames on the canvas.
 9. Use `Run Monte Carlo` to execute repeated seeded runs in an inline Web Worker and populate the aggregate report table.
 10. Use `Debrief` to inspect event sequencing, Blue/Red feeds, and failure-driver summaries.
 11. Use `Export` to download the current scenario JSON, single-run outputs, Monte Carlo CSV, or event log JSON.
@@ -60,17 +67,21 @@ Start with:
 - `playtest_09_child_interceptor_timeout.json`
 - `playtest_10_red_fallback_behavior.json`
 - `playtest_11_owa_terminal_impact.json`
+- `playtest_12_multispectrum_detection.json`
+- `playtest_13_jammer_lost_link_rtb.json`
+- `playtest_14_spoofer_meaconing.json`
+- `playtest_15_cyber_telemetry_spoof.json`
 
 Use `Docs/Playtest/PLAYTEST_PLAN.md` as the execution checklist.
 
 ## Scope limits
 
-- No reusable template library yet beyond the scenario-local Template Wizard / detailed editor
+- No reusable template library yet beyond the scenario-local Template Editor / detailed editor
 - Terrain editing is first-pass polygon capture only; there is no rerouting or pathfinding yet
 - Network and power are modeled as hidden single infrastructure objects per side, not user-editable topology yet
-- OWA payloads are currently authored through scenario/template JSON fields, not through a dedicated common-form payload editor yet
-- Template Wizard helper sections are placeholders, not full derived-field calculators yet
+- There is still no dedicated doctrine or spectrum workflow UI beyond the expanded Template Editor common form and raw JSON editor
+- Template Editor helper sections are placeholders, not full derived-field calculators yet
 - No external libraries, backend, build step, or network calls
 - Scenario validation is still lightweight and assumes the current template + instance schema
-- Ghost and clutter handling are still placeholders, not full environment modeling
-- EW currently covers jamming / network degradation only; spoofing and cyber remain deferred
+- The dynamic environment model is first-pass only; richer doctrine-aware weather, clutter classes, and persistent anomaly workflows remain deferred
+- EW/cyber is still first-pass: jamming, meaconing, and telemetry injection are modeled, but richer band logic, operator workflows, and full cyber doctrine remain deferred

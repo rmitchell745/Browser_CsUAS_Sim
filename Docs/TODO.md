@@ -10,15 +10,12 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Implement the V2.2 refactor request set with the lowest-risk order: tracker updates first, then kernel sided-track / fallback / logging fixes, then UI terminology cleanup, roster instance control, and the new FOB swarm baseline.
+Stabilize and document the v2.4 refactor state: keep `index.html` as the ready-to-test build, keep `src/` aligned enough for modular review/Vite cutover, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
 
-- update the work tracker before and after each refactor tranche so the next pass stays decision-complete
-- split Red/Blue cognitive tracks and fix Red fallback hierarchy so Red only falls back when control is actually lost
-- improve log observability for TEWA, detection, and spoofer runs so playtests 03 / 12 / 14 stop depending on payload internals
-- add interceptor guidance typing and retasking so command-guided launchers stay locked while autonomous missiles can release immediately
-- rename the UI terminology to `C-sUAS Tactical Simulator`, `Scenario Wizard`, `Template Editor`, `Report Viewer`, and `Raw Data / Export`
-- consolidate roster editing into instance-level control inside the Scenario Wizard
-- replace the baseline scenario with the FOB defense swarm-attack layout requested in `Docs/ReFactorReq/260611.md`
+- keep the extracted `src/` review tree synchronized with the June 15 physics/cognitive/environment changes
+- preserve the Vite bridge path while avoiding divergence between `src/` review slices and the runnable monolith
+- close remaining behavior gaps in playtests under the new ballistic / spoof / endurance / environment rules
+- keep documentation explicit about what is authoritative in `index.html` versus what is transitional in `src/`
 
 ---
 
@@ -52,10 +49,13 @@ The current working prototype now includes:
 # Open Tasks
 
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
-- [ ] Finish the sided-track / Red telemetry refactor and confirm Blue systems only read `blueTracks` while Red telemetry populates `redTracks`.
-- [ ] Review the extracted `src/` tree and wire module imports only after the split is approved; keep `index.html` as the runnable shell for now.
+- [ ] Finish the v2.4 extracted-tree sync so `src/` mirrors the June 15 kernel behavior closely enough for modular review.
+- [ ] Wire module imports only after the split is approved; keep `index.html` as the runnable shell until the module build passes full playtest review.
 - [ ] Verify Red fallback hierarchy in-browser so `Networked` stays primary, `Loiter` is allowed when untasked, and fallback only appears after jam or C2 destruction.
 - [ ] Verify interceptor guidance split in-browser so command-guided launchers stay locked and autonomous launchers release cleanly.
+- [ ] Verify dynamic environment behavior in-browser so temporary anomalies/clutter create explainable false detections and noise penalties without overwhelming baseline runs.
+- [ ] Verify same-side-only telemetry spoof effects in-browser so enemy sensors still see physical truth while same-side C2/ballistic fire can be misled.
+- [ ] Tune endurance limits in authored scenarios once more movers start using finite `maxEnduranceSec`.
 - [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range.
 - [ ] Finish the UI terminology cleanup across the shell, drawers, hero copy, and scenario naming.
 - [ ] Convert the roster screen into an instance manager in the Scenario Wizard and verify single-instance map placement.
@@ -158,6 +158,7 @@ The current working prototype now includes:
 - [x] Expanded template normalization and common-form editing for acoustic / passive RF signatures, distinct EW-cyber vulnerabilities, payload impact, and lost-link behavior.
 - [x] Implemented multispectrum sensing plus first-pass jammer, meaconing, and telemetry-cyber runtime effects.
 - [x] Added focused playtests for multispectrum detection, jammer-driven RTB fallback, navigation spoofing, and telemetry injection.
+- [x] Implemented the June 15 v2.4 physics/cognitive/environment pass in the runnable kernel: dynamic anomalies/clutter, same-side telemetry spoofing, endurance depletion, ballistic spoof penalties, and command-guided interceptor cleanup.
 
 ---
 

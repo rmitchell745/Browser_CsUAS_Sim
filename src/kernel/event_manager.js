@@ -1,4 +1,7 @@
-// Extracted from index.html
+// Extracted from index.html.
+// This file remains a review-oriented kernel snapshot while `index.html` is
+// still the authoritative runnable build. Keep behavioral notes here aligned
+// with the live shell so later modular wiring does not reintroduce stale logic.
       const EVENT_PRIORITIES = {
         state: 1,
         sensor: 2,
@@ -368,6 +371,10 @@
         scenario.environment.baseNoiseDb = Number(scenario.environment.baseNoiseDb ?? 1.8);
         scenario.environment.backgroundImageBase64 = scenario.environment.backgroundImageBase64 || "";
         scenario.environment.mapWidthMeters = Number(scenario.environment.mapWidthMeters ?? 1080);
+        // Dynamic environment defaults stay explicit even while the UI still
+        // exposes the older placeholder toggles for debugging.
+        scenario.environment.anomalySpawnChance = Number(scenario.environment.anomalySpawnChance ?? 0.35);
+        scenario.environment.clutterSpawnChance = Number(scenario.environment.clutterSpawnChance ?? 0.28);
         scenario.environment.placeholderGhostTrack = scenario.environment.placeholderGhostTrack || {
           enabled: false,
           spawnTimeSec: 7,
@@ -441,7 +448,12 @@
                 stepSec: Number(components.movement.stepSec ?? 1),
                 waypointToleranceM: Number(components.movement.waypointToleranceM ?? 10),
                 maxAccel: Number(components.movement.maxAccel ?? components.movement.maxAccel_mps2 ?? 9999),
-                turnRate_dps: Number(components.movement.turnRate_dps ?? components.movement.turnRateDps ?? 360)
+                turnRate_dps: Number(components.movement.turnRate_dps ?? components.movement.turnRateDps ?? 360),
+                maxEnduranceSec: Number(
+                  components.movement.maxEnduranceSec
+                  ?? components.movement.maxEndurance_sec
+                  ?? Number.POSITIVE_INFINITY
+                )
               } : null,
               sensors: ensureArray(components.sensors).map(normalizeSensor),
               effectors: ensureArray(components.effectors).map(normalizeEffector),
@@ -733,19 +745,6 @@
             }
           });
         });
-        if (scenario.environment.placeholderGhostTrack.enabled) {
-          addIssue("note", "Ghost track placeholder is enabled; it is a track-only environment stub.", "Use this for workflow testing, not as a physical object model.", {
-            targetScreen: "wizard",
-            targetLabel: "Open wizard"
-          });
-        }
-        if (scenario.environment.placeholderClutterField.enabled) {
-          addIssue("note", "Clutter placeholder is enabled; it is a visual/logging stub only.", "Keep it on for UI review, but do not treat it as full clutter physics.", {
-            targetScreen: "wizard",
-            targetLabel: "Open wizard"
-          });
-        }
-
         scenario.instances
           .filter((instance) => instance.side === "Red")
           .forEach((instance) => {
@@ -1380,7 +1379,7 @@
 
       function getTrackObservedPosition(world, observerSide, target) {
         if (
-          observerSide === "Blue"
+          observerSide === target?.side
           && target?.runtime?.telemetrySpoofed
           && target.runtime.telemetryOffsetXY
         ) {
@@ -2262,12 +2261,14 @@
             intent: track.intentStatus,
             status: track.status
           })),
-          clutterPlaceholders: world.environment.placeholderClutterField?.enabled ? [{
-            centerX: world.environment.placeholderClutterField.centerX,
-            centerY: world.environment.placeholderClutterField.centerY,
-            radiusM: world.environment.placeholderClutterField.radiusM,
-            label: world.environment.placeholderClutterField.label
-          }] : []
+          // Preserve the older frame property name for renderer compatibility
+          // while sourcing the data from live clutter objects in v2.4.
+          clutterPlaceholders: ensureArray(world.environment?.activeClutter).map((clutter) => ({
+            centerX: clutter.centerX,
+            centerY: clutter.centerY,
+            radiusM: clutter.radiusM,
+            label: clutter.label
+          }))
         };
       }
 

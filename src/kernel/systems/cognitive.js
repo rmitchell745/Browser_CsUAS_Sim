@@ -1,9 +1,10 @@
-// Extracted from index.html
+// Extracted from index.html.
+// v2.4 moves classification closer to track evidence instead of direct target
+// role peeking so anomaly/telemetry paths stay decoupled from object truth.
       class ClassificationSystem {
         process(event, world, services) {
           const track = getTrack(world, event.payload.trackId);
           const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
-          const target = track ? getObject(world, track.realObjectId) : null;
           const assessmentState = track ? getTrackAssessmentState(track) : null;
           if (!track || track.status !== "Active" || !sensor || !assessmentState) {
             return;
@@ -80,10 +81,6 @@
             return;
           }
 
-          if (!target || target.runtime.destroyed) {
-            return;
-          }
-
           const confidence = clamp(
             (event.payload.baseConfidence * sensor.classification.accuracyBase)
               + 0.14
@@ -93,9 +90,9 @@
             0.99
           );
 
-          if (target.roles.includes("UAS") && confidence >= 0.52) {
+          if (Number(track.position?.z || 0) > 5 && confidence >= 0.52) {
             track.classificationStatus = "UAS";
-          } else if (target.roles.includes("Asset") && confidence >= 0.48) {
+          } else if (confidence >= 0.52) {
             track.classificationStatus = "Ground Asset";
           } else {
             track.classificationStatus = "Unknown Object";

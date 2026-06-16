@@ -1,4 +1,7 @@
 ﻿// Extracted from index.html
+      // Extracted from index.html.
+      // This slice mirrors the live scenario/bootstrap setup for review purposes
+      // while `index.html` remains the authoritative runnable build.
       function buildBaselineScenario() {
         return normalizeScenario({
           metadata: {
@@ -15,6 +18,8 @@
             baseNoiseDb: 1.8,
             mapWidthMeters: 1080,
             backgroundImageBase64: "",
+            anomalySpawnChance: 0.35,
+            clutterSpawnChance: 0.28,
             placeholderGhostTrack: {
               enabled: false,
               spawnTimeSec: 7,
@@ -392,6 +397,8 @@
             baseNoiseDb: 1.8,
             mapWidthMeters: 1080,
             backgroundImageBase64: "",
+            anomalySpawnChance: 0.35,
+            clutterSpawnChance: 0.28,
             placeholderGhostTrack: {
               enabled: false,
               spawnTimeSec: 7,
@@ -494,8 +501,8 @@
               case "sensor.releaseCue":
                 this.sensorSystem.releaseCue(event, runtime, services);
                 break;
-              case "environment.spawnGhostTrack":
-                this.environmentSystem.spawnGhostTrack(event, runtime, services);
+              case "environment.process":
+                this.environmentSystem.process(event, runtime, services);
                 break;
               case "track.process":
                 this.trackSystem.process(event, runtime, services);
@@ -576,6 +583,7 @@
               runtime: {
                 position: { x: instance.posX, y: instance.posY, z: instance.posZ },
                 initialPosition: { x: instance.posX, y: instance.posY, z: instance.posZ },
+                spawnTimeSec: 0,
                 health: template.components.health.maxHealth,
                 operationalStatus: "Active",
                 destroyed: false,
@@ -717,7 +725,13 @@
             assessmentSnapshots: [],
             frames: [],
             config: deepClone(scenario.config),
-            environment: deepClone(scenario.environment),
+            environment: {
+              ...deepClone(scenario.environment),
+              activeAnomalies: [],
+              activeClutter: [],
+              nextAnomalyIndex: 0,
+              nextClutterIndex: 0
+            },
             eventManager,
             captureFrames,
             currentTimeSec: 0,

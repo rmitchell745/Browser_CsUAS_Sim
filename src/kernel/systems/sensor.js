@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// The v2.4 sensor slice now covers real targets plus dynamic environment
+// anomalies so reviewers can follow how false detections enter the track chain.
       class SensorSystem {
         process(event, world, services) {
           const host = getObject(world, event.payload.objectId);
@@ -129,6 +131,93 @@
                 }
               });
             });
+
+            ensureArray(world.environment?.activeAnomalies)
+              .filter((anomaly) => Number(anomaly.expiresAtSec || 0) > event.time)
+              .forEach((anomaly) => {
+                if (isOpticalSensor(sensor) || isAcousticSensor(sensor)) {
+                  return;
+                }
+                const hostPosition = host.runtime.position;
+                const anomalyPosition = deepClone(anomaly.position || { x: 0, y: 0, z: 0 });
+                const rangeM = distance3D(hostPosition, anomalyPosition);
+                const horizontalRangeM = distance2D(hostPosition, anomalyPosition);
+                if (rangeM > sensor.maxRangeM) {
+                  return;
+                }
+
+                const blockingTerrain = getTerrainIntersection(
+                  world,
+                  hostPosition,
+                  anomalyPosition,
+                  (terrain) => terrain.interferenceType === "Block"
+                );
+                if (blockingTerrain) {
+                  return;
+                }
+
+                const bearingDeg = angleDeg(hostPosition, anomalyPosition);
+                const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
+                const elevationDeg = Math.abs(
+                  Math.atan2(anomalyPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI)
+                );
+                if (relativeBearingDeg > sensor.horizontalFovDeg / 2 || elevationDeg > sensor.verticalFovDeg / 2) {
+                  return;
+                }
+
+                const terrainNoiseDb = getTerrainNoisePenalty(world, hostPosition, anomalyPosition);
+                const networkNoiseDb = getNetworkState(world, host.side, event.time).noisePenaltyDb;
+                const pathLossDb = 20 * Math.log10(Math.max(1, rangeM));
+                const signalStrengthDb = isRfPassiveSensor(sensor)
+                  ? Number(anomaly.signatureDb || 0) - pathLossDb
+                  : sensor.transmitPowerDb + Number(anomaly.signatureDb || 0) - pathLossDb;
+                const noiseDb = sensor.noiseFloorDb
+                  + world.environment.baseNoiseDb
+                  + terrainNoiseDb
+                  + networkNoiseDb
+                  + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
+                if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
+                  return;
+                }
+
+                const confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
+                world.metrics.detectionCandidates += 1;
+                services.logger.record(
+                  world,
+                  event.time,
+                  "detection",
+                  host.name + " (" + sensor.name + ") generated a detection candidate on " + anomaly.label,
+                  {
+                    observerId: host.id,
+                    sensorId: sensor.id,
+                    sensorName: sensor.name,
+                    sensorType: sensor.type,
+                    anomalyId: anomaly.id,
+                    rangeM: round(rangeM, 2),
+                    confidence: round(confidence, 2),
+                    sensorMode: "em",
+                    isAnomaly: true
+                  }
+                );
+
+                services.events.schedule({
+                  time: event.time,
+                  type: "track.process",
+                  priority: EVENT_PRIORITIES.track,
+                  payload: {
+                    observerId: host.id,
+                    sensorId: sensor.id,
+                    targetId: null,
+                    observedPosition: deepClone(anomalyPosition),
+                    confidence,
+                    rangeM,
+                    bearingDeg,
+                    isAnomaly: true,
+                    anomalyId: anomaly.id,
+                    anomalyLabel: anomaly.label
+                  }
+                });
+              });
 
             if (event.time + sensor.scanIntervalSec <= world.config.maxTimeSec) {
               services.events.scheduleDelay(event.time, sensor.scanIntervalSec, {

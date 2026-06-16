@@ -2322,6 +2322,8 @@
         scenario.environment.baseNoiseDb = Number(scenario.environment.baseNoiseDb ?? 1.8);
         scenario.environment.backgroundImageBase64 = scenario.environment.backgroundImageBase64 || "";
         scenario.environment.mapWidthMeters = Number(scenario.environment.mapWidthMeters ?? 1080);
+        scenario.environment.anomalySpawnChance = Number(scenario.environment.anomalySpawnChance ?? 0.35);
+        scenario.environment.clutterSpawnChance = Number(scenario.environment.clutterSpawnChance ?? 0.28);
         scenario.environment.placeholderGhostTrack = scenario.environment.placeholderGhostTrack || {
           enabled: false,
           spawnTimeSec: 7,
@@ -2395,7 +2397,8 @@
                 stepSec: Number(components.movement.stepSec ?? 1),
                 waypointToleranceM: Number(components.movement.waypointToleranceM ?? 10),
                 maxAccel: Number(components.movement.maxAccel ?? components.movement.maxAccel_mps2 ?? 9999),
-                turnRate_dps: Number(components.movement.turnRate_dps ?? components.movement.turnRateDps ?? 360)
+                turnRate_dps: Number(components.movement.turnRate_dps ?? components.movement.turnRateDps ?? 360),
+                maxEnduranceSec: Number(components.movement.maxEnduranceSec ?? components.movement.maxEndurance_sec ?? Number.POSITIVE_INFINITY)
               } : null,
               sensors: ensureArray(components.sensors).map(normalizeSensor),
               effectors: ensureArray(components.effectors).map(normalizeEffector),
@@ -2687,19 +2690,6 @@
             }
           });
         });
-        if (scenario.environment.placeholderGhostTrack.enabled) {
-          addIssue("note", "Ghost track placeholder is enabled; it is a track-only environment stub.", "Use this for workflow testing, not as a physical object model.", {
-            targetScreen: "wizard",
-            targetLabel: "Open wizard"
-          });
-        }
-        if (scenario.environment.placeholderClutterField.enabled) {
-          addIssue("note", "Clutter placeholder is enabled; it is a visual/logging stub only.", "Keep it on for UI review, but do not treat it as full clutter physics.", {
-            targetScreen: "wizard",
-            targetLabel: "Open wizard"
-          });
-        }
-
         scenario.instances
           .filter((instance) => instance.side === "Red")
           .forEach((instance) => {
@@ -3334,7 +3324,7 @@
 
       function getTrackObservedPosition(world, observerSide, target) {
         if (
-          observerSide === "Blue"
+          observerSide === target?.side
           && target?.runtime?.telemetrySpoofed
           && target.runtime.telemetryOffsetXY
         ) {
@@ -3725,7 +3715,7 @@
       }
 
       function getTerrainNoisePenalty(world, start, end) {
-        return getActiveTerrainObjects(world)
+        const terrainPenalty = getActiveTerrainObjects(world)
           .filter((terrain) => terrain.interferenceType === "Noise")
           .filter((terrain) => {
             const terrainCenter = getTerrainCentroid(terrain);
@@ -3739,6 +3729,20 @@
             return losZAtObstacle < Number(terrain.heightZ || 0) && segmentIntersectsPolygon2D(start, end, terrain.areaPolygon);
           })
           .reduce((sum, terrain) => sum + (Number(terrain.clutterPenaltyDb || 0) * 0.55), 0);
+        const clutterPenalty = ensureArray(world.environment?.activeClutter)
+          .filter((clutter) => Number(clutter.expiresAtSec || 0) > Number(world.currentTimeSec || 0))
+          .filter((clutter) => {
+            const center = { x: Number(clutter.centerX || 0), y: Number(clutter.centerY || 0) };
+            const total2DDistance = Math.max(distance2D(start, end), 1e-6);
+            const distanceToObstacle = distance2D(start, center);
+            const losZAtObstacle = Number(start.z || 0)
+              + ((Number(end.z || 0) - Number(start.z || 0)) * (distanceToObstacle / total2DDistance));
+            const heightZ = Number(clutter.heightZ ?? clutter.centerZ ?? Number.MAX_SAFE_INTEGER);
+            return losZAtObstacle < heightZ
+              && pointToSegmentDistance2D(center, start, end) <= Number(clutter.radiusM || 0);
+          })
+          .reduce((sum, clutter) => sum + Number(clutter.clutterPenaltyDb || 0), 0);
+        return terrainPenalty + clutterPenalty;
       }
 
       function createAssessmentStageState() {
@@ -4216,12 +4220,14 @@
             intent: track.intentStatus,
             status: track.status
           })),
-          clutterPlaceholders: world.environment.placeholderClutterField?.enabled ? [{
-            centerX: world.environment.placeholderClutterField.centerX,
-            centerY: world.environment.placeholderClutterField.centerY,
-            radiusM: world.environment.placeholderClutterField.radiusM,
-            label: world.environment.placeholderClutterField.label
-          }] : []
+          clutterPlaceholders: ensureArray(world.environment?.activeClutter)
+            .filter((clutter) => Number(clutter.expiresAtSec || 0) > timeSec)
+            .map((clutter) => ({
+              centerX: Number(clutter.centerX || 0),
+              centerY: Number(clutter.centerY || 0),
+              radiusM: Number(clutter.radiusM || 0),
+              label: clutter.label || "Physical Clutter"
+            }))
         };
       }
 
@@ -4464,108 +4470,95 @@
 
       class EnvironmentSystem {
         initialize(world, services) {
-          const ghost = world.environment.placeholderGhostTrack;
-          if (ghost && ghost.enabled) {
-            services.events.schedule({
-              time: Number(ghost.spawnTimeSec || 7),
-              type: "environment.spawnGhostTrack",
-              priority: EVENT_PRIORITIES.track,
-              payload: {
-                posX: Number(ghost.posX || 500),
-                posY: Number(ghost.posY || 180),
-                posZ: Number(ghost.posZ || 110),
-                label: ghost.label || "Ghost Track Placeholder"
-              }
-            });
-          }
+          world.environment.activeAnomalies = ensureArray(world.environment.activeAnomalies);
+          world.environment.activeClutter = ensureArray(world.environment.activeClutter);
+          world.environment.nextAnomalyIndex = Number(world.environment.nextAnomalyIndex || 0);
+          world.environment.nextClutterIndex = Number(world.environment.nextClutterIndex || 0);
+          services.events.schedule({
+            time: 5,
+            type: "environment.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {}
+          });
+        }
 
-          const clutter = world.environment.placeholderClutterField;
-          if (clutter && clutter.enabled) {
+        process(event, world, services) {
+          world.environment.activeAnomalies = ensureArray(world.environment.activeAnomalies)
+            .filter((anomaly) => Number(anomaly.expiresAtSec || 0) > event.time);
+          world.environment.activeClutter = ensureArray(world.environment.activeClutter)
+            .filter((clutter) => Number(clutter.expiresAtSec || 0) > event.time);
+
+          const mapWidthMeters = Math.max(100, Number(world.environment.mapWidthMeters || 1080));
+          if (services.rng.chance(Number(world.environment.anomalySpawnChance ?? 0.35))) {
+            world.environment.nextAnomalyIndex += 1;
+            const anomaly = {
+              id: "Anomaly-" + world.environment.nextAnomalyIndex,
+              label: "RF Noise Spike " + world.environment.nextAnomalyIndex,
+              position: {
+                x: round(services.rng.next() * mapWidthMeters, 2),
+                y: round(services.rng.next() * mapWidthMeters, 2),
+                z: round(20 + (services.rng.next() * 180), 2)
+              },
+              signatureDb: round(-20 + (services.rng.next() * 20), 2),
+              expiresAtSec: round(event.time + 3 + (services.rng.next() * 9), 2)
+            };
+            world.environment.activeAnomalies.push(anomaly);
             services.logger.record(
               world,
-              0,
+              event.time,
               "environment",
-              (clutter.label || "Clutter Placeholder") + " active in scenario preview",
+              anomaly.label + " spawned",
               {
-                centerX: clutter.centerX,
-                centerY: clutter.centerY,
-                radiusM: clutter.radiusM,
-                note: clutter.note || ""
+                anomalyId: anomaly.id,
+                x: anomaly.position.x,
+                y: anomaly.position.y,
+                z: anomaly.position.z,
+                signatureDb: anomaly.signatureDb,
+                expiresAtSec: anomaly.expiresAtSec
               }
             );
           }
-        }
 
-        spawnGhostTrack(event, world, services) {
-          const trackId = "Blue-Track-" + world.nextBlueTrackId++;
-          world.blueTracks[trackId] = {
-            id: trackId,
-            realObjectId: null,
-            trackType: "Ghost",
-            owningSide: "Blue",
-            perceivedSide: "Unknown",
-            sourceSensorIds: ["Environment-Ghost-Placeholder"],
-            detectionConfidence: 0.58,
-            classificationStatus: "Unknown Air Object",
-            classificationConfidence: 0.22,
-            identificationStatus: "Unknown",
-            identificationConfidence: 0,
-            intentStatus: "Unknown",
-            intentConfidence: 0,
-            trackQuality: 0.38,
-            status: "Active",
-            staleAfterSec: world.config.trackStaleAfterSec,
-            lastUpdateTimeSec: round(event.time, 2),
-            history: [{
-              timeSec: round(event.time, 2),
-              confidence: 0.58,
-              rangeM: null,
-              position: {
-                x: event.payload.posX,
-                y: event.payload.posY,
-                z: event.payload.posZ
+          if (services.rng.chance(Number(world.environment.clutterSpawnChance ?? 0.28))) {
+            world.environment.nextClutterIndex += 1;
+            const centerZ = round(10 + (services.rng.next() * 50), 2);
+            const clutter = {
+              id: "Clutter-" + world.environment.nextClutterIndex,
+              label: "Physical Clutter " + world.environment.nextClutterIndex,
+              centerX: round(services.rng.next() * mapWidthMeters, 2),
+              centerY: round(services.rng.next() * mapWidthMeters, 2),
+              centerZ,
+              radiusM: round(35 + (services.rng.next() * 125), 2),
+              clutterPenaltyDb: round(2 + (services.rng.next() * 8), 2),
+              heightZ: round(centerZ + 20 + (services.rng.next() * 40), 2),
+              expiresAtSec: round(event.time + 3 + (services.rng.next() * 9), 2)
+            };
+            world.environment.activeClutter.push(clutter);
+            services.logger.record(
+              world,
+              event.time,
+              "environment",
+              clutter.label + " formed",
+              {
+                clutterId: clutter.id,
+                centerX: clutter.centerX,
+                centerY: clutter.centerY,
+                radiusM: clutter.radiusM,
+                clutterPenaltyDb: clutter.clutterPenaltyDb,
+                expiresAtSec: clutter.expiresAtSec
               }
-            }],
-            pendingEngagement: false,
-            agingToken: 0,
-            threatState: {
-              attackRunActive: false,
-              nonClosingCount: 0,
-              lastThreatAssetId: null,
-              lastThreatDistanceXYM: null
-            },
-            position: {
-              x: event.payload.posX,
-              y: event.payload.posY,
-              z: event.payload.posZ
-            }
-          };
+            );
+          }
 
-          world.metrics.ghostTracksGenerated += 1;
-          services.logger.record(
-            world,
-            event.time,
-            "ghost-track",
-            event.payload.label + " spawned as a track-only placeholder",
-            {
-              trackId,
-              posX: event.payload.posX,
-              posY: event.payload.posY
-            }
-          );
-
-          services.captureFrame(world, event.time, "ghost-track");
-
-          const track = world.blueTracks[trackId];
-          track.agingToken += 1;
-          services.events.scheduleDelay(event.time, track.staleAfterSec, {
-            type: "track.age",
-            priority: EVENT_PRIORITIES.track,
-            payload: {
-              trackId,
-              agingToken: track.agingToken
-            }
-          });
+          if (event.time + 5 <= world.config.maxTimeSec) {
+            services.events.schedule({
+              time: round(event.time + 5, 2),
+              type: "environment.process",
+              priority: EVENT_PRIORITIES.track,
+              payload: {}
+            });
+          }
+          services.captureFrame(world, event.time, "environment");
         }
       }
 
@@ -4580,6 +4573,36 @@
           const movement = object.components.movement;
           const mission = object.runtime.mission;
           if (!movement) {
+            return;
+          }
+          const enduranceLimitSec = Number(movement.maxEnduranceSec ?? Number.POSITIVE_INFINITY);
+          if (
+            Number.isFinite(enduranceLimitSec)
+            && event.time > Number(object.runtime.spawnTimeSec || 0) + enduranceLimitSec
+          ) {
+            services.logger.record(
+              world,
+              event.time,
+              "movement",
+              object.name + " exhausted fuel/endurance and crashed",
+              {
+                objectId: object.id,
+                sourceMode: "fuel-depletion",
+                maxEnduranceSec: enduranceLimitSec
+              }
+            );
+            services.events.schedule({
+              time: round(event.time, 3),
+              type: "damage.resolve",
+              priority: EVENT_PRIORITIES.damage,
+              payload: {
+                targetId: object.id,
+                trackId: null,
+                hit: true,
+                damagePoints: 9999,
+                sourceMode: "fuel-depletion"
+              }
+            });
             return;
           }
 
@@ -5016,9 +5039,6 @@
               if (shooter) {
                 clearEffectorAssignment(shooter, childState.sourceEffectorId, world);
               }
-              if (childState.guidanceType === "Autonomous" && track) {
-                track.interceptorsInbound = Math.max(0, (track.interceptorsInbound || 1) - 1);
-              }
               world.metrics.interceptorAborts += 1;
               services.logger.record(
                 world,
@@ -5336,6 +5356,93 @@
               });
             });
 
+            ensureArray(world.environment?.activeAnomalies)
+              .filter((anomaly) => Number(anomaly.expiresAtSec || 0) > event.time)
+              .forEach((anomaly) => {
+                if (isOpticalSensor(sensor) || isAcousticSensor(sensor)) {
+                  return;
+                }
+                const hostPosition = host.runtime.position;
+                const anomalyPosition = deepClone(anomaly.position || { x: 0, y: 0, z: 0 });
+                const rangeM = distance3D(hostPosition, anomalyPosition);
+                const horizontalRangeM = distance2D(hostPosition, anomalyPosition);
+                if (rangeM > sensor.maxRangeM) {
+                  return;
+                }
+
+                const blockingTerrain = getTerrainIntersection(
+                  world,
+                  hostPosition,
+                  anomalyPosition,
+                  (terrain) => terrain.interferenceType === "Block"
+                );
+                if (blockingTerrain) {
+                  return;
+                }
+
+                const bearingDeg = angleDeg(hostPosition, anomalyPosition);
+                const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
+                const elevationDeg = Math.abs(
+                  Math.atan2(anomalyPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI)
+                );
+                if (relativeBearingDeg > sensor.horizontalFovDeg / 2 || elevationDeg > sensor.verticalFovDeg / 2) {
+                  return;
+                }
+
+                const terrainNoiseDb = getTerrainNoisePenalty(world, hostPosition, anomalyPosition);
+                const networkNoiseDb = getNetworkState(world, host.side, event.time).noisePenaltyDb;
+                const pathLossDb = 20 * Math.log10(Math.max(1, rangeM));
+                const signalStrengthDb = isRfPassiveSensor(sensor)
+                  ? Number(anomaly.signatureDb || 0) - pathLossDb
+                  : sensor.transmitPowerDb + Number(anomaly.signatureDb || 0) - pathLossDb;
+                const noiseDb = sensor.noiseFloorDb
+                  + world.environment.baseNoiseDb
+                  + terrainNoiseDb
+                  + networkNoiseDb
+                  + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
+                if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
+                  return;
+                }
+
+                const confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
+                world.metrics.detectionCandidates += 1;
+                services.logger.record(
+                  world,
+                  event.time,
+                  "detection",
+                  host.name + " (" + sensor.name + ") generated a detection candidate on " + anomaly.label,
+                  {
+                    observerId: host.id,
+                    sensorId: sensor.id,
+                    sensorName: sensor.name,
+                    sensorType: sensor.type,
+                    anomalyId: anomaly.id,
+                    rangeM: round(rangeM, 2),
+                    confidence: round(confidence, 2),
+                    sensorMode: "em",
+                    isAnomaly: true
+                  }
+                );
+
+                services.events.schedule({
+                  time: event.time,
+                  type: "track.process",
+                  priority: EVENT_PRIORITIES.track,
+                  payload: {
+                    observerId: host.id,
+                    sensorId: sensor.id,
+                    targetId: null,
+                    observedPosition: deepClone(anomalyPosition),
+                    confidence,
+                    rangeM,
+                    bearingDeg,
+                    isAnomaly: true,
+                    anomalyId: anomaly.id,
+                    anomalyLabel: anomaly.label
+                  }
+                });
+              });
+
             if (event.time + sensor.scanIntervalSec <= world.config.maxTimeSec) {
               services.events.scheduleDelay(event.time, sensor.scanIntervalSec, {
                 type: "sensor.scan",
@@ -5387,22 +5494,69 @@
         }
 
         process(event, world, services) {
-          const target = getObject(world, event.payload.targetId);
+          const target = event.payload.isAnomaly ? null : getObject(world, event.payload.targetId);
           const observer = getObject(world, event.payload.observerId);
           const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
-          if (!target || !observer || !sensor || target.runtime.destroyed) {
+          if (!observer || !sensor || (!event.payload.isAnomaly && (!target || target.runtime.destroyed))) {
             return;
           }
-          clearExpiredRuntimeEffects(world, target, event.time, services);
+          if (target) {
+            clearExpiredRuntimeEffects(world, target, event.time, services);
+          }
 
           const trackCollection = observer.side === "Red" ? world.redTracks : world.blueTracks;
           let track = Object.values(trackCollection).find((candidate) =>
-            candidate.realObjectId === target.id
-            && candidate.owningSide === observer.side
-            && candidate.status === "Active"
+            event.payload.isAnomaly
+              ? candidate.trackType === "Anomaly" && candidate.anomalyId === event.payload.anomalyId && candidate.status === "Active"
+              : (
+                candidate.realObjectId === target.id
+                && candidate.owningSide === observer.side
+                && candidate.status === "Active"
+              )
           );
 
-          if (!track) {
+          if (!track && event.payload.isAnomaly) {
+            const trackId = (observer.side === "Red" ? "Red-Track-" + world.nextRedTrackId++ : "Blue-Track-" + world.nextBlueTrackId++);
+            track = {
+              id: trackId,
+              realObjectId: null,
+              anomalyId: event.payload.anomalyId,
+              trackType: "Anomaly",
+              owningSide: observer.side,
+              perceivedSide: "Unknown",
+              sourceSensorIds: [sensor.id],
+              detectionConfidence: 0,
+              classificationStatus: "Unknown Air Object",
+              classificationConfidence: 0.18,
+              identificationStatus: "Unknown",
+              identificationConfidence: 0,
+              intentStatus: "Unknown",
+              intentConfidence: 0,
+              trackQuality: 0,
+              status: "Active",
+              staleAfterSec: world.config.trackStaleAfterSec,
+              lastUpdateTimeSec: 0,
+              history: [],
+              pendingEngagement: false,
+              agingToken: 0,
+              assessmentState: createTrackAssessmentState(),
+              threatState: {
+                attackRunActive: false,
+                nonClosingCount: 0,
+                lastThreatAssetId: null,
+                lastThreatDistanceXYM: null
+              }
+            };
+            trackCollection[trackId] = track;
+            world.metrics.tracksCreated += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "track",
+              "Environmental anomaly track created for " + (event.payload.anomalyLabel || event.payload.anomalyId),
+              { trackId: track.id, anomalyId: event.payload.anomalyId, observerId: observer.id, updateReason: "new-anomaly-track" }
+            );
+          } else if (!track) {
             const trackId = (observer.side === "Red" ? "Red-Track-" + world.nextRedTrackId++ : "Blue-Track-" + world.nextBlueTrackId++);
             track = {
               id: trackId,
@@ -5445,9 +5599,10 @@
           }
 
           const newSensorContribution = !track.sourceSensorIds.includes(sensor.id);
-          if (track.history.length > 0) {
-            const lastKnownPosition = track.position || track.history[track.history.length - 1]?.position || target.runtime.position;
-            const movedDistanceM = distance3D(lastKnownPosition, target.runtime.position);
+          const fallbackPosition = target?.runtime?.position || event.payload.observedPosition || { x: 0, y: 0, z: 0 };
+          if (!event.payload.isAnomaly && track.history.length > 0) {
+            const lastKnownPosition = track.position || track.history[track.history.length - 1]?.position || fallbackPosition;
+            const movedDistanceM = distance3D(lastKnownPosition, fallbackPosition);
             const updateReason = newSensorContribution
               ? "new-sensor-fused"
               : (movedDistanceM >= 15 ? "track-state-changed" : "same-sensor-refresh");
@@ -5468,7 +5623,7 @@
           if (newSensorContribution) {
             track.sourceSensorIds.push(sensor.id);
           }
-          const observedPosition = deepClone(event.payload.observedPosition || target.runtime.position);
+          const observedPosition = deepClone(event.payload.observedPosition || fallbackPosition);
           track.lastUpdateTimeSec = round(event.time, 2);
           track.position = observedPosition;
           track.rangeM = round(event.payload.rangeM, 2);
@@ -5490,6 +5645,10 @@
 
           this.scheduleTrackAging(track, event.time, services.events);
           services.captureFrame(world, event.time, "track");
+
+          if (event.payload.isAnomaly) {
+            return;
+          }
 
           services.events.scheduleDelay(event.time, sensor.classification.latencySec, {
             type: "classification.process",
@@ -5531,7 +5690,6 @@
         process(event, world, services) {
           const track = getTrack(world, event.payload.trackId);
           const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
-          const target = track ? getObject(world, track.realObjectId) : null;
           const assessmentState = track ? getTrackAssessmentState(track) : null;
           if (!track || track.status !== "Active" || !sensor || !assessmentState) {
             return;
@@ -5608,10 +5766,6 @@
             return;
           }
 
-          if (!target || target.runtime.destroyed) {
-            return;
-          }
-
           const confidence = clamp(
             (event.payload.baseConfidence * sensor.classification.accuracyBase)
               + 0.14
@@ -5621,9 +5775,9 @@
             0.99
           );
 
-          if (target.roles.includes("UAS") && confidence >= 0.52) {
+          if (Number(track.position?.z || 0) > 5 && confidence >= 0.52) {
             track.classificationStatus = "UAS";
-          } else if (target.roles.includes("Asset") && confidence >= 0.48) {
+          } else if (confidence >= 0.52) {
             track.classificationStatus = "Ground Asset";
           } else {
             track.classificationStatus = "Unknown Object";
@@ -6064,7 +6218,7 @@
                 ? Number(projectedAsset.components.health.assetValuePts || 1)
                 : 1;
               const currentThreatDistanceXYM = projectedAsset
-                ? distance2D(track.position || target.runtime.position, projectedAsset.runtime.position)
+                ? (track.position ? distance2D(track.position, projectedAsset.runtime.position) : (track.effectiveThreatDistanceXYM ?? Infinity))
                 : (track.effectiveThreatDistanceXYM ?? Infinity);
               const ttiSec = speedMps > 0
                 ? Math.max(0.1, currentThreatDistanceXYM / speedMps)
@@ -6509,7 +6663,10 @@
           world.metrics.shotsFired += 1;
           world.metrics.ammoExpended[shooter.templateId] = (world.metrics.ammoExpended[shooter.templateId] || 0) + 1;
 
+          const trackAimPosition = deepClone(track.position || target.runtime.position);
           const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
+          const spoofSeparationM = distance3D(trackAimPosition, target.runtime.position);
+          const spoofTerminalMissFactor = spoofSeparationM > Number(effector.terminalRadiusM || 12) ? 0 : 1;
           const rangeFactor = effector.maxRangeM > 0
             ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0, 1)
             : 0;
@@ -6600,25 +6757,25 @@
               : magnitude3D(getVelocityVector(track, target));
             const targetHeadingDeg = Number.isFinite(target.runtime.currentHeadingDeg)
               ? Number(target.runtime.currentHeadingDeg)
-              : (Number.isFinite(track?.headingDeg) ? Number(track.headingDeg) : angleDeg(shooter.runtime.position, target.runtime.position));
+              : (Number.isFinite(track?.headingDeg) ? Number(track.headingDeg) : angleDeg(shooter.runtime.position, trackAimPosition));
             const targetHeadingRad = targetHeadingDeg * (Math.PI / 180);
-            let projectedTargetPosition = deepClone(target.runtime.position);
+            let projectedTargetPosition = deepClone(trackAimPosition);
             let leadRangeM = distance3D(shooter.runtime.position, projectedTargetPosition);
             let timeToImpactSec = Math.max(0.05, leadRangeM / projectileSpeedMps);
             for (let iteration = 0; iteration < 2; iteration += 1) {
               projectedTargetPosition = {
-                x: Number(target.runtime.position.x || 0) + (Math.cos(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
-                y: Number(target.runtime.position.y || 0) + (Math.sin(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
-                z: Number(target.runtime.position.z || 0)
+                x: Number(trackAimPosition.x || 0) + (Math.cos(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
+                y: Number(trackAimPosition.y || 0) + (Math.sin(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
+                z: Number(trackAimPosition.z || 0)
               };
               leadRangeM = distance3D(shooter.runtime.position, projectedTargetPosition);
               timeToImpactSec = Math.max(0.05, leadRangeM / projectileSpeedMps);
             }
             const ballisticRangeFactor = effector.maxRangeM > 0
-              ? clamp(0.55 + (0.45 * (1 - Math.pow((leadRangeM / effector.maxRangeM), 2))), 0.55, 1)
+              ? clamp(1 - Math.pow((leadRangeM / effector.maxRangeM), 2), 0, 1)
               : 0;
             const effectivePk = clamp(
-              (Number(effector.basePk || 0.7) + world.randomization.pkBias) * ballisticRangeFactor * environmentFactor * targetModifier,
+              (Number(effector.basePk || 0.7) + world.randomization.pkBias) * ballisticRangeFactor * environmentFactor * targetModifier * spoofTerminalMissFactor,
               0,
               0.98
             );
@@ -6633,7 +6790,8 @@
                 targetId: target.id,
                 effectivePk: round(effectivePk, 2),
                 rangeM: round(leadRangeM, 2),
-                flightTimeSec: round(timeToImpactSec, 2)
+                flightTimeSec: round(timeToImpactSec, 2),
+                spoofSeparationM: round(spoofSeparationM, 2)
               }
             );
             services.events.schedule({
@@ -6886,6 +7044,9 @@
             const effectorState = getEffectorRuntimeState(shooter, event.payload.sourceEffectorId);
             if (effectorState) {
               effectorState.inFlightChildId = null;
+              if (effectorState.missionState === "Engaging" && event.time >= (shooter.runtime.lastFireTimeSec[event.payload.sourceEffectorId] || 0)) {
+                clearEffectorAssignment(shooter, event.payload.sourceEffectorId, world);
+              }
             }
           }
 
@@ -7078,8 +7239,8 @@
               case "sensor.releaseCue":
                 this.sensorSystem.releaseCue(event, runtime, services);
                 break;
-              case "environment.spawnGhostTrack":
-                this.environmentSystem.spawnGhostTrack(event, runtime, services);
+              case "environment.process":
+                this.environmentSystem.process(event, runtime, services);
                 break;
               case "track.process":
                 this.trackSystem.process(event, runtime, services);
@@ -7160,6 +7321,7 @@
               runtime: {
                 position: { x: instance.posX, y: instance.posY, z: instance.posZ },
                 initialPosition: { x: instance.posX, y: instance.posY, z: instance.posZ },
+                spawnTimeSec: 0,
                 health: template.components.health.maxHealth,
                 operationalStatus: "Active",
                 destroyed: false,
@@ -7301,7 +7463,13 @@
             assessmentSnapshots: [],
             frames: [],
             config: deepClone(scenario.config),
-            environment: deepClone(scenario.environment),
+            environment: {
+              ...deepClone(scenario.environment),
+              activeAnomalies: [],
+              activeClutter: [],
+              nextAnomalyIndex: 0,
+              nextClutterIndex: 0
+            },
             eventManager,
             captureFrames,
             currentTimeSec: 0,

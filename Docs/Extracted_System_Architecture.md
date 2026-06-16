@@ -1,6 +1,6 @@
 # Extracted System Architecture
 
-This document tracks the current code split for the V2.2 refactor. `index.html` remains the runnable shell for now; `src/` is the extracted review tree.
+This document tracks the current code split for the v2.4 refactor state. `index.html` remains the runnable shell for now; `src/` is the extracted review tree and Vite-review target.
 
 ## Working Refactor Tree
 
@@ -78,17 +78,18 @@ src/
 | `world_state.js` | `getObject`, `getTrack`, `getTracksForSide`, `getAllTracks`, `getTracksForObject`, `getSensor`, `getSensorRuntimeState`, `getOpposingSide`, `getObjectsForSide`, `getSideAssets`, `getEffectorRuntimeState`, `getObjectSideById`, `inferLogSide` | Read-only world queries. |
 | `world_mutators.js` | `syncFpvSensorHeading`, `clearEffectorAssignment`, `markObjectDestroyed`, `applyDamageEvent`, `removeRuntimeObject`, `setObjectControlMode`, `restoreObjectControlMode`, `clearExpiredRuntimeEffects`, `buildRandomOffset` | Safe state writers and runtime effect cleanup. |
 | `simulation_manager.js` | `buildBaselineScenario`, `buildDemoScenario`, `buildScratchScenario`, `class SimulationManager` | Scenario factories and simulation orchestration. |
+| `simulation_manager.js` | `createRuntimeWorld` | Runtime object instantiation, hidden infrastructure setup, and active environment-state initialization. |
 
 ### `src/kernel/systems/`
 | Target file | Functions / classes | Responsibility |
 |---|---|---|
-| `movement.js` | `class MovementSystem` | Waypoints, pursuit, kinematics, and terrain collisions. |
-| `sensor.js` | `class SensorSystem` | Detection, LOS, and sensor-domain SNR checks. |
-| `track.js` | `class TrackSystem` | Track creation, aging, and fusion. |
+| `movement.js` | `class MovementSystem` | Waypoints, pursuit, kinematics, endurance depletion, and terrain collisions. |
+| `sensor.js` | `class SensorSystem` | Detection, LOS, sensor-domain SNR checks, and anomaly observations. |
+| `track.js` | `class TrackSystem` | Real/anomaly track creation, aging, and fusion. |
 | `cognitive.js` | `class ClassificationSystem`, `class IdentificationSystem`, `class IntentSystem`, `getVelocityVector`, `estimateTrackPayloadScore`, `findMissionHeuristicTarget`, `resolveProjectedAsset`, `updateTrackThreatAssessment`, `createAssessmentStageState`, `startAssessmentCycle`, `recordAssessmentDecision` | Track assessment and intent reasoning. |
 | `c2.js` | `class C2System` | TEWA and effector tasking. |
 | `network.js` | `class NetworkSystem` | Hidden infrastructure, comms, power, and EW degradation. |
-| `effect.js` | `class EffectSystem` | Fire resolution, child interceptors, ballistic lead, and EW effects. |
+| `effect.js` | `class EffectSystem` | Fire resolution, child interceptors, ballistic lead, telemetry-spoof penalties, DEW dwell penalties, and EW effects. |
 | `damage.js` | `class DamageSystem` | HP reduction, destroy state, and secondary effects. |
 
 ### `src/report/`
@@ -132,6 +133,8 @@ These fields were not called out clearly in the original table and are now part 
 | `world.blueTracks`, `world.redTracks` | Split track stores by side. |
 | `world.objectIds` | Stable iteration order for world objects. |
 | `world.logs` | Runtime log stream. |
+| `world.environment.activeAnomalies` | Temporary environment-driven false-detection sources. |
+| `world.environment.activeClutter` | Temporary clutter/noise objects used in LOS/noise checks and frame output. |
 | `world.seededRng` | Deterministic run RNG. |
 
 ### Object runtime fields
@@ -145,6 +148,7 @@ These fields were not called out clearly in the original table and are now part 
 | `runtime.spoofedOffset` | Navigation corruption offset. |
 | `runtime.telemetrySpoofed` | Track/telemetry corruption flag. |
 | `runtime.telemetryOffsetXY` | Red/Blue telemetry displacement. |
+| `runtime.spawnTimeSec` | Endurance and child-object lifecycle anchor. |
 | `runtime.spoofRestored` | State transition marker. |
 | `runtime.telemetryRestored` | State transition marker. |
 | `runtime.interceptorChild` | Guided munition child state. |
@@ -152,5 +156,6 @@ These fields were not called out clearly in the original table and are now part 
 ## Notes For The Next Split Pass
 
 - `index.html` remains the ready-to-test build.
-- `src/` is a review tree, not yet wired into the bootstrap shell.
+- `src/` is a review tree and Vite-review target, not yet the runtime source of truth.
 - The placeholder files exist to keep the architecture stable while the remaining browser-thread and analytics helpers are separated in a later pass.
+- The June 15 v2.4 pass added dynamic environment scheduling, same-side telemetry spoof handling, endurance depletion, ballistic spoof penalties, and command-guided effector cleanup; those seams should stay visible when the monolith is finally decomposed.

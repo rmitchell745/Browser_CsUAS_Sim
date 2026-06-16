@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// v2.4 keeps ballistic, guided, EW, and directed-energy effects separated so
+// review of lead angles, spoof impacts, and launcher deadlock fixes stays local.
       class EffectSystem {
         canContinueEngagement(world, shooter, effector, track, target, timeSec = 0) {
           if (!shooter || !effector || !track || !target || target.runtime.destroyed || track.status !== "Active") {
@@ -239,7 +241,12 @@
           world.metrics.shotsFired += 1;
           world.metrics.ammoExpended[shooter.templateId] = (world.metrics.ammoExpended[shooter.templateId] || 0) + 1;
 
+          // Ballistic fire now aims off the believed track state, not blindly off the
+          // target truth position, so same-side telemetry corruption can create misses.
+          const trackAimPosition = deepClone(track.position || target.runtime.position);
           const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
+          const spoofSeparationM = distance3D(trackAimPosition, target.runtime.position);
+          const spoofTerminalMissFactor = spoofSeparationM > Number(effector.terminalRadiusM || 12) ? 0 : 1;
           const rangeFactor = effector.maxRangeM > 0
             ? clamp(1 - Math.pow((rangeM / effector.maxRangeM), 2), 0, 1)
             : 0;
@@ -330,25 +337,29 @@
               : magnitude3D(getVelocityVector(track, target));
             const targetHeadingDeg = Number.isFinite(target.runtime.currentHeadingDeg)
               ? Number(target.runtime.currentHeadingDeg)
-              : (Number.isFinite(track?.headingDeg) ? Number(track.headingDeg) : angleDeg(shooter.runtime.position, target.runtime.position));
+              : (Number.isFinite(track?.headingDeg) ? Number(track.headingDeg) : angleDeg(shooter.runtime.position, trackAimPosition));
             const targetHeadingRad = targetHeadingDeg * (Math.PI / 180);
-            let projectedTargetPosition = deepClone(target.runtime.position);
+            let projectedTargetPosition = deepClone(trackAimPosition);
             let leadRangeM = distance3D(shooter.runtime.position, projectedTargetPosition);
             let timeToImpactSec = Math.max(0.05, leadRangeM / projectileSpeedMps);
             for (let iteration = 0; iteration < 2; iteration += 1) {
               projectedTargetPosition = {
-                x: Number(target.runtime.position.x || 0) + (Math.cos(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
-                y: Number(target.runtime.position.y || 0) + (Math.sin(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
-                z: Number(target.runtime.position.z || 0)
+                x: Number(trackAimPosition.x || 0) + (Math.cos(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
+                y: Number(trackAimPosition.y || 0) + (Math.sin(targetHeadingRad) * targetSpeedMps * timeToImpactSec),
+                z: Number(trackAimPosition.z || 0)
               };
               leadRangeM = distance3D(shooter.runtime.position, projectedTargetPosition);
               timeToImpactSec = Math.max(0.05, leadRangeM / projectileSpeedMps);
             }
             const ballisticRangeFactor = effector.maxRangeM > 0
-              ? clamp(0.55 + (0.45 * (1 - Math.pow((leadRangeM / effector.maxRangeM), 2))), 0.55, 1)
+              ? clamp(1 - Math.pow((leadRangeM / effector.maxRangeM), 2), 0, 1)
               : 0;
             const effectivePk = clamp(
-              (Number(effector.basePk || 0.7) + world.randomization.pkBias) * ballisticRangeFactor * environmentFactor * targetModifier,
+              (Number(effector.basePk || 0.7) + world.randomization.pkBias)
+                * ballisticRangeFactor
+                * environmentFactor
+                * targetModifier
+                * spoofTerminalMissFactor,
               0,
               0.98
             );
@@ -363,7 +374,8 @@
                 targetId: target.id,
                 effectivePk: round(effectivePk, 2),
                 rangeM: round(leadRangeM, 2),
-                flightTimeSec: round(timeToImpactSec, 2)
+                flightTimeSec: round(timeToImpactSec, 2),
+                spoofSeparationM: round(spoofSeparationM, 2)
               }
             );
             services.events.schedule({
@@ -616,6 +628,9 @@
             const effectorState = getEffectorRuntimeState(shooter, event.payload.sourceEffectorId);
             if (effectorState) {
               effectorState.inFlightChildId = null;
+              if (effectorState.missionState === "Engaging" && event.time >= (shooter.runtime.lastFireTimeSec[event.payload.sourceEffectorId] || 0)) {
+                clearEffectorAssignment(shooter, event.payload.sourceEffectorId, world);
+              }
             }
           }
 

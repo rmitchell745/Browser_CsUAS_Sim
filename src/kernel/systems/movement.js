@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Movement is where v2.4 now ties together kinematics, lost-link behavior,
+// terrain interaction, and interceptor pursuit/timeout lifecycle.
       class MovementSystem {
         process(event, world, services) {
           const object = getObject(world, event.payload.objectId);
@@ -10,6 +12,36 @@
           const movement = object.components.movement;
           const mission = object.runtime.mission;
           if (!movement) {
+            return;
+          }
+          const enduranceLimitSec = Number(movement.maxEnduranceSec ?? Number.POSITIVE_INFINITY);
+          if (
+            Number.isFinite(enduranceLimitSec)
+            && event.time > Number(object.runtime.spawnTimeSec || 0) + enduranceLimitSec
+          ) {
+            services.logger.record(
+              world,
+              event.time,
+              "movement",
+              object.name + " exhausted fuel/endurance and crashed",
+              {
+                objectId: object.id,
+                sourceMode: "fuel-depletion",
+                maxEnduranceSec: enduranceLimitSec
+              }
+            );
+            services.events.schedule({
+              time: round(event.time, 3),
+              type: "damage.resolve",
+              priority: EVENT_PRIORITIES.damage,
+              payload: {
+                targetId: object.id,
+                trackId: null,
+                hit: true,
+                damagePoints: 9999,
+                sourceMode: "fuel-depletion"
+              }
+            });
             return;
           }
 
@@ -322,6 +354,8 @@
             return;
           }
 
+          // Pure pursuit now steers toward the current aimpoint, but turn-rate and
+          // acceleration limits decide whether the mover can actually make the corner.
           const remainingDistance = distance3D(navigationOrigin, movementTarget);
           const desiredHeadingDeg = remainingDistance > 0.001
             ? angleDeg(navigationOrigin, movementTarget)
@@ -445,9 +479,6 @@
               const shooter = getObject(world, childState.sourceShooterId);
               if (shooter) {
                 clearEffectorAssignment(shooter, childState.sourceEffectorId, world);
-              }
-              if (childState.guidanceType === "Autonomous" && track) {
-                track.interceptorsInbound = Math.max(0, (track.interceptorsInbound || 1) - 1);
               }
               world.metrics.interceptorAborts += 1;
               services.logger.record(
