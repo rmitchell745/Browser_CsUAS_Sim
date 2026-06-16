@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Validation mixes hard blockers with softer scenario-quality warnings because
+// many authoring issues are still useful during debug passes.
       function createValidationIssue(severity, message, recommendedAction, extras = {}) {
         return {
           severity,

@@ -1,5 +1,9 @@
-// Extracted from index.html
+// Extracted from index.html.
+// CSV export intentionally stays flat and additive so external analysis scripts
+// do not break when new counters appear.
       function createCsvRow(iterationId, report) {
+        // Keep column names explicit instead of nesting so spreadsheet tooling
+        // and downstream Monte Carlo post-processing remain simple.
         const row = {
           Iteration_ID: iterationId,
           Scenario_Name: report.scenarioName,

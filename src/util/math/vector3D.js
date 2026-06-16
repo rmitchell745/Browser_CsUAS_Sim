@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Vector helpers stay small and side-effect free so kinematics and threat math
+// can share them without hidden coupling.
       function distance3D(a, b) {
         const dx = b.x - a.x;
         const dy = b.y - a.y;

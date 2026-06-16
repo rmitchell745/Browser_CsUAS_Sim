@@ -1,9 +1,13 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Read-only world helpers live here so systems can query the current runtime
+// shape without mutating it.
       function getObject(world, objectId) {
         return world.objects[objectId] || null;
       }
 
       function getTrack(world, trackId) {
+        // Track IDs are unique across both side stores, so callers can use a
+        // single helper instead of branching on Blue vs Red.
         return world.blueTracks?.[trackId] || world.redTracks?.[trackId] || null;
       }
 
@@ -126,8 +130,10 @@
       }
 
       function getTrackObservedPosition(world, observerSide, target) {
+        // This extracted slice still needs to mirror the same-side spoof rule
+        // from the runnable shell during the full module cutover.
         if (
-          observerSide === "Blue"
+          observerSide === target?.side
           && target?.runtime?.telemetrySpoofed
           && target.runtime.telemetryOffsetXY
         ) {

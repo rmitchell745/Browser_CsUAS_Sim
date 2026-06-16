@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Mutable world helpers stay centralized here so systems do not duplicate
+// assignment, damage, or transient-effect cleanup rules.
       function syncFpvSensorHeading(object, headingDeg) {
         (object?.components?.sensors || []).forEach((sensor) => {
           if (String(sensor.type || "").toUpperCase() === "FPV") {
@@ -8,6 +10,8 @@
       }
 
       function clearEffectorAssignment(object, effectorId, world) {
+        // Releasing an effector also clears the track's pending-engagement bit,
+        // allowing later C2 cycles to reconsider it.
         const effectorState = getEffectorRuntimeState(object, effectorId);
         if (!effectorState) {
           return;
@@ -41,6 +45,8 @@
       }
 
       function applyDamageEvent(world, payload, timeSec, services) {
+        // Centralize damage so kill bookkeeping, frame capture, and blast fan-out
+        // all happen from one path.
         const target = getObject(world, payload.targetId);
         const track = getTrack(world, payload.trackId);
         if (!target) {
@@ -221,6 +227,7 @@
       }
 
       function clearExpiredRuntimeEffects(world, object, timeSec, services) {
+        // Expiration is a loggable state transition, not just silent cleanup.
         if (!object?.runtime) {
           return;
         }

@@ -1,5 +1,9 @@
-// Extracted from index.html
+// Extracted from index.html.
+// This is the legacy in-browser worker path. The Vite bridge currently bundles
+// the monolith, so this file remains a review target more than a live runtime.
 function createMonteCarloWorker() {
+      // The worker rehydrates the kernel from a serialized factory so Monte
+      // Carlo runs do not block the browser thread.
       const workerSource = `
         const createSimulationKernel = ${createSimulationKernel.toString()};
         const kernel = createSimulationKernel();

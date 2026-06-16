@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Monte Carlo coordinates repeated seeded runs while delegating actual scenario
+// execution to `SimulationManager`.
       class MonteCarloManager {
         constructor(simulationManager) {
           this.simulationManager = simulationManager;

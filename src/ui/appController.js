@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// This is the browser orchestration layer: it ties kernel execution, wizard
+// state, rendering, and export surfaces together.
 class AppController {
       constructor() {
         this.kernel = SIMULATION_KERNEL;

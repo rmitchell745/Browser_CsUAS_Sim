@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// UIManager owns drawer/screen visibility rules and should stay mostly free of
+// simulation behavior so the workstation shell can evolve independently.
 class UIManager {
       constructor() {
         this.screens = {

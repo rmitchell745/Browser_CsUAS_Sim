@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Keep these helpers intentionally generic: they are reused by movement,
+// ballistics, heading math, and schema cleanup.
       function clamp(value, min, max) {
         return Math.max(min, Math.min(max, value));
       }

@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Map rendering is the main visual consumer of world snapshots and selected
+// object state, so it is a likely seam for richer playback tooling later.
 class MapRenderer {
       constructor(canvas) {
         this.canvas = canvas;

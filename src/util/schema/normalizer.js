@@ -1,4 +1,6 @@
 // Extracted from index.html
+// The normalizer is the main schema-compatibility layer. It keeps older JSON
+// payloads runnable while newer fields like endurance and vulnerabilities land.
       function normalizeRoles(roles, fallbackRoles = []) {
         if (Array.isArray(roles) && roles.length) {
           return roles.slice();
@@ -22,6 +24,8 @@
       }
 
       function normalizePayload(payload) {
+        // OWA and secondary-damage logic depend on payload staying explicit even
+        // when older scenario files use looser field names.
         return {
           impactDamagePoints: Number(payload?.impactDamagePoints ?? payload?.damagePoints ?? payload?.payloadYield ?? 0),
           selfDestructOnImpact: payload?.selfDestructOnImpact !== false
@@ -54,6 +58,8 @@
       }
 
       function normalizeCapability(capability, components = {}) {
+        // Capability flags are the runtime contract for C2/network/power gating;
+        // infer carefully so older templates still behave sensibly.
         const inferredUsesRf = ensureArray(components.sensors).length > 0 || ensureArray(components.effectors).some((effector) => {
           const type = String(effector?.type || "").toUpperCase();
           return ["EW", "JAMMER", "SPOOFER", "CYBER", "RF_PASSIVE", "FPV"].includes(type);

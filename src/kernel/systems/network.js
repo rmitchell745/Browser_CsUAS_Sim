@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Hidden infrastructure stays per-side for now. This system restores degraded
+// network state after jammer/cyber timers expire.
       class NetworkSystem {
         restore(event, world, services) {
           const network = getInfrastructureForSide(world, event.payload.side)?.network;

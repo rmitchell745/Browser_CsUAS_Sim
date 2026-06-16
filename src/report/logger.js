@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// This file currently mixes generic logging with the older environment stub.
+// Treat it as a review slice until the environment system is fully re-extracted.
       class LoggingSystem {
         record(world, timeSec, type, message, data = {}) {
           const side = inferLogSide(world, data);

@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Geospatial helpers are shared by rendering, LOS masking, and terrain/noise
+// logic, so small changes here can have wide simulation effects.
       function getActiveTerrainObjects(world) {
         return ensureArray(world.scenario?.terrainObjects);
       }

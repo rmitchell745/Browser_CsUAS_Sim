@@ -1,2 +1,3 @@
-// Heat map placeholder
-// Not yet split from the current report pipeline.
+// Heat map placeholder.
+// Reserved for future spatial analytics once the debrief/report pipeline is
+// fully extracted from the monolith.

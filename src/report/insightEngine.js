@@ -1,2 +1,3 @@
-// Insight engine placeholder
-// Not yet split from the current report pipeline.
+// Insight engine placeholder.
+// Reserved for future automated debrief generation once report data flow is
+// fully modularized.

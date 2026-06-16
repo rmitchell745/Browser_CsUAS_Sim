@@ -1,4 +1,6 @@
-// Extracted from index.html
+// Extracted from index.html.
+// Report assembly is the contract surface for debrief, Monte Carlo, CSV export,
+// and future analytics.
       function finalizeReport(world, seed) {
         const blueObjects = world.objectIds
           .map((id) => world.objects[id])

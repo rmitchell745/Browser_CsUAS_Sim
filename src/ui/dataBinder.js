@@ -1,2 +1,2 @@
-// Data binder placeholder
-// This split has not been extracted from the monolith yet.
+// Data binder placeholder.
+// This will eventually isolate UI state synchronization from AppController.

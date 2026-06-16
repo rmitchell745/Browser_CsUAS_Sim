@@ -1,4 +1,6 @@
 ﻿// Extracted from index.html
+// Deterministic RNG is critical because playtests, Monte Carlo, and bug reports
+// all assume seeded replayability.
       class SeededRNG {
         constructor(seed) {
           this.seed = seed >>> 0;
