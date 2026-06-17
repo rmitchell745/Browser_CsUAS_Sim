@@ -1,0 +1,142 @@
+Refactor Request: V2.2 Bug Fixes and Enhancements (Jammers, UI, Metrics)
+
+Playtesting V2.1 revealed four specific issues. Please refactor `Browser_CsUAS_Sim_v2.1.html` to fix these without truncating any existing code. Provide exact Search/Replace blocks for the Blob string and the Main Thread UI logic.
+
+1. **Implement Jammer Physics & Effects:**
+Currently, Jammer effectors do not resolve correctly because they do not deal kinetic HP damage. 
+- Fix in `EffectSystem.resolve`: Check the `effector.type`. If it is `"Jammer"`, do NOT schedule a `damage.resolve` event. Instead, if `hit === true`, instantly change the Target's `controlMode` to `"Jammed/Severed"`. 
+- Fix in `MovementSystem`: If a Red UAS has `controlMode === "Jammed/Severed"`, it MUST immediately execute its `lostLinkBehavior` (e.g., if `lostLinkBehavior === "Hover/Loiter"`, it stops moving; if `RTB`, it calculates a path back to its `startX/Y`).
+- Log the event: `[Shooter Name] successfully jammed [Target Name]. Target executing lost-link protocol.`
+
+2. **Add Blue Asset Placement to the UI:**
+The Scenario Wizard allows creating Red Threat Groups, but there is no button to add additional Blue Assets to the map.
+- Fix in the UI: In the `Scenario Wizard -> 2. Blue Site` panel, add an `[Add Blue Asset]` button (similar to the Red Threat Group logic). 
+- Allow the user to specify a Name, X/Y/Z, and select a Template (e.g., Generator, Water Tank, Secondary Radar). 
+- Ensure `buildScenarioFromWizardInputs()` loops through these added Blue Assets and injects them into the `scenario.instances` array before running.
+
+3. **Fix Monte Carlo UI Routing:**
+When the Monte Carlo batch finishes, the UI accidentally opens the Roster side panel instead of the Debrief screen.
+- Fix in `AppController.runMonteCarlo()`: In the `try` block, after `this.updateMonteCarloReport()`, ensure the correct screen routing is called. Change the routing command to `this.uiManager.showScreen("report");` and ensure all side-trays are closed (`this.uiManager.closeAllSideTrays();`).
+
+4. **Correct Kill Percentage and HQ Survival Metrics:**
+The current CSV and UI metrics calculate "Kill Rate" based on whether *any* target was destroyed, and counts Kamikaze (OWA) self-detonations as Blue Kills.
+- Fix in `finalizeReport` (inside the Blob): 
+   - Calculate `hqSurvived`: True only if ALL Blue Assets with `isHQ === true` have `runtime.destroyed === false`. 
+   - Calculate `Total_Threats_Spawned`: The total number of Red UAS instances.
+   - Calculate `Blue_Defeats`: The number of Red UAS destroyed by BLUE effectors (Do not count Red UAS that died because they triggered their own Area of Effect / Kamikaze detonation against a Blue Asset).
+   - Update `Kill_Rate_Percent`: `Blue_Defeats / Total_Threats_Spawned`.
+- Ensure these updated metrics (`HQ_Survived` and the true `Kill_Rate_Percent`) are passed to `createCsvRow` and correctly mapped to the CSV headers and the UI `monte-carlo-summary` grid.
+
+Refactor Request: UI Simplification and Enum Enforcement
+
+The current UI workflow is fragmented and allows users to input free-text into fields that require strict Enums, causing engine crashes. Please refactor the HTML/CSS and `UIManager` in `Browser_CsUAS_Sim_v2.1.html` to simplify the interface into two primary editor screens. Provide exact Search/Replace blocks.
+
+1. **Consolidate into Two Editor Screens:**
+   - **Screen 1: Template Editor:** Remove the old "Wizard" logic that created templates on the fly. This screen is strictly for editing the physics and capabilities of Templates (e.g., Speed, RCS, Max Range, Base Pk). Helper functions to create capabilities from more common metrics will reside here. 
+   - **Screen 2: Scenario Designer:** This screen features the 2D Canvas. Add a sidebar with two sections: 
+      a) *Environment:* Inputs for `baseNoiseDb`, `trackStaleAfterSec`, and Map Image Upload.
+      b) *Instances:* Buttons to `[Add Blue Instance]` and `[Add Red Instance]`. Clicking these opens a form to select a Template from a dropdown, input starting X/Y/Z, and define Waypoints.
+
+2. **Strict Enum Enforcement (Dropdowns):**
+Convert all free-text `<input>` fields that represent Enums into `<select>` dropdown menus across both editor screens. The `<option>` values MUST strictly match the engine's internal strings:
+   - `Sensor Type`: Radar, EO_IR, RF_Passive, Acoustic, FPV
+   - `Effector Type`: Kinetic, Jammer, DirectedEnergy, Interceptor
+   - `Control Mode / ROE`: AutoEngage, ManInLoop
+   - `Explosive Yield`: High, Medium, Low, No
+   - `Lost Link Behavior`: ContinueDeadReckoning, RTB, Hover/Loiter, ExecuteTerminalDive
+   - `Mission Profile (Red)`: Geographic, SpecificAsset, MaxDamage
+
+3. **Data Binding:**
+Ensure that when a user adds an Instance in the Scenario Designer, the `templateId` correctly binds to the selected Template from the dropdown, so the Web Worker parses the inheritance correctly when the Monte Carlo runs.
+
+
+
+
+Refactor Request: UI Routing and Visual Separation (Map Hiding)
+
+Currently, the visual routing between the Template Editor and the Scenario Designer is causing UX confusion. The user should not see the 2D map when editing global template physics. Please refactor the HTML/CSS and `UIManager` logic to enforce strict visual separation.
+
+1. **Template Editor (Full Screen, No Map):**
+When the user clicks the "Template Editor" navigation button, the `sim-canvas` and all Scenario/Map specific elements MUST be completely hidden (e.g., using `display: none` via a CSS class). The screen should only display the Template list and the physics/capabilities editing forms. 
+
+2. **Scenario Designer (Map + Floating Side-Tray):**
+When the user clicks "Scenario Designer", the `sim-canvas` MUST be visible and take up the majority of the screen. The controls for adding/editing Instances (X/Y/Z, Waypoints, Environment variables) must be housed in a CSS side-tray or floating panel that overlays the right side of the canvas, allowing the user to view the map while placing units.
+
+3. **UIManager Logic Update:**
+Update the `showScreen()` or equivalent routing function in the `UIManager` class to ensure that the container holding the `<canvas id="sim-canvas">` is explicitly hidden when routing to the `templates` screen, and explicitly shown when routing to the `scenario`, `run`, or `report` screens. Provide the exact Search/Replace block for the updated routing logic and necessary CSS.
+
+Refactor Request: Multi-Spectrum Signatures (Acoustic and RF Passive)
+
+The current `SensorSystem.process` relies entirely on `radarSignatureDb`, which makes Acoustic and RF Passive sensors physically inaccurate. We need to add specific emission signatures to the UAS templates and branch the detection math.
+
+Please implement the following updates. Provide exact Search/Replace blocks.
+
+1. **Schema Update (UAS Signatures):**
+In the `Template` normalization logic and the Template Editor UI, expand the `signature` component to include three distinct fields:
+- `radarSignatureDb`: Float (Default -14).
+- `acousticSignatureDb`: Float (Default 60. Represents motor noise).
+- `rfEmissionDb`: Float (Default 20. Represents telemetry/video broadcast strength).
+
+2. **Sensor Physics Branching:**
+In `SensorSystem.process`, when calculating `signalStrengthDb`, branch the logic based on `sensor.type`:
+- **If `Radar`:** `signal = sensor.transmitPowerDb + target.components.signature.radarSignatureDb - PathLoss`.
+- **If `Acoustic`:** `signal = target.components.signature.acousticSignatureDb - PathLoss`.
+- **If `RF_Passive`:** First, check the target's `controlMode`. If `controlMode === "Autonomous"`, it is radio-silent; return no detection. Otherwise, `signal = target.components.signature.rfEmissionDb - PathLoss`.
+- *(Note: PathLoss remains `20 * Math.log10(Math.max(1, rangeM))` for all three, representing the Inverse Square Law in decibels).*
+
+3. **Template Editor UI Update:**
+Add the `acousticSignatureDb` and `rfEmissionDb` input fields to the "Health + Signature" section of the Template Editor HTML, and ensure they are saved/loaded correctly when the template form is submitted.
+
+Feature Request: Advanced EW/Cyber Vulnerability Profiling
+
+To support future roadmap features like GPS Spoofing and Cyber Takeover, a single `linkResilience` variable is insufficient. We must break down a Threat UAS's vulnerability into distinct vectors.
+
+Please implement the following updates to the `Browser_CsUAS_Sim.html` file. Provide exact Search/Replace blocks.
+
+1. **Schema Update (UAS Vulnerabilities):**
+In the Template normalization logic, expand the Threat UAS Template schema to replace `linkResilience` with three distinct floats (0.0 to 1.0):
+- `commsResilience`: (Default 0.5) Resistance to brute-force RF Jamming (J/S Ratio).
+- `navResilience`: (Default 0.5) Resistance to GPS/GNSS Spoofing.
+- `cyberResilience`: (Default 0.5) Resistance to encryption cracking and command-injection.
+
+2. **Effector Type Expansion:**
+Update the `effector.type` Enum to include `"Spoofer"` and `"Cyber"`. 
+
+3. **Physics Integration (EffectSystem.resolve):**
+When calculating `effectivePk` for non-kinetic effectors, apply the distance degradation curve `(1 - Math.pow((rangeM / effector.maxRangeM), 2))`, and multiply the result by the target's specific vulnerability:
+- If `"Jammer"`: `Effective_Pk = Distance_Degradation * (1 - target.commsResilience)`
+- If `"Spoofer"`: `Effective_Pk = Distance_Degradation * (1 - target.navResilience)`
+- If `"Cyber"`: `Effective_Pk = Distance_Degradation * (1 - target.cyberResilience)`
+
+4. **Template Editor UI Update:**
+Add the `commsResilience`, `navResilience`, and `cyberResilience` input fields (type="number", step="0.05", min="0", max="1") to the Template Editor HTML, and ensure they are saved/loaded correctly.
+
+Feature Request: Advanced Electronic Warfare (MIJS, Forced Downgrade, and Telemetry Spoofing)
+
+We need to elevate the EW modeling to represent high-end military tactics, specifically Forced Downgrades, Meaconing (Replay Attacks), and Telemetry Injection. 
+
+Please refactor `EffectSystem`, `C2System`, and the `TrackSystem` in `Browser_CsUAS_Sim_v2.1.html` to implement the following rules. Provide exact Search/Replace blocks for the Blob string.
+
+1. **The Forced Downgrade Mechanic (Jamming $\rightarrow$ Spoofing):**
+Military GPS drops to unencrypted backups when jammed. 
+- Fix in `EffectSystem.resolve`: When an effector of type `Jammer` successfully hits a target, in addition to changing `controlMode` to `"Jammed/Severed"`, reduce the target's `navResilience` by 50% (`target.components.vulnerability.navResilience *= 0.5`). 
+- Log the event: `[Jammer Name] forced [Target Name] to downgrade navigation systems. Spoofing vulnerability increased.`
+
+2. **Meaconing / Navigation Spoofing:**
+A `Spoofer` effector doesn't just jam; it injects fake coordinates, causing the drone to fly off course.
+- Fix in `EffectSystem.resolve`: If a `Spoofer` successfully hits a target (rolling against `navResilience`), inject a `spoofedOffset` into the target's runtime state. Generate a random offset Vector3 (e.g., X: +500m, Y: -500m). 
+- Fix in `MovementSystem.process`: If a target has a `spoofedOffset`, its physical X/Y/Z position must be updated as if the `spoofedOffset` was its true waypoint, pulling the drone off its intended mission path. 
+- Log the event: `[Spoofer Name] successfully meaconed [Target Name]. Target deviating from mission path.`
+
+3. **Telemetry Injection (Spoofing the C2 Node and Operator):**
+A `Cyber` effector hacks the datalink, feeding false coordinates to Blue sensors AND feeding false telemetry back to the Red Operator (Red C2).
+- Fix in `EffectSystem.resolve`: If a `Cyber` effector successfully hits a target (rolling against `cyberResilience`), apply a `telemetrySpoofed: true` flag and generate a `telemetryOffsetXY` Vector2 to the target's runtime state.
+- Fix in `TrackSystem.process` (Blue Deception): When a Blue sensor updates the track, if `telemetrySpoofed === true`, apply the `telemetryOffsetXY` to the track's recorded position. (Blue weapons will now aim at fake coordinates, dropping `Effective_Pk` to near 0).
+- Fix in `MovementSystem.process` (Red Deception): The Red drone relies on its telemetry to navigate to its waypoints. If `telemetrySpoofed === true`, the drone calculates its heading from its FAKE position (`runtime.position + telemetryOffsetXY`) to the waypoint. Because it thinks it is off-course, it will physically steer itself in the wrong direction to "compensate", flying into empty space.
+- Log the event: `[Cyber Name] successfully injected false telemetry into [Target Name]. Track and Operator navigation corrupted.`
+
+4. **Schema Updates:**
+Ensure the template normalization logic includes `navResilience` and `cyberResilience` floats (0.0 to 1.0) under a new `components.vulnerability` object for all templates.
+
+
+

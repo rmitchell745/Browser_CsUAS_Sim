@@ -1,0 +1,175 @@
+ Working Refactor Tree
+│ ├ └ ─
+
+src/
+├─ util/ #pure functions
+│    ├─math/[vector3D.js, geospatial.js, physics.js, mulberry32.js] 
+│    ├─schema/[normalizer.js, validator.js]
+│    └─export/ 
+│
+├─ kernel/ #runs the simulation
+│    ├─event_manager.js
+│    ├─world_state.js
+│    └─systems/ [//object behaviors…, movement.js, sensor.js, c2.js, …]
+│
+├─ ui/ #displays the outputs, manages inputs
+│    ├─mapRenderer.js
+│    ├─uiManager.js
+│    ├─dataBinder.js
+│    ├─htmlGen.js 
+│    ├─appController.js
+│    └─tutorial.js //runs tutorial scenarios with additional help and pop up boxes
+│
+├─report/ #generates reports
+│    ├─metricsEngine.js
+│    ├─csvBuilder.js
+│    ├─heatMapBuilder.js
+│    └─insightEngine.js
+│
+└─scenario/ # holds built in scenarios out of main code
+      ├─demo.json
+      └─tutorial_scenarios/[xxx.json, xxy.json, …]
+    
+
+
+
+
+
+
+
+
+
+
+
+
+File to Function Map
+
+1. src/util/math/ (Pure Mathematical Primitives)
+Rules: No DOM access, no world state mutations. Inputs go in, numbers/vectors come out.
+Target File
+Functions / Classes
+Responsibility
+physics.js
+clamp, round, deepClone, ensureArray
+General data type manipulation and bounds checking.
+vector3D.js
+distance3D, distance2D, subtractVectors, addVectors, scaleVector, dotProduct, magnitude3D, magnitude2D, normalizeVector, normalizeVector2D, dotProduct2D
+Core linear algebra for movement, raycasting, and kinematics.
+geospatial.js
+angleDeg, smallestAngleDifference, pointInPolygon, orientation2D, onSegment2D, segmentsIntersect2D, segmentIntersectsPolygon2D, getTerrainIntersection, getTerrainNoisePenalty
+2D map geometry, Line-of-Sight blocking, and FOV angle calculations.
+random.js
+class SeededRNG (includes next, nextGaussian, chance)
+Mulberry32 PRNG and Box-Muller normal distributions.
+ew_physics.js
+New Extractions: computeNonKineticProbability, calculateSignalStrengthDb, calculateDistanceDegradation
+Pulls the specific EW/Radar/Ballistic formulas out of the EffectSystem and SensorSystem.
+
+
+2. src/util/schema/ (Data Normalization & Validation)
+Rules: Responsible for ensuring JSON payloads are safe and structured before the engine uses them.
+Target File
+Functions / Classes
+Responsibility
+normalizer.js
+normalizeRoles, normalizeMissionProfile, normalizeLostLinkBehavior, normalizePayload, normalizeResistance, normalizeSignature, normalizeVulnerability, normalizeCapability, normalizeSensorType, normalizeEffectorType, normalizeDeliveryModel, normalizeSensor, normalizeEffector, normalizeScenario
+Ensures missing JSON fields are populated with safe baseline defaults.
+validator.js
+createValidationIssue, validateScenario
+Performs logical checks (e.g., "Does Red have waypoints?") and generates the Validation Report payload.
+
+
+3. src/kernel/ (The Headless Simulation Engine)
+Rules: This code runs entirely inside the Web Worker. It cannot read the DOM or touch HTML elements.
+Target File
+Functions / Classes
+Responsibility
+event_manager.js
+class EventManager, EVENT_PRIORITIES, MIN_STATE_DELAY_SEC
+The core Min-Heap priority queue driving the Discrete Event Simulation.
+world_state.js
+getObject, getTrack, getTracksForSide, getAllTracks, getTracksForObject, getSensor, getSensorRuntimeState, getOpposingSide, getObjectsForSide, getSideAssets, getEffectorRuntimeState, getObjectSideById, inferLogSide
+Read-only accessors to safely query the ECS arrays.
+world_mutators.js
+syncFpvSensorHeading, clearEffectorAssignment, markObjectDestroyed, applyDamageEvent, removeRuntimeObject, setObjectControlMode, restoreObjectControlMode, clearExpiredRuntimeEffects
+Safe state-writers that update the ECS arrays during event resolution.
+simulation_manager.js
+class SimulationManager (includes run, createRuntimeWorld)
+The orchestrator. Initializes the world, seeds the first events, and executes the while(hasEvents) loop.
+
+
+4. src/kernel/systems/ (The ECS Logic Modules)
+Rules: These classes hold the process(), resolve(), and fire() methods that execute the events off the queue and generate events for the queue.
+Target File
+Functions / Classes
+Responsibility
+movement.js
+class MovementSystem
+Waypoint following, Kamikaze terminal dives, interceptor kinematic pursuit, and terrain collisions.
+sensor.js
+class SensorSystem, isOpticalSensor, isRfPassiveSensor, isAcousticSensor
+Iterates targets, checks LOS, calculates SNR, pushes detections to TrackSystem.
+track.js
+class TrackSystem
+Handles tracking creation, fusion, and stale-track aging/dropping.
+cognitive.js
+class ClassificationSystem, class IdentificationSystem, class IntentSystem, getVelocityVector, estimateTrackPayloadScore, findMissionHeuristicTarget, resolveProjectedAsset, updateTrackThreatAssessment, createAssessmentStageState, startAssessmentCycle, recordAssessmentDecision, etc.
+The "Brain." Processes confidence intervals, squawks, and predicts threat paths.
+c2.js
+class C2System
+Threat Evaluation and Weapons Assignment (TEWA). Calculates Threat Scores and tasks available Effectors.
+effect.js
+class EffectSystem, isDirectedEnergyEffector, buildRandomOffset
+Calculates Time of Flight, spawns Child Interceptors, and rolls
+Pk​
+/ EW effects.
+damage.js
+class DamageSystem, class ImpactSystem
+Subtracts HP, resolves Area of Effect (AoE) secondary explosions, and updates status flags to "Destroyed".
+network.js
+class NetworkSystem, getInfrastructureForSide, getNetworkState, hasOperationalPower, hasNetworkAccess, canObjectAct, getObjectEmissionState
+Manages implicit infrastructure logic, EW Jamming durations, and comms degradation.
+
+
+5. src/report/ (Analytics & Output Formatting)
+Rules: Translates the raw Web Worker output into human-readable or external-tool-ready formats. Provides some common analysis for viewing in the browser. 
+Target File
+Functions / Classes
+Responsibility
+logger.js
+class LoggingSystem
+Formats and pushes text entries to the world.logs array during execution.
+metrics_engine.js
+snapshotWorld, recordAssessmentSnapshot, finalizeReport
+Aggregates the final state of the world into the JSON report payload.
+csv_builder.js
+createCsvRow, rowsToCsv
+Dynamically flattens the JSON report (including variable effector templates) into an R/Python-ready CSV string.
+monte_carlo.js
+class MonteCarloManager
+Loops the SimulationManager
+N
+times and compiles the CSV rows.
+
+
+6. src/ui/ (The Browser Thread)
+Rules: This is the ONLY folder allowed to touch document.getElementById, CanvasRenderingContext2D, or the DOM.
+Target File
+Functions / Classes
+Responsibility
+mapRenderer.js
+class MapRenderer
+Translates the scenario JSON and run frames into drawn shapes on the HTML5 <canvas>, handling panning and scaling.
+uiManager.js
+class UIManager
+Toggles CSS classes to slide the sidebars in and out and switch active views.
+workerClient.js
+createMonteCarloWorker (Refactored to point to the bundled worker script)
+Manages the asynchronous messaging (postMessage) between the DOM and the headless Simulation Kernel.
+appController.js
+class AppController
+The main bridging file. Binds HTML buttons to JavaScript functions, manages the Scenario Wizard state, and triggers updates.
+
+Summary for Execution
+This map completely dismantles the "God Object" architecture. It ensures that when you want to change how a jammer works, you only open effect.js and ew_physics.js, without ever having to scroll past 2,000 lines of UI and HTML rendering code.
+

@@ -589,6 +589,25 @@ For a browser-only prototype:
 
 If automated tests do not exist, record manual test steps in `TODO.md`.
 
+Automatic Testing Requirements
+
+- Never modify index.html to support testing.
+- Create Playwright tests under /tests.
+- Launch Chromium with:
+
+--no-sandbox
+--disable-setuid-sandbox
+--disable-dev-shm-usage
+--disable-gpu
+
+- Serve the application through a local HTTP server.
+- Verify:
+  * Application loads
+  * No console errors
+  * Scenario can be loaded
+  * Simulation can execute
+  * Report view renders
+
 ---
 
 # 23. Do Not Do

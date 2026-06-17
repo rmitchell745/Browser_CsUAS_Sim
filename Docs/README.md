@@ -4,6 +4,8 @@ This repository currently contains a browser-only component-system Counter-small
 
 Current review version: `v2.4`
 
+The repo also includes a standalone offline environment/scenario extraction utility at `external_util/Environment_Extractor.html`.
+
 ## Current prototype
 
 - Single-file `index.html`
@@ -32,6 +34,7 @@ Current review version: `v2.4`
 - Scenario validation grouped into blockers, warnings, and scenario-quality notes with editor jump-links
 - Track aging and stale track drop behavior
 - Event log, single-run report, worker-backed Monte Carlo aggregation, and flat CSV export with dynamic ammo columns and weighted survival metrics
+- Vite single-file bridge with a native module-worker Monte Carlo path layered over the legacy shell
 - Export preview tabs for scenario JSON, single-run report JSON, event log JSON, and Monte Carlo CSV
 - Click-to-select and click-to-move geographic editing for placed scenario objects after build/import
 
@@ -49,6 +52,7 @@ Current review version: `v2.4`
 10. Use `Debrief` to inspect event sequencing, Blue/Red feeds, and failure-driver summaries.
 11. Use `Export` to download the current scenario JSON, single-run outputs, Monte Carlo CSV, or event log JSON.
 12. Inspect the single-run report JSON when needed to review `assessmentSnapshots` for stateful refresh/skip behavior.
+13. Use the Vite path when reviewing the modularization effort; it now runs Monte Carlo through a native module worker, while `index.html` remains the direct ready-to-test reference build.
 
 ## Playtest package
 
@@ -73,6 +77,12 @@ Start with:
 - `playtest_15_cyber_telemetry_spoof.json`
 
 Use `Docs/Playtest/PLAYTEST_PLAN.md` as the execution checklist.
+
+## Standalone extractor
+
+- `external_util/Environment_Extractor.html` is the authoritative standalone extractor.
+- It now defaults to generating simulator-ready scenario JSON and can also export a legacy environment package.
+- The older `Envornment_Extractor_2.html` path now redirects to the canonical extractor.
 
 ## Scope limits
 

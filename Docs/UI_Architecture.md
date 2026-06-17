@@ -96,21 +96,17 @@ The UI should support local files for:
 
 Because the application is a single HTML file, navigation should be handled by a `UIManager` or state machine.
 
-The UIManager controls which screen is visible.
+The UIManager controls which workstation drawer is visible.
 
-Only one major menu or workflow section should be visible at a time.
+Only one major right-side drawer should be active at a time.
 
-Example screen states:
+Current prototype drawer states:
 
-- Main Menu
-- Build Scenario
-- Edit Terrain
-- Edit Platform Templates
-- Build Rosters
-- Build Mission Plan
-- Run Scenario
-- View Report
-- Tutorial / Help
+- Scenario Editor
+- Template Wizard
+- Rosters / Networks / Power
+- Debrief
+- Export
 
 Implementation concept:
 
@@ -118,63 +114,62 @@ Implementation concept:
 UIManager.showScreen(screenId)
 ```
 
-The UIManager should toggle the CSS display property of relevant `<section>` or `<div>` elements.
+The UIManager should toggle the active state of the relevant sidebar `<section>` and its matching side-tray button.
 
 ---
 
-# 5. Main Menu Loop
+# 5. Workstation Flow
 
-The main menu provides access to the major workflows.
+The current prototype uses a tactical workstation shell rather than a separate main-menu loop.
 
-Primary actions:
-
-1. Run Scenario
-2. View Report
-3. Build Scenario
-4. Edit / Create Scenario Parameters
-5. Tutorial / Help
-
-The main menu should prioritize the normal user flow:
+Primary operator flow:
 
 ```text
-Build Scenario
+Template Wizard (Tier 1)
+↓
+Rosters / Networks / Power (Tier 2)
+↓
+Scenario Editor (Tier 3)
 ↓
 Run Scenario
 ↓
-View Report
+Debrief / Export
 ```
+
+The map remains the dominant surface throughout this flow. Drawers support the task rather than replacing the map.
 
 ---
 
-# 6. Scenario Builder Overview
+# 6. Scenario Editor Overview
 
-The Scenario Builder is responsible for creating or editing complete simulation scenarios.
+The Scenario Editor is responsible for creating or editing complete simulation scenarios at Tier 3.
 
 Major functions:
 
 - Load Scenario JSON
 - Create New Scenario
-- Edit Terrain
-- Build Blue Force
-- Build Red Force
-- Build Environment
-- Configure Networks
-- Configure Power Grids
+- Edit terrain/environment metadata
+- Build Blue placement
+- Build Red threat placement
+- Assign logical networks
+- Assign power-grid connections
 - Save Scenario JSON
 
-The builder should preserve the Three-Tier System:
+The editor should preserve the Three-Tier System:
 
 1. Templates
 2. Rosters
 3. Mission Instances
 
+The current prototype defaults this workflow to `Blank From Scratch`, while still allowing starter patterns for baseline, lock/refire, and TEWA-priority cases.
+
 ---
 
-# 7. Template Editing UI
+# 7. Template Wizard UI
 
 Templates define reusable capabilities.
 
-The Template Editor should support creation and editing of component-based templates.
+The Template Wizard is the Tier 1 workflow. It should support creation and editing of component-based templates while keeping major capability edits out of the Scenario Editor.
 
 Template categories may include:
 
@@ -187,7 +182,15 @@ Template categories may include:
 - Decoy
 - Clutter Object
 
-The UI should allow templates to be assembled using components rather than forcing a single large form.
+The current prototype includes:
+
+- helper-workflow placeholder cards
+- a scenario-local template list
+- common-field editing
+- selected-template JSON editing
+- standalone selected-template import/export
+
+The UI should continue allowing templates to be assembled using components rather than forcing a single large form.
 
 Example components:
 
@@ -296,11 +299,11 @@ Sensor baseline defaults may include:
 
 ---
 
-# 10. Roster Builder UI
+# 10. Roster / Network / Power UI
 
 Rosters define force composition.
 
-The Roster Builder should allow users to:
+The Tier 2 drawer should allow users to:
 
 - Select templates from the scenario library
 - Assign quantities
@@ -323,20 +326,15 @@ Assign Side
 Add to Roster
 ```
 
-The UI should support:
-
-- Load ORBAT JSON
-- Export ORBAT JSON
-- Save to Scenario Library
-- Validate missing Template IDs
+The current prototype also hosts first-pass C2 network and power-grid editors in this drawer so scenario authors can manage logical assignment without leaving the workstation shell.
 
 ---
 
-# 11. Mission Builder UI
+# 11. Map-Centric Scenario Editing UI
 
-The Mission Builder creates Tier 3 mission instances.
+Tier 3 mission instances are laid out through the Scenario Editor and live map.
 
-The Mission Builder should provide a 2D canvas for placement and mission planning.
+The map-centric editor should provide a 2D canvas for placement and mission planning.
 
 Major functions:
 
@@ -353,7 +351,7 @@ Major functions:
 - Assign C2 network subscriptions
 - Assign power grid connections
 
-The Mission Builder should support separate Blue and Red planning views, but use the same underlying data model.
+The current prototype supports click-to-select and click-to-move for built/imported scenario objects, plus click-to-place flows for Blue placement and Red route endpoint authoring in the editor draft.
 
 ---
 
@@ -536,13 +534,14 @@ The Run Scenario UI controls execution.
 Current prototype functions:
 
 - Load Scenario
-- Review Scenario Summary
+- Review validation and summary state
 - Set number of Monte Carlo iterations
 - Execute single scenario
 - Execute Monte Carlo
 - Toggle ghost and clutter placeholders
 - Review validation status
 - Download raw outputs
+- Keep Blue and Red feeds visible alongside the map
 
 Not yet implemented in the current prototype:
 
@@ -584,22 +583,25 @@ The UI should support progress updates when feasible.
 
 ---
 
-# 18. Report Viewer UI
+# 18. Debrief UI
 
-The Report Viewer visualizes completed runs.
+The Debrief drawer visualizes completed runs.
 
 Current prototype views:
 
 - single-run summary metrics
 - single-run detail list
-- event log
+- split Blue / Red operational feeds
+- event timeline
+- top failure-driver summary
 - replay frames on the canvas
 - Monte Carlo aggregate table
-- raw export preview
 
-The report viewer should replay stored logs rather than rerunning the simulation.
+The debrief surface should replay stored logs rather than rerunning the simulation.
 
 Assessment snapshots currently live in the single-run report JSON payload and are not yet exposed as a dedicated UI panel.
+
+Raw data preview and download workflows belong to the separate `Export` drawer.
 
 ---
 
@@ -754,23 +756,23 @@ Monte Carlo execution should clone runtime state for each iteration.
 
 ---
 
-# 24. Recommended Screen List
+# 24. Recommended Workstation Surfaces
 
-Recommended major screens:
+Current major workstation surfaces:
 
-1. Main Menu
-2. Scenario Dashboard
-3. Terrain Editor
-4. Template Library
-5. Template Editor
-6. Roster Builder
-7. Mission Builder
-8. Environment Builder
-9. Network / Power Builder
-10. Run Scenario
-11. Report Viewer
-12. Raw Data / Export
-13. Tutorial / Help
+1. Live Map / Canvas
+2. Scenario Editor
+3. Template Wizard
+4. Rosters / Networks / Power
+5. Debrief
+6. Export
+
+Likely future additions:
+
+7. Dedicated terrain/environment editor
+8. Dedicated helper-calculator panels inside Template Wizard
+9. Dedicated assessment snapshot viewer
+10. Advanced playback controls
 
 ---
 

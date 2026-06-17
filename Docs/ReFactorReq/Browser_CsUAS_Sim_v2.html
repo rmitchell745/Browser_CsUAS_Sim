@@ -1,0 +1,3347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C-sUAS Monte Carlo DES Prototype</title>
+  <style>
+    :root {
+      --bg-top: #080212;
+      --bg-mid: #120528;
+      --bg-bottom: #060312;
+      --panel: rgba(19, 10, 46, 0.92);
+      --panel-soft: rgba(18, 13, 50, 0.82);
+      --panel-border: rgba(110, 92, 255, 0.34);
+      --panel-glow: rgba(66, 225, 255, 0.18);
+      --text: #f4f1ff;
+      --muted: #a49bc9;
+      --accent: #9c4dff;
+      --accent-strong: #50d8ff;
+      --neon-purple: #a855ff;
+      --neon-blue: #38d9ff;
+      --red: #ff5f92;
+      --blue: #50d8ff;
+      --green: #77ffb1;
+      --warning: #ffd86e;
+      --shadow: 0 24px 55px rgba(2, 0, 14, 0.52);
+      --grid-line: rgba(143, 112, 255, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(168, 85, 255, 0.32), transparent 28%),
+        radial-gradient(circle at top right, rgba(56, 217, 255, 0.18), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(80, 216, 255, 0.18), transparent 34%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-mid) 42%, var(--bg-bottom));
+    }
+
+    .app-shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+      padding: 18px 20px;
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      background:
+        linear-gradient(135deg, rgba(18, 10, 52, 0.96), rgba(10, 26, 63, 0.92)),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(1.8rem, 3vw, 3rem);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      max-width: 72ch;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      align-content: start;
+    }
+
+    .stat-card,
+    .panel,
+    .screen {
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      background: var(--panel-soft);
+      box-shadow: var(--shadow), inset 0 0 0 1px rgba(80, 216, 255, 0.06), 0 0 24px var(--panel-glow);
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-card {
+      padding: 14px 16px;
+      min-height: 94px;
+    }
+
+    .stat-card .label,
+    .metric-card .label {
+      font-size: 0.78rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stat-card .value,
+    .metric-card .value {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--accent-strong);
+    }
+
+    .nav-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 12px;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid rgba(80, 216, 255, 0.3);
+      border-radius: 999px;
+      padding: 10px 16px;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(168, 85, 255, 0.28), rgba(56, 217, 255, 0.12)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 58%);
+      box-shadow: 0 0 18px rgba(80, 216, 255, 0.14);
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      background:
+        linear-gradient(180deg, rgba(176, 94, 255, 0.4), rgba(80, 216, 255, 0.18)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.18), transparent 58%);
+      border-color: rgba(80, 216, 255, 0.6);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: wait;
+    }
+
+    .nav-button.active {
+      background:
+        linear-gradient(180deg, rgba(80, 216, 255, 0.34), rgba(168, 85, 255, 0.22)),
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.14), transparent 58%);
+      border-color: rgba(80, 216, 255, 0.7);
+      box-shadow: 0 0 22px rgba(80, 216, 255, 0.2);
+    }
+
+    .screen {
+      display: none;
+      padding: 18px;
+    }
+
+    .screen.active {
+      display: block;
+      animation: fade-in 0.26s ease;
+    }
+
+    @keyframes fade-in {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .screen-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 16px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      padding: 16px;
+    }
+
+    .panel h2,
+    .panel h3,
+    .screen h2 {
+      margin: 0 0 12px;
+      letter-spacing: 0.03em;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+    }
+
+    .field input {
+      width: 84px;
+      padding: 6px 8px;
+      border: 1px solid rgba(80, 216, 255, 0.2);
+      border-radius: 10px;
+      background: rgba(7, 9, 25, 0.72);
+      color: var(--text);
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--muted);
+    }
+
+    .badge strong.status-ok {
+      color: var(--green);
+    }
+
+    .badge strong.status-warning {
+      color: var(--warning);
+    }
+
+    .badge strong.status-error {
+      color: #ff88b4;
+    }
+
+    .badge strong {
+      color: var(--text);
+    }
+
+    .canvas-wrap {
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      background:
+        linear-gradient(180deg, rgba(17, 10, 53, 0.52), rgba(4, 9, 29, 0.88)),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: auto, 80px 80px, 80px 80px;
+      border: 1px solid rgba(80, 216, 255, 0.14);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 12 / 7;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 7px;
+      vertical-align: middle;
+    }
+
+    .legend .blue::before {
+      background: var(--blue);
+    }
+
+    .legend .red::before {
+      background: var(--red);
+    }
+
+    .legend .track::before {
+      background: var(--accent-strong);
+    }
+
+    .log-feed {
+      max-height: 420px;
+      overflow: auto;
+      padding-right: 4px;
+      font-size: 0.94rem;
+    }
+
+    .log-entry {
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-entry .time {
+      color: var(--accent-strong);
+      font-weight: 700;
+      margin-right: 8px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(80, 216, 255, 0.12);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+    }
+
+    th,
+    td {
+      padding: 10px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .report-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .report-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .report-list li:last-child {
+      border-bottom: none;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 320px;
+      padding: 12px;
+      color: var(--text);
+      background: rgba(7, 9, 25, 0.78);
+      border: 1px solid rgba(80, 216, 255, 0.16);
+      border-radius: 12px;
+      resize: vertical;
+    }
+
+    .placeholder-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .placeholder-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px dashed rgba(80, 216, 255, 0.2);
+      color: var(--muted);
+    }
+
+    .toggle-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .toggle-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(80, 216, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--muted);
+    }
+
+    .toggle-chip input {
+      accent-color: var(--neon-blue);
+    }
+
+    .validation-summary {
+      display: grid;
+      gap: 10px;
+    }
+
+    .validation-box {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(80, 216, 255, 0.16);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .validation-box h3,
+    .validation-box h4 {
+      margin: 0 0 10px;
+    }
+
+    .validation-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .validation-list li + li {
+      margin-top: 6px;
+    }
+
+    .validation-ok {
+      color: var(--green);
+    }
+
+    .validation-warning {
+      color: var(--warning);
+    }
+
+    .validation-error {
+      color: #ff88b4;
+    }
+
+    @media (max-width: 1080px) {
+      .hero,
+      .screen-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app-shell {
+        padding: 12px;
+      }
+
+      .hero {
+        padding: 16px;
+      }
+
+      .screen,
+      .panel {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hero">
+      <div>
+        <h1>C-sUAS Vertical Slice</h1>
+        <p>
+          Single-file browser prototype for a component-system discrete event simulation.
+          The current slice runs one hardcoded Red UAS against one Blue sensor / effector site,
+          then pushes detections through tracking, classification, C2, firing, damage, logging,
+          and Monte Carlo reporting.
+        </p>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-card">
+          <span class="label">Architecture</span>
+          <span class="value">Component + System</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Execution</span>
+          <span class="value">Browser Only</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Scenario</span>
+          <span class="value">1 Blue / 1 Red</span>
+        </div>
+        <div class="stat-card">
+          <span class="label">Export</span>
+          <span class="value">Flat CSV</span>
+        </div>
+      </div>
+    </header>
+
+    <nav class="nav-strip">
+      <button class="nav-button active" data-screen="dashboard">Scenario Dashboard</button>
+      <button class="nav-button" data-screen="run">Run Scenario</button>
+      <button class="nav-button" data-screen="report">Report Viewer</button>
+      <button class="nav-button" data-screen="export">Raw Data / Export</button>
+    </nav>
+
+    <section class="screen active" id="screen-dashboard">
+      <div class="screen-grid">
+        <div class="stack">
+          <div class="panel">
+            <h2>Current Slice</h2>
+            <ul class="report-list">
+              <li><span>Scenario model</span><strong>Template + instance JSON with local import/export</strong></li>
+              <li><span>Physical chain</span><strong>Move -> detect -> track -> classify -> identify -> intent -> engage</strong></li>
+              <li><span>Decision style</span><strong>Simple hostile-track engagement rule</strong></li>
+              <li><span>Damage model</span><strong>Effective_Pk with kinetic damage and stale track drop</strong></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h2>Environment Placeholders</h2>
+            <p style="margin: 0; color: var(--muted);">
+              These switches add minimal environment placeholders without building the full editor.
+            </p>
+            <div class="toggle-row">
+              <label class="toggle-chip">
+                <input type="checkbox" id="ghost-placeholder-toggle">
+                <span>Ghost track placeholder</span>
+              </label>
+              <label class="toggle-chip">
+                <input type="checkbox" id="clutter-placeholder-toggle">
+                <span>Clutter field placeholder</span>
+              </label>
+            </div>
+            <div class="placeholder-list" style="margin-top: 12px;">
+              <div class="placeholder-card" id="ghost-placeholder-card">Ghost placeholder inactive</div>
+              <div class="placeholder-card" id="clutter-placeholder-card">Clutter placeholder inactive</div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Deferred Screens</h2>
+            <div class="placeholder-list">
+              <div class="placeholder-card">Template Library placeholder</div>
+              <div class="placeholder-card">Mission Builder placeholder</div>
+              <div class="placeholder-card">Environment Builder placeholder</div>
+              <div class="placeholder-card">Tutorial / Help placeholder</div>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel">
+            <h2>System Layout</h2>
+            <ul class="report-list">
+              <li><span>EventManager</span><strong>Deterministic queue</strong></li>
+              <li><span>MovementSystem</span><strong>Waypoint motion</strong></li>
+              <li><span>SensorSystem</span><strong>Range, FOV, signal, noise</strong></li>
+              <li><span>TrackSystem</span><strong>Track create / update</strong></li>
+              <li><span>ClassificationSystem</span><strong>Classify track type</strong></li>
+              <li><span>IdentificationSystem</span><strong>Assess affiliation</strong></li>
+              <li><span>IntentSystem</span><strong>Estimate behavior</strong></li>
+              <li><span>C2System</span><strong>Task available effector</strong></li>
+              <li><span>Effect + Damage</span><strong>Resolve hit and destruction</strong></li>
+              <li><span>LoggingSystem</span><strong>Explainable event history</strong></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h2>Scenario Validation</h2>
+            <div class="validation-summary" id="validation-summary"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-run">
+      <div class="panel">
+        <div class="controls">
+          <button id="run-single-btn">Run Single Scenario</button>
+          <button id="run-monte-carlo-btn">Run Monte Carlo</button>
+          <button id="load-scenario-btn">Load Scenario JSON</button>
+          <button id="export-scenario-btn">Export Scenario JSON</button>
+          <button id="reset-view-btn">Reset Scenario View</button>
+          <input id="scenario-file-input" type="file" accept=".json,application/json" hidden>
+          <div class="field">
+            <label for="monte-carlo-count">Iterations</label>
+            <input id="monte-carlo-count" type="number" min="1" max="250" value="25">
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="badge"><span>Status</span><strong id="status-text">Ready</strong></div>
+          <div class="badge"><span>Playback</span><strong id="playback-text">Idle</strong></div>
+          <div class="badge"><span>Queue</span><strong id="queue-text">0</strong></div>
+          <div class="badge"><span>Last seed</span><strong id="seed-text">-</strong></div>
+          <div class="badge"><span>Scenario</span><strong id="scenario-text">Baseline Vertical Slice</strong></div>
+        </div>
+      </div>
+
+      <div class="screen-grid" style="margin-top: 16px;">
+        <div class="stack">
+          <div class="panel">
+            <h2>Simulation Map</h2>
+            <div class="canvas-wrap">
+              <canvas id="sim-canvas" width="1080" height="630"></canvas>
+            </div>
+            <div class="legend">
+              <span class="blue">Blue object</span>
+              <span class="red">Red physical object</span>
+              <span class="track">Track belief</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="panel">
+            <h2>Live Run Metrics</h2>
+            <div class="metrics-grid" id="run-metrics"></div>
+          </div>
+          <div class="panel">
+            <h2>Event Log</h2>
+            <div class="log-feed" id="event-log"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-report">
+      <div class="stack">
+        <div class="panel">
+          <h2>Single Run Report</h2>
+          <div class="metrics-grid" id="single-run-summary"></div>
+        </div>
+        <div class="screen-grid">
+          <div class="panel">
+            <h3>Report Details</h3>
+            <ul class="report-list" id="single-run-details"></ul>
+          </div>
+          <div class="panel">
+            <h3>Monte Carlo Aggregate</h3>
+            <div class="metrics-grid" id="monte-carlo-summary"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Monte Carlo Results</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Iteration</th>
+                <th>Detected</th>
+                <th>Identified</th>
+                <th>Intent</th>
+                <th>Engaged</th>
+                <th>Destroyed</th>
+                <th>Dropped</th>
+                <th>Detect Time (s)</th>
+                <th>Kill Time (s)</th>
+                <th>Shots</th>
+              </tr>
+            </thead>
+            <tbody id="monte-carlo-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-export">
+      <div class="stack">
+        <div class="panel">
+          <div class="controls">
+            <button id="export-single-btn">Export Single Run CSV</button>
+            <button id="export-monte-carlo-btn">Export Monte Carlo CSV</button>
+            <button id="export-log-btn">Export Event Log JSON</button>
+            <button id="export-scenario-file-btn">Export Scenario JSON</button>
+          </div>
+          <p style="margin: 0; color: var(--muted);">
+            Preview area shows the most recent export payload before download.
+          </p>
+        </div>
+        <div class="panel">
+          <h2>Export Preview</h2>
+          <textarea id="export-preview" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function createSimulationKernel() {
+      const EVENT_PRIORITIES = {
+        state: 1,
+        sensor: 2,
+        track: 3,
+        c2: 4,
+        movement: 5,
+        effector: 6,
+        effect: 7,
+        damage: 8,
+        log: 9
+      };
+
+      const MIN_STATE_DELAY_SEC = 0.1;
+
+      function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+      }
+
+      function round(value, decimals = 2) {
+        const factor = 10 ** decimals;
+        return Math.round(value * factor) / factor;
+      }
+
+      function deepClone(value) {
+        if (typeof structuredClone === "function") {
+          return structuredClone(value);
+        }
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function distance3D(a, b) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const dz = (b.z || 0) - (a.z || 0);
+        return Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+      }
+
+      function distance2D(a, b) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        return Math.sqrt((dx * dx) + (dy * dy));
+      }
+
+      function angleDeg(from, to) {
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        if (angle < 0) {
+          angle += 360;
+        }
+        return angle;
+      }
+
+      function smallestAngleDifference(a, b) {
+        let diff = ((a - b + 540) % 360) - 180;
+        if (diff < -180) {
+          diff += 360;
+        }
+        return diff;
+      }
+
+      function ensureArray(value) {
+        return Array.isArray(value) ? value : [];
+      }
+
+      function normalizeRoles(roles, fallbackRoles = []) {
+        if (Array.isArray(roles) && roles.length) {
+          return roles.slice();
+        }
+        return fallbackRoles.slice();
+      }
+
+      function normalizeSensor(sensor, index) {
+        const classification = sensor.classification || {};
+        const identification = sensor.identification || {};
+        return {
+          id: sensor.id || "Sensor-" + (index + 1),
+          name: sensor.name || sensor.type || ("Sensor " + (index + 1)),
+          type: sensor.type || "Radar",
+          maxRangeM: Number(sensor.maxRangeM ?? sensor.maxRange_m ?? 0),
+          horizontalFovDeg: Number(sensor.horizontalFovDeg ?? sensor.fov_azimuth_deg ?? 360),
+          verticalFovDeg: Number(sensor.verticalFovDeg ?? sensor.fov_elevation_deg ?? 180),
+          headingDeg: Number(sensor.headingDeg ?? sensor.heading_deg ?? 0),
+          transmitPowerDb: Number(sensor.transmitPowerDb ?? sensor.txPower_dB ?? 0),
+          noiseFloorDb: Number(sensor.noiseFloorDb ?? -94),
+          noiseSigmaDb: Number(sensor.noiseSigmaDb ?? 1.2),
+          detectionThresholdDb: Number(sensor.detectionThresholdDb ?? sensor.thresholdDb ?? 17),
+          scanIntervalSec: Number(sensor.scanIntervalSec ?? sensor.sweepRate_sec ?? 1),
+          classification: {
+            canClassify: classification.canClassify !== false,
+            latencySec: Number(classification.latencySec ?? classification.classificationLatency_sec ?? 0.2),
+            accuracyBase: Number(classification.accuracyBase ?? classification.classificationAccuracyBase ?? 0.72)
+          },
+          identification: {
+            canIdentify: identification.canIdentify !== false,
+            latencySec: Number(identification.latencySec ?? identification.identificationLatency_sec ?? 0.35),
+            accuracyBase: Number(identification.accuracyBase ?? identification.identificationAccuracyBase ?? 0.68)
+          }
+        };
+      }
+
+      function normalizeEffector(effector, index) {
+        return {
+          id: effector.id || "Effector-" + (index + 1),
+          name: effector.name || effector.type || ("Effector " + (index + 1)),
+          type: effector.type || "Kinetic",
+          maxRangeM: Number(effector.maxRangeM ?? effector.maxRange_m ?? 0),
+          basePk: Number(effector.basePk ?? 0),
+          basePe: Number(effector.basePe ?? 0),
+          damagePoints: Number(effector.damagePoints ?? effector.payloadYield ?? 0),
+          ammoCapacity: Number(effector.ammoCapacity ?? 1),
+          commandDelaySec: Number(effector.commandDelaySec ?? 0.2),
+          timeToEffectSec: Number(effector.timeToEffectSec ?? 0.6),
+          cooldownSec: Number(effector.cooldownSec ?? effector.cooldown_sec ?? 1.5)
+        };
+      }
+
+      function normalizeScenario(inputScenario) {
+        const scenario = deepClone(inputScenario || {});
+        scenario.metadata = scenario.metadata || {};
+        scenario.metadata.name = scenario.metadata.name || scenario.name || "Baseline Vertical Slice";
+        scenario.metadata.description = scenario.metadata.description || "";
+        scenario.config = scenario.config || {};
+        scenario.config.maxTimeSec = Number(scenario.config.maxTimeSec ?? 45);
+        scenario.config.trackStaleAfterSec = Number(scenario.config.trackStaleAfterSec ?? 4);
+        scenario.config.attackRunRangeM = Number(scenario.config.attackRunRangeM ?? 240);
+        scenario.environment = scenario.environment || {};
+        scenario.environment.baseNoiseDb = Number(scenario.environment.baseNoiseDb ?? 1.8);
+        scenario.environment.placeholderGhostTrack = scenario.environment.placeholderGhostTrack || {
+          enabled: false,
+          spawnTimeSec: 7,
+          posX: 500,
+          posY: 180,
+          posZ: 110,
+          label: "Ghost Track Placeholder"
+        };
+        scenario.environment.placeholderClutterField = scenario.environment.placeholderClutterField || {
+          enabled: false,
+          centerX: 410,
+          centerY: 430,
+          radiusM: 100,
+          label: "Clutter Placeholder",
+          note: "Placeholder clutter field only; no full clutter object spawning yet."
+        };
+        scenario.templates = ensureArray(scenario.templates).map((template, templateIndex) => {
+          const components = template.components || {};
+          return {
+            id: template.id || "Template-" + (templateIndex + 1),
+            name: template.name || ("Template " + (templateIndex + 1)),
+            category: template.category || "Generic",
+            defaultRoles: normalizeRoles(template.defaultRoles, []),
+            components: {
+              health: {
+                maxHealth: Number(components.health?.maxHealth ?? 100)
+              },
+              resistance: {
+                kineticResistance: Number(components.resistance?.kineticResistance ?? 0.1)
+              },
+              signature: {
+                radarSignatureDb: Number(components.signature?.radarSignatureDb ?? components.signature?.radarSignature_dB ?? -10)
+              },
+              movement: components.movement ? {
+                speedMps: Number(components.movement.speedMps ?? components.movement.maxSpeed_mps ?? 0),
+                stepSec: Number(components.movement.stepSec ?? 1),
+                waypointToleranceM: Number(components.movement.waypointToleranceM ?? 10)
+              } : null,
+              sensors: ensureArray(components.sensors).map(normalizeSensor),
+              effectors: ensureArray(components.effectors).map(normalizeEffector),
+              c2: components.c2 ? {
+                trackCapacity: Number(components.c2.trackCapacity ?? components.c2.maxTracks ?? 8),
+                processingLatencySec: Number(components.c2.processingLatencySec ?? components.c2.processingLatency_sec ?? 0.25)
+              } : null
+            }
+          };
+        });
+
+        scenario.instances = ensureArray(scenario.instances).map((instance, instanceIndex) => ({
+          id: instance.id || "Instance-" + (instanceIndex + 1),
+          templateId: instance.templateId,
+          name: instance.name || ("Instance " + (instanceIndex + 1)),
+          side: instance.side || "Neutral",
+          roles: normalizeRoles(instance.roles, []),
+          posX: Number(instance.posX ?? 0),
+          posY: Number(instance.posY ?? 0),
+          posZ: Number(instance.posZ ?? 0),
+          missionWaypoints: ensureArray(instance.missionWaypoints).map((waypoint) => ({
+            x: Number(waypoint.x ?? 0),
+            y: Number(waypoint.y ?? 0),
+            z: Number(waypoint.z ?? 0)
+          }))
+        }));
+
+        return scenario;
+      }
+
+      function validateScenario(inputScenario) {
+        const errors = [];
+        const warnings = [];
+        const scenario = normalizeScenario(inputScenario);
+
+        if (!scenario.metadata.name) {
+          errors.push("Scenario name is required.");
+        }
+
+        if (!scenario.templates.length) {
+          errors.push("At least one template is required.");
+        }
+
+        if (!scenario.instances.length) {
+          errors.push("At least one instance is required.");
+        }
+
+        const templateIds = new Set();
+        scenario.templates.forEach((template) => {
+          if (templateIds.has(template.id)) {
+            errors.push("Duplicate template id: " + template.id);
+          }
+          templateIds.add(template.id);
+          if (!Array.isArray(template.defaultRoles)) {
+            errors.push("Template " + template.id + " must use roles as an array.");
+          }
+          if (!template.components.health || !Number.isFinite(template.components.health.maxHealth)) {
+            errors.push("Template " + template.id + " is missing valid health.maxHealth.");
+          }
+        });
+
+        const instanceIds = new Set();
+        let blueCount = 0;
+        let redCount = 0;
+        let sensorCount = 0;
+        let c2Count = 0;
+
+        scenario.instances.forEach((instance) => {
+          if (instanceIds.has(instance.id)) {
+            errors.push("Duplicate instance id: " + instance.id);
+          }
+          instanceIds.add(instance.id);
+
+          if (!templateIds.has(instance.templateId)) {
+            errors.push("Instance " + instance.id + " references missing template " + instance.templateId + ".");
+          }
+
+          if (!Array.isArray(instance.roles)) {
+            errors.push("Instance " + instance.id + " must use roles as an array.");
+          }
+
+          ["posX", "posY", "posZ"].forEach((field) => {
+            if (!Number.isFinite(instance[field])) {
+              errors.push("Instance " + instance.id + " has invalid " + field + ".");
+            }
+          });
+
+          if (instance.side === "Blue") {
+            blueCount += 1;
+          } else if (instance.side === "Red") {
+            redCount += 1;
+          }
+
+          const template = scenario.templates.find((candidate) => candidate.id === instance.templateId);
+          if (template) {
+            if ((template.components.sensors || []).length) {
+              sensorCount += 1;
+            }
+            if (template.components.c2) {
+              c2Count += 1;
+            }
+          }
+        });
+
+        if (blueCount === 0) {
+          errors.push("At least one Blue instance is required.");
+        }
+        if (redCount === 0) {
+          errors.push("At least one Red instance is required.");
+        }
+        if (sensorCount === 0) {
+          errors.push("At least one sensor-bearing object is required.");
+        }
+        if (c2Count === 0) {
+          warnings.push("No C2-capable object was found; engagements will not occur.");
+        }
+        if (scenario.environment.placeholderGhostTrack.enabled) {
+          warnings.push("Ghost track placeholder is enabled; it is a track-only environment stub.");
+        }
+        if (scenario.environment.placeholderClutterField.enabled) {
+          warnings.push("Clutter placeholder is enabled; it is a visual/logging stub only.");
+        }
+
+        return {
+          valid: errors.length === 0,
+          errors,
+          warnings,
+          scenario
+        };
+      }
+
+      function buildBaselineScenario() {
+        return normalizeScenario({
+          metadata: {
+            name: "Baseline Vertical Slice",
+            description: "One Blue C-sUAS site engages one Red UAS along a straight waypoint route."
+          },
+          config: {
+            maxTimeSec: 45,
+            trackStaleAfterSec: 4,
+            attackRunRangeM: 240
+          },
+          environment: {
+            baseNoiseDb: 1.8,
+            placeholderGhostTrack: {
+              enabled: false,
+              spawnTimeSec: 7,
+              posX: 505,
+              posY: 182,
+              posZ: 110,
+              label: "Ghost Track Placeholder"
+            },
+            placeholderClutterField: {
+              enabled: false,
+              centerX: 410,
+              centerY: 430,
+              radiusM: 100,
+              label: "Clutter Placeholder",
+              note: "Visual placeholder for future clutter field behavior."
+            }
+          },
+          templates: [
+            {
+              id: "Template-Blue-CUAS-Site",
+              name: "Blue CUAS Site",
+              defaultRoles: ["Asset", "Sensor", "Effector", "C2"],
+              components: {
+                health: { maxHealth: 120 },
+                resistance: { kineticResistance: 0.15 },
+                signature: { radarSignatureDb: -2 },
+                sensors: [
+                  {
+                    id: "Sensor-Blue-EO-RF-1",
+                    name: "Blue EO/RF Sensor",
+                    type: "EO_IR",
+                    maxRangeM: 420,
+                    horizontalFovDeg: 140,
+                    verticalFovDeg: 90,
+                    headingDeg: 180,
+                    transmitPowerDb: 53,
+                    noiseFloorDb: -94,
+                    noiseSigmaDb: 1.2,
+                    detectionThresholdDb: 17,
+                    scanIntervalSec: 1,
+                    classification: {
+                      canClassify: true,
+                      latencySec: 0.25,
+                      accuracyBase: 0.84
+                    },
+                    identification: {
+                      canIdentify: true,
+                      latencySec: 0.35,
+                      accuracyBase: 0.76
+                    }
+                  }
+                ],
+                effectors: [
+                  {
+                    id: "Effector-Blue-Kinetic-1",
+                    name: "Interceptor Launcher",
+                    type: "Kinetic",
+                    maxRangeM: 230,
+                    basePk: 0.74,
+                    damagePoints: 150,
+                    ammoCapacity: 3,
+                    commandDelaySec: 0,
+                    timeToEffectSec: 0.6,
+                    cooldownSec: 2
+                  }
+                ],
+                c2: {
+                  trackCapacity: 8,
+                  processingLatencySec: 0.3
+                }
+              }
+            },
+            {
+              id: "Template-Red-UAS-Generic",
+              name: "Red Recon Strike UAS",
+              defaultRoles: ["UAS"],
+              components: {
+                health: { maxHealth: 90 },
+                resistance: { kineticResistance: 0.18 },
+                signature: { radarSignatureDb: -14 },
+                movement: {
+                  speedMps: 35,
+                  stepSec: 1,
+                  waypointToleranceM: 10
+                }
+              }
+            }
+          ],
+          instances: [
+            {
+              id: "Blue-Site-01",
+              templateId: "Template-Blue-CUAS-Site",
+              name: "Blue Site 01",
+              side: "Blue",
+              roles: ["Asset", "Sensor", "Effector", "C2"],
+              posX: 670,
+              posY: 315,
+              posZ: 20,
+              missionWaypoints: []
+            },
+            {
+              id: "Red-UAS-01",
+              templateId: "Template-Red-UAS-Generic",
+              name: "Red UAS 01",
+              side: "Red",
+              roles: ["UAS"],
+              posX: 90,
+              posY: 315,
+              posZ: 120,
+              missionWaypoints: [
+                { x: 980, y: 315, z: 120 }
+              ]
+            }
+          ]
+        });
+      }
+
+      function getObject(world, objectId) {
+        return world.objects[objectId] || null;
+      }
+
+      function getTrack(world, trackId) {
+        return world.tracks[trackId] || null;
+      }
+
+      function getSensor(world, objectId, sensorId) {
+        const object = getObject(world, objectId);
+        if (!object) {
+          return null;
+        }
+        return (object.components.sensors || []).find((sensor) => sensor.id === sensorId) || null;
+      }
+
+      function snapshotWorld(world, timeSec, reason) {
+        return {
+          timeSec: round(timeSec, 2),
+          reason,
+          objects: world.objectIds.map((id) => {
+            const object = world.objects[id];
+            return {
+              id: object.id,
+              name: object.name,
+              side: object.side,
+              roles: deepClone(object.roles),
+              x: object.runtime.position.x,
+              y: object.runtime.position.y,
+              z: object.runtime.position.z,
+              destroyed: object.runtime.destroyed,
+              status: object.runtime.operationalStatus
+            };
+          }),
+          tracks: Object.values(world.tracks).map((track) => ({
+            id: track.id,
+            x: track.position ? track.position.x : null,
+            y: track.position ? track.position.y : null,
+            classification: track.classificationStatus,
+            identification: track.identificationStatus,
+            intent: track.intentStatus,
+            status: track.status
+          })),
+          clutterPlaceholders: world.environment.placeholderClutterField?.enabled ? [{
+            centerX: world.environment.placeholderClutterField.centerX,
+            centerY: world.environment.placeholderClutterField.centerY,
+            radiusM: world.environment.placeholderClutterField.radiusM,
+            label: world.environment.placeholderClutterField.label
+          }] : []
+        };
+      }
+
+      function finalizeReport(world, seed) {
+        const blueObjects = world.objectIds
+          .map((id) => world.objects[id])
+          .filter((object) => object.side === "Blue");
+        const redObjects = world.objectIds
+          .map((id) => world.objects[id])
+          .filter((object) => object.side === "Red");
+        const destroyedRedObjects = redObjects.filter((object) => object.runtime.destroyed);
+        const survivingBlueObjects = blueObjects.filter((object) => !object.runtime.destroyed);
+        const primaryTrack = Object.values(world.tracks)
+          .sort((left, right) => (right.lastUpdateTimeSec || 0) - (left.lastUpdateTimeSec || 0))[0] || null;
+
+        return {
+          report: {
+            scenarioName: world.scenario.metadata.name,
+            seed,
+            endTimeSec: round(world.currentTimeSec, 2),
+            detected: world.metrics.detectionCandidates > 0,
+            trackCreated: world.metrics.tracksCreated > 0,
+            classified: world.metrics.classifications > 0,
+            identified: world.metrics.identifications > 0,
+            intentAssessed: world.metrics.intentsAssessed > 0,
+            engaged: world.metrics.shotsFired > 0,
+            targetDestroyed: destroyedRedObjects.length > 0,
+            tracksDropped: world.metrics.tracksDropped,
+            ghostTracksGenerated: world.metrics.ghostTracksGenerated,
+            firstDetectionTimeSec: world.metrics.firstDetectionTimeSec,
+            firstDetectionRangeM: world.metrics.firstDetectionRangeM,
+            killTimeSec: world.metrics.killTimeSec,
+            blueAssetsSurvived: survivingBlueObjects.length,
+            threatsDestroyed: destroyedRedObjects.length,
+            shotsFired: world.metrics.shotsFired,
+            eventCount: world.logs.length,
+            ammoExpended: deepClone(world.metrics.ammoExpended),
+            finalTargetStatus: destroyedRedObjects.length > 0
+              ? "Destroyed"
+              : (redObjects[0]?.runtime.operationalStatus || "Unknown"),
+            finalTrackStatus: primaryTrack ? primaryTrack.status : "None",
+            finalClassificationStatus: primaryTrack ? primaryTrack.classificationStatus : "None",
+            finalIdentificationStatus: primaryTrack ? primaryTrack.identificationStatus : "None",
+            finalIntentStatus: primaryTrack ? primaryTrack.intentStatus : "None",
+            logs: deepClone(world.logs),
+            frames: deepClone(world.frames),
+            tracks: deepClone(world.tracks)
+          }
+        };
+      }
+
+      function createCsvRow(iterationId, report) {
+        return {
+          Iteration_ID: iterationId,
+          Scenario_Name: report.scenarioName,
+          Seed: report.seed,
+          Detected: report.detected ? "Yes" : "No",
+          Track_Created: report.trackCreated ? "Yes" : "No",
+          Classified: report.classified ? "Yes" : "No",
+          Identified: report.identified ? "Yes" : "No",
+          Intent_Assessed: report.intentAssessed ? "Yes" : "No",
+          Engaged: report.engaged ? "Yes" : "No",
+          Threat_Destroyed: report.targetDestroyed ? "Yes" : "No",
+          Tracks_Dropped: report.tracksDropped,
+          Ghost_Tracks_Generated: report.ghostTracksGenerated,
+          First_Detection_Time_s: report.firstDetectionTimeSec ?? "",
+          First_Detection_Range_m: report.firstDetectionRangeM ?? "",
+          Kill_Time_s: report.killTimeSec ?? "",
+          Blue_Assets_Survived: report.blueAssetsSurvived,
+          Threats_Destroyed: report.threatsDestroyed,
+          Shots_Fired: report.shotsFired,
+          Final_Target_Status: report.finalTargetStatus,
+          Final_Track_Status: report.finalTrackStatus,
+          Classification_Status: report.finalClassificationStatus,
+          Identification_Status: report.finalIdentificationStatus,
+          Intent_Status: report.finalIntentStatus,
+          Event_Count: report.eventCount,
+          Template_Blue_CUAS_Site_Ammo_Expended: report.ammoExpended["Template-Blue-CUAS-Site"] || 0
+        };
+      }
+
+      function rowsToCsv(rows) {
+        if (!rows.length) {
+          return "";
+        }
+        const headers = Object.keys(rows[0]);
+        const lines = [headers.join(",")];
+        rows.forEach((row) => {
+          const values = headers.map((header) => {
+            const rawValue = row[header] ?? "";
+            return "\"" + String(rawValue).replace(/"/g, "\"\"") + "\"";
+          });
+          lines.push(values.join(","));
+        });
+        return lines.join("\n");
+      }
+
+      class SeededRNG {
+        constructor(seed) {
+          this.seed = seed >>> 0;
+        }
+
+        next() {
+          this.seed = (1664525 * this.seed + 1013904223) >>> 0;
+          return this.seed / 4294967296;
+        }
+
+        nextGaussian(mean = 0, standardDeviation = 1) {
+          let u1 = this.next();
+          let u2 = this.next();
+          if (u1 <= 1e-12) {
+            u1 = 1e-12;
+          }
+          const magnitude = Math.sqrt(-2 * Math.log(u1));
+          const z0 = magnitude * Math.cos(2 * Math.PI * u2);
+          return mean + (z0 * standardDeviation);
+        }
+
+        chance(probability) {
+          return this.next() <= probability;
+        }
+      }
+
+      class EventManager {
+        constructor() {
+          this.queue = [];
+          this.sequence = 0;
+        }
+
+        schedule(event) {
+          this.queue.push({
+            ...event,
+            sequence: this.sequence++
+          });
+          this.queue.sort((left, right) => {
+            if (left.time !== right.time) {
+              return left.time - right.time;
+            }
+            if (left.priority !== right.priority) {
+              return left.priority - right.priority;
+            }
+            return left.sequence - right.sequence;
+          });
+        }
+
+        scheduleDelay(currentTime, delaySec, event, options = {}) {
+          const adjustedDelay = options.enforceMinimumDelay && delaySec <= 0
+            ? MIN_STATE_DELAY_SEC
+            : Math.max(0, delaySec);
+          this.schedule({
+            ...event,
+            time: round(currentTime + adjustedDelay, 3)
+          });
+        }
+
+        next() {
+          return this.queue.shift();
+        }
+
+        hasEvents() {
+          return this.queue.length > 0;
+        }
+      }
+
+      class LoggingSystem {
+        record(world, timeSec, type, message, data = {}) {
+          world.logs.push({
+            timeSec: round(timeSec, 2),
+            type,
+            message,
+            data
+          });
+        }
+      }
+
+      class EnvironmentSystem {
+        initialize(world, services) {
+          const ghost = world.environment.placeholderGhostTrack;
+          if (ghost && ghost.enabled) {
+            services.events.schedule({
+              time: Number(ghost.spawnTimeSec || 7),
+              type: "environment.spawnGhostTrack",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                posX: Number(ghost.posX || 500),
+                posY: Number(ghost.posY || 180),
+                posZ: Number(ghost.posZ || 110),
+                label: ghost.label || "Ghost Track Placeholder"
+              }
+            });
+          }
+
+          const clutter = world.environment.placeholderClutterField;
+          if (clutter && clutter.enabled) {
+            services.logger.record(
+              world,
+              0,
+              "environment",
+              (clutter.label || "Clutter Placeholder") + " active in scenario preview",
+              {
+                centerX: clutter.centerX,
+                centerY: clutter.centerY,
+                radiusM: clutter.radiusM,
+                note: clutter.note || ""
+              }
+            );
+          }
+        }
+
+        spawnGhostTrack(event, world, services) {
+          const trackId = "Track-" + world.nextTrackId++;
+          world.tracks[trackId] = {
+            id: trackId,
+            realObjectId: null,
+            trackType: "Ghost",
+            owningSide: "Blue",
+            perceivedSide: "Unknown",
+            sourceSensorIds: ["Environment-Ghost-Placeholder"],
+            detectionConfidence: 0.58,
+            classificationStatus: "Unknown Air Object",
+            classificationConfidence: 0.22,
+            identificationStatus: "Unknown",
+            identificationConfidence: 0,
+            intentStatus: "Unknown",
+            intentConfidence: 0,
+            trackQuality: 0.38,
+            status: "Active",
+            staleAfterSec: world.config.trackStaleAfterSec,
+            lastUpdateTimeSec: round(event.time, 2),
+            history: [{
+              timeSec: round(event.time, 2),
+              confidence: 0.58,
+              rangeM: null,
+              position: {
+                x: event.payload.posX,
+                y: event.payload.posY,
+                z: event.payload.posZ
+              }
+            }],
+            pendingEngagement: false,
+            agingToken: 0,
+            position: {
+              x: event.payload.posX,
+              y: event.payload.posY,
+              z: event.payload.posZ
+            }
+          };
+
+          world.metrics.ghostTracksGenerated += 1;
+          services.logger.record(
+            world,
+            event.time,
+            "ghost-track",
+            event.payload.label + " spawned as a track-only placeholder",
+            {
+              trackId,
+              posX: event.payload.posX,
+              posY: event.payload.posY
+            }
+          );
+
+          services.captureFrame(world, event.time, "ghost-track");
+
+          const track = world.tracks[trackId];
+          track.agingToken += 1;
+          services.events.scheduleDelay(event.time, track.staleAfterSec, {
+            type: "track.age",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId,
+              agingToken: track.agingToken
+            }
+          });
+        }
+      }
+
+      class MovementSystem {
+        process(event, world, services) {
+          const object = getObject(world, event.payload.objectId);
+          if (!object || object.runtime.destroyed) {
+            return;
+          }
+
+          const movement = object.components.movement;
+          const mission = object.runtime.mission;
+          if (!movement || mission.currentWaypointIndex >= mission.waypoints.length) {
+            return;
+          }
+
+          const waypoint = mission.waypoints[mission.currentWaypointIndex];
+          const current = object.runtime.position;
+          const stepDistance = movement.speedMps * movement.stepSec;
+          const remainingDistance = distance3D(current, waypoint);
+
+          if (remainingDistance <= stepDistance || remainingDistance <= movement.waypointToleranceM) {
+            object.runtime.position = { x: waypoint.x, y: waypoint.y, z: waypoint.z };
+            mission.currentWaypointIndex += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "movement",
+              object.name + " reached waypoint " + mission.currentWaypointIndex,
+              { objectId: object.id, waypointIndex: mission.currentWaypointIndex }
+            );
+          } else {
+            const ratio = stepDistance / remainingDistance;
+            object.runtime.position = {
+              x: current.x + ((waypoint.x - current.x) * ratio),
+              y: current.y + ((waypoint.y - current.y) * ratio),
+              z: current.z + ((waypoint.z - current.z) * ratio)
+            };
+          }
+
+          services.captureFrame(world, event.time, "movement");
+
+          if (mission.currentWaypointIndex < mission.waypoints.length) {
+            services.events.scheduleDelay(event.time, movement.stepSec, {
+              type: "movement.step",
+              priority: EVENT_PRIORITIES.movement,
+              payload: { objectId: object.id }
+            });
+          } else {
+            services.logger.record(
+              world,
+              event.time,
+              "movement",
+              object.name + " completed its waypoint route",
+              { objectId: object.id }
+            );
+          }
+        }
+      }
+
+      class SensorSystem {
+        process(event, world, services) {
+          const host = getObject(world, event.payload.objectId);
+          if (!host || host.runtime.destroyed) {
+            return;
+          }
+
+          (host.components.sensors || []).forEach((sensor) => {
+            world.objectIds.forEach((targetId) => {
+              const target = getObject(world, targetId);
+              if (!target || target.runtime.destroyed || target.side === host.side) {
+                return;
+              }
+
+              const hostPosition = host.runtime.position;
+              const targetPosition = target.runtime.position;
+              const rangeM = distance3D(hostPosition, targetPosition);
+              const horizontalRangeM = distance2D(hostPosition, targetPosition);
+              if (rangeM > sensor.maxRangeM) {
+                return;
+              }
+
+              const bearingDeg = angleDeg(hostPosition, targetPosition);
+              const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
+              const elevationDeg = Math.abs(
+                Math.atan2(targetPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI)
+              );
+
+              if (relativeBearingDeg > sensor.horizontalFovDeg / 2 || elevationDeg > sensor.verticalFovDeg / 2) {
+                return;
+              }
+
+              const signalStrengthDb = sensor.transmitPowerDb
+                + target.components.signature.radarSignatureDb
+                - (20 * Math.log10(Math.max(1, rangeM)));
+              const noiseDb = sensor.noiseFloorDb
+                + world.environment.baseNoiseDb
+                + services.rng.nextGaussian(0, sensor.noiseSigmaDb);
+
+              if (signalStrengthDb <= noiseDb + sensor.detectionThresholdDb) {
+                return;
+              }
+
+              const confidence = clamp((signalStrengthDb - (noiseDb + sensor.detectionThresholdDb) + 22) / 24, 0.1, 0.99);
+              world.metrics.detectionCandidates += 1;
+              if (world.metrics.firstDetectionTimeSec === null) {
+                world.metrics.firstDetectionTimeSec = round(event.time, 2);
+                world.metrics.firstDetectionRangeM = round(rangeM, 2);
+              }
+
+              services.logger.record(
+                world,
+                event.time,
+                "detection",
+                host.name + " generated a detection candidate on " + target.name,
+                {
+                  observerId: host.id,
+                  sensorId: sensor.id,
+                  targetId: target.id,
+                  rangeM: round(rangeM, 2),
+                  confidence: round(confidence, 2)
+                }
+              );
+
+              services.events.schedule({
+                time: event.time,
+                type: "track.process",
+                priority: EVENT_PRIORITIES.track,
+                payload: {
+                  observerId: host.id,
+                  sensorId: sensor.id,
+                  targetId: target.id,
+                  confidence,
+                  rangeM,
+                  bearingDeg
+                }
+              });
+            });
+
+            if (event.time + sensor.scanIntervalSec <= world.config.maxTimeSec) {
+              services.events.scheduleDelay(event.time, sensor.scanIntervalSec, {
+                type: "sensor.scan",
+                priority: EVENT_PRIORITIES.sensor,
+                payload: { objectId: host.id }
+              });
+            }
+          });
+        }
+      }
+
+      class TrackSystem {
+        scheduleTrackAging(track, timeSec, events) {
+          track.agingToken += 1;
+          events.scheduleDelay(timeSec, track.staleAfterSec, {
+            type: "track.age",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id,
+              agingToken: track.agingToken
+            }
+          });
+        }
+
+        process(event, world, services) {
+          const target = getObject(world, event.payload.targetId);
+          const observer = getObject(world, event.payload.observerId);
+          const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
+          if (!target || !observer || !sensor || target.runtime.destroyed) {
+            return;
+          }
+
+          let track = Object.values(world.tracks).find((candidate) =>
+            candidate.realObjectId === target.id
+            && candidate.owningSide === observer.side
+            && candidate.status === "Active"
+          );
+
+          if (!track) {
+            const trackId = "Track-" + world.nextTrackId++;
+            track = {
+              id: trackId,
+              realObjectId: target.id,
+              trackType: "Real",
+              owningSide: observer.side,
+              perceivedSide: "Unknown",
+              sourceSensorIds: [sensor.id],
+              detectionConfidence: 0,
+              classificationStatus: "Unknown Air Object",
+              classificationConfidence: 0,
+              identificationStatus: "Unknown",
+              identificationConfidence: 0,
+              intentStatus: "Unknown",
+              intentConfidence: 0,
+              trackQuality: 0,
+              status: "Active",
+              staleAfterSec: world.config.trackStaleAfterSec,
+              lastUpdateTimeSec: 0,
+              history: [],
+              pendingEngagement: false,
+              agingToken: 0
+            };
+            world.tracks[trackId] = track;
+            world.metrics.tracksCreated += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "track",
+              "Track created for " + target.name,
+              { trackId: track.id, targetId: target.id }
+            );
+          } else {
+            services.logger.record(
+              world,
+              event.time,
+              "track",
+              "Track updated for " + target.name,
+              { trackId: track.id, targetId: target.id }
+            );
+          }
+
+          if (!track.sourceSensorIds.includes(sensor.id)) {
+            track.sourceSensorIds.push(sensor.id);
+          }
+          track.lastUpdateTimeSec = round(event.time, 2);
+          track.position = deepClone(target.runtime.position);
+          track.rangeM = round(event.payload.rangeM, 2);
+          track.detectionConfidence = round(event.payload.confidence, 2);
+          track.trackQuality = round(clamp((track.trackQuality * 0.45) + (event.payload.confidence * 0.55), 0.1, 0.99), 2);
+          track.history.push({
+            timeSec: round(event.time, 2),
+            confidence: round(event.payload.confidence, 2),
+            rangeM: round(event.payload.rangeM, 2),
+            position: deepClone(target.runtime.position)
+          });
+
+          this.scheduleTrackAging(track, event.time, services.events);
+          services.captureFrame(world, event.time, "track");
+
+          services.events.scheduleDelay(event.time, sensor.classification.latencySec, {
+            type: "classification.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id,
+              observerId: observer.id,
+              sensorId: sensor.id,
+              baseConfidence: event.payload.confidence
+            }
+          }, { enforceMinimumDelay: sensor.classification.latencySec <= 0 });
+        }
+
+        age(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          if (!track || track.status !== "Active" || track.agingToken !== event.payload.agingToken) {
+            return;
+          }
+
+          if (round(event.time - track.lastUpdateTimeSec, 2) < track.staleAfterSec) {
+            return;
+          }
+
+          track.status = "Dropped";
+          world.metrics.tracksDropped += 1;
+          services.logger.record(
+            world,
+            event.time,
+            "track",
+            track.id + " dropped due to staleness",
+            { trackId: track.id, staleAfterSec: track.staleAfterSec }
+          );
+          services.captureFrame(world, event.time, "track-drop");
+        }
+      }
+
+      class ClassificationSystem {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active" || !sensor) {
+            return;
+          }
+
+          if (track.trackType === "Ghost") {
+            track.classificationStatus = "Unknown Air Object";
+            track.classificationConfidence = 0.2;
+            world.metrics.classifications += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "classification",
+              track.id + " remained ghost-like clutter during classification",
+              {
+                trackId: track.id,
+                classification: track.classificationStatus,
+                confidence: track.classificationConfidence
+              }
+            );
+            services.events.scheduleDelay(event.time, 0.2, {
+              type: "identification.process",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                trackId: track.id,
+                observerId: event.payload.observerId,
+                sensorId: sensor.id
+              }
+            }, { enforceMinimumDelay: true });
+            return;
+          }
+
+          if (!target || target.runtime.destroyed) {
+            return;
+          }
+
+          const confidence = clamp(
+            (event.payload.baseConfidence * sensor.classification.accuracyBase)
+              + 0.14
+              + world.randomization.classificationBias
+              + services.rng.nextGaussian(0, 0.035),
+            0.05,
+            0.99
+          );
+
+          track.classificationStatus = target.roles.includes("UAS") && confidence >= 0.52
+            ? "UAS"
+            : "Unknown Air Object";
+          track.classificationConfidence = round(confidence, 2);
+          world.metrics.classifications += 1;
+
+          services.logger.record(
+            world,
+            event.time,
+            "classification",
+            track.id + " classified as " + track.classificationStatus,
+            {
+              trackId: track.id,
+              classification: track.classificationStatus,
+              confidence: track.classificationConfidence
+            }
+          );
+
+          services.captureFrame(world, event.time, "classification");
+
+          const delaySec = sensor.identification.canIdentify ? sensor.identification.latencySec : 0;
+          services.events.scheduleDelay(event.time, delaySec, {
+            type: "identification.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id,
+              observerId: event.payload.observerId,
+              sensorId: sensor.id
+            }
+          }, { enforceMinimumDelay: delaySec <= 0 });
+        }
+      }
+
+      class IdentificationSystem {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const sensor = getSensor(world, event.payload.observerId, event.payload.sensorId);
+          const observer = getObject(world, event.payload.observerId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active" || !sensor || !observer) {
+            return;
+          }
+
+          if (track.trackType === "Ghost") {
+            track.identificationStatus = "Unknown";
+            track.identificationConfidence = 0.08;
+            world.metrics.identifications += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "identification",
+              track.id + " remained unidentified because it is a ghost placeholder",
+              {
+                trackId: track.id,
+                identification: track.identificationStatus,
+                confidence: track.identificationConfidence
+              }
+            );
+            services.events.scheduleDelay(event.time, 0.2, {
+              type: "intent.process",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                trackId: track.id
+              }
+            }, { enforceMinimumDelay: true });
+            return;
+          }
+
+          if (!target || target.runtime.destroyed) {
+            return;
+          }
+
+          const confidence = clamp(
+            (track.classificationConfidence * sensor.identification.accuracyBase)
+              + 0.12
+              + world.randomization.identificationBias
+              + services.rng.nextGaussian(0, 0.04),
+            0.05,
+            0.99
+          );
+
+          let identificationStatus = "Unknown";
+          if (target.side === observer.side && confidence >= 0.52) {
+            identificationStatus = "Friendly";
+          } else if (track.classificationStatus === "UAS" && confidence >= 0.58) {
+            identificationStatus = "Hostile";
+          } else if (track.classificationStatus === "UAS" && confidence >= 0.42) {
+            identificationStatus = "Suspect";
+          }
+
+          track.identificationStatus = identificationStatus;
+          track.identificationConfidence = round(confidence, 2);
+          track.perceivedSide = identificationStatus;
+          world.metrics.identifications += 1;
+
+          services.logger.record(
+            world,
+            event.time,
+            "identification",
+            track.id + " identified as " + identificationStatus,
+            {
+              trackId: track.id,
+              identification: identificationStatus,
+              confidence: track.identificationConfidence
+            }
+          );
+
+          services.captureFrame(world, event.time, "identification");
+
+          services.events.scheduleDelay(event.time, 0.2, {
+            type: "intent.process",
+            priority: EVENT_PRIORITIES.track,
+            payload: {
+              trackId: track.id
+            }
+          }, { enforceMinimumDelay: true });
+        }
+      }
+
+      class IntentSystem {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active") {
+            return;
+          }
+
+          if (track.trackType === "Ghost") {
+            track.intentStatus = "Unknown";
+            track.intentConfidence = 0.1;
+            world.metrics.intentsAssessed += 1;
+            services.logger.record(
+              world,
+              event.time,
+              "intent",
+              track.id + " kept unknown intent because it is a ghost placeholder",
+              {
+                trackId: track.id,
+                intent: track.intentStatus,
+                confidence: track.intentConfidence
+              }
+            );
+            services.captureFrame(world, event.time, "intent");
+            services.events.schedule({
+              time: event.time,
+              type: "c2.decide",
+              priority: EVENT_PRIORITIES.c2,
+              payload: {
+                trackId: track.id
+              }
+            });
+            return;
+          }
+
+          if (!target || target.runtime.destroyed) {
+            return;
+          }
+
+          const history = track.history;
+          const previousEntry = history.length > 1 ? history[history.length - 2] : null;
+          const currentEntry = history.length ? history[history.length - 1] : null;
+          let intentStatus = "Unknown";
+          let confidence = clamp(0.42 + world.randomization.intentBias + services.rng.nextGaussian(0, 0.03), 0.1, 0.99);
+
+          if (track.classificationStatus === "UAS") {
+            intentStatus = "Transit";
+            if (previousEntry && currentEntry) {
+              const closingRangeM = previousEntry.rangeM - currentEntry.rangeM;
+              if (Math.abs(closingRangeM) < 8) {
+                intentStatus = "Loiter";
+                confidence += 0.12;
+              } else if (currentEntry.rangeM <= world.config.attackRunRangeM && closingRangeM > 0) {
+                intentStatus = "Attack Run";
+                confidence += 0.18;
+              }
+            }
+          }
+
+          track.intentStatus = intentStatus;
+          track.intentConfidence = round(clamp(confidence, 0.05, 0.99), 2);
+          world.metrics.intentsAssessed += 1;
+
+          services.logger.record(
+            world,
+            event.time,
+            "intent",
+            track.id + " assessed intent " + intentStatus,
+            {
+              trackId: track.id,
+              intent: intentStatus,
+              confidence: track.intentConfidence
+            }
+          );
+
+          services.captureFrame(world, event.time, "intent");
+
+          services.events.schedule({
+            time: event.time,
+            type: "c2.decide",
+            priority: EVENT_PRIORITIES.c2,
+            payload: {
+              trackId: track.id
+            }
+          });
+        }
+      }
+
+      class C2System {
+        process(event, world, services) {
+          const track = getTrack(world, event.payload.trackId);
+          const target = track ? getObject(world, track.realObjectId) : null;
+          if (!track || track.status !== "Active" || track.pendingEngagement) {
+            return;
+          }
+
+          if (track.trackType === "Ghost") {
+            services.logger.record(
+              world,
+              event.time,
+              "c2",
+              "C2 held fire on " + track.id + " because it is a ghost placeholder",
+              { trackId: track.id, reason: "ghost-track-placeholder" }
+            );
+            return;
+          }
+
+          if (!target || target.runtime.destroyed) {
+            return;
+          }
+
+          const c2Objects = world.objectIds
+            .map((id) => world.objects[id])
+            .filter((object) =>
+              object.side === track.owningSide
+              && !object.runtime.destroyed
+              && object.components.c2
+              && (object.components.effectors || []).length
+            );
+
+                   for (const c2Object of c2Objects) {
+            for (const effector of c2Object.components.effectors || []) {
+              
+              // --- QUICK FIX: EFFECTOR TARGET LOCK ---
+              // Initialize lock storage if it doesn't exist on this C2 object yet
+              c2Object.runtime.lockedTargetId = c2Object.runtime.lockedTargetId || {};
+              let lockedId = c2Object.runtime.lockedTargetId[effector.id];
+
+              // If locked to a DIFFERENT track, check if that track is still a valid target
+              if (lockedId && lockedId !== track.id) {
+                const lockedTrack = getTrack(world, lockedId);
+                const lockedTarget = lockedTrack ? getObject(world, lockedTrack.realObjectId) : null;
+                
+                // If the locked target is still active, alive, and in range, this effector is BUSY. Skip it.
+                if (lockedTrack && lockedTrack.status === "Active" && lockedTarget && !lockedTarget.runtime.destroyed) {
+                  const lockRange = distance3D(c2Object.runtime.position, lockedTarget.runtime.position);
+                  if (lockRange <= effector.maxRangeM) {
+                    continue; 
+                  }
+                }
+              }
+              // ---------------------------------------
+
+              const ammoRemaining = c2Object.runtime.ammo[effector.id];
+              const cooldownReady = event.time >= (c2Object.runtime.lastFireTimeSec[effector.id] || 0);
+              const rangeM = distance3D(c2Object.runtime.position, target.runtime.position);
+
+              if (ammoRemaining <= 0 || !cooldownReady || rangeM > effector.maxRangeM) {
+                continue;
+              }
+
+              if (track.identificationStatus !== "Hostile") {
+                services.logger.record(
+                  world,
+                  event.time,
+                  "c2",
+                  c2Object.name + " held fire on " + track.id,
+                  { trackId: track.id, reason: "not-hostile" }
+                );
+                return;
+              }
+
+              // --- QUICK FIX: APPLY THE LOCK ---
+              // We are engaging! Lock this effector onto this track.
+              c2Object.runtime.lockedTargetId[effector.id] = track.id;
+              // ---------------------------------
+
+              track.pendingEngagement = true;
+              world.metrics.c2Decisions += 1;
+              services.logger.record(
+                world,
+                event.time,
+                "c2",
+                c2Object.name + " ordered engagement against " + track.id,
+                {
+                  trackId: track.id,
+                  effectorId: effector.id,
+                  targetId: target.id,
+                  intent: track.intentStatus
+                }
+              );
+
+              services.events.scheduleDelay(event.time, c2Object.components.c2.processingLatencySec + effector.commandDelaySec, {
+                type: "effector.fire",
+                priority: EVENT_PRIORITIES.effector,
+                payload: {
+                  shooterId: c2Object.id,
+                  effectorId: effector.id,
+                  trackId: track.id,
+                  targetId: target.id
+                }
+              }, { enforceMinimumDelay: true });
+
+              return;
+            }
+          }
+        }
+      }
+
+      class EffectSystem {
+        fire(event, world, services) {
+          const shooter = getObject(world, event.payload.shooterId);
+          const target = getObject(world, event.payload.targetId);
+          const track = getTrack(world, event.payload.trackId);
+          if (!shooter || !target || !track || target.runtime.destroyed) {
+            if (track) {
+              track.pendingEngagement = false;
+            }
+            return;
+          }
+
+          const effector = (shooter.components.effectors || []).find((candidate) => candidate.id === event.payload.effectorId);
+          if (!effector || shooter.runtime.ammo[effector.id] <= 0) {
+            track.pendingEngagement = false;
+            return;
+          }
+
+          shooter.runtime.ammo[effector.id] -= 1;
+          shooter.runtime.lastFireTimeSec[effector.id] = round(event.time + effector.cooldownSec, 2);
+          world.metrics.shotsFired += 1;
+          world.metrics.ammoExpended[shooter.templateId] = (world.metrics.ammoExpended[shooter.templateId] || 0) + 1;
+
+          const rangeM = distance3D(shooter.runtime.position, target.runtime.position);
+          const rangeFactor = clamp(1 - ((rangeM / effector.maxRangeM) * 0.35), 0.35, 1);
+          const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
+          const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
+          const effectivePk = clamp(
+            (effector.basePk + world.randomization.pkBias) * rangeFactor * environmentFactor * targetModifier,
+            0.05,
+            0.98
+          );
+
+          services.logger.record(
+            world,
+            event.time,
+            "effector",
+            shooter.name + " fired " + effector.name + " at " + target.name,
+            {
+              trackId: track.id,
+              targetId: target.id,
+              effectivePk: round(effectivePk, 2),
+              rangeM: round(rangeM, 2)
+            }
+          );
+
+          services.events.scheduleDelay(event.time, effector.timeToEffectSec, {
+            type: "effect.resolve",
+            priority: EVENT_PRIORITIES.effect,
+            payload: {
+              shooterId: shooter.id,
+              targetId: target.id,
+              trackId: track.id,
+              damagePoints: effector.damagePoints,
+              effectivePk
+            }
+          }, { enforceMinimumDelay: true });
+        }
+
+        resolve(event, world, services) {
+          const target = getObject(world, event.payload.targetId);
+          const track = getTrack(world, event.payload.trackId);
+          if (!target || !track) {
+            return;
+          }
+
+          const hit = services.rng.chance(event.payload.effectivePk);
+          services.logger.record(
+            world,
+            event.time,
+            "effect",
+            hit ? "Effect resolved as a hit on " + target.name : "Effect missed " + target.name,
+            {
+              targetId: target.id,
+              trackId: track.id,
+              hit,
+              effectivePk: round(event.payload.effectivePk, 2)
+            }
+          );
+
+          services.events.scheduleDelay(event.time, 0, {
+            type: "damage.resolve",
+            priority: EVENT_PRIORITIES.damage,
+            payload: {
+              targetId: target.id,
+              trackId: track.id,
+              hit,
+              damagePoints: event.payload.damagePoints
+            }
+          }, { enforceMinimumDelay: true });
+        }
+      }
+
+      class DamageSystem {
+        process(event, world, services) {
+          const target = getObject(world, event.payload.targetId);
+          const track = getTrack(world, event.payload.trackId);
+          if (!target || !track) {
+            return;
+          }
+
+          track.pendingEngagement = false;
+          if (!event.payload.hit) {
+            services.logger.record(
+              world,
+              event.time,
+              "damage",
+              target.name + " was not damaged",
+              { targetId: target.id, remainingHealth: target.runtime.health }
+            );
+            return;
+          }
+
+          target.runtime.health = Math.max(0, target.runtime.health - event.payload.damagePoints);
+          world.metrics.damageResolutions += 1;
+          if (target.runtime.health <= 0) {
+            target.runtime.destroyed = true;
+            target.runtime.operationalStatus = "Destroyed";
+            track.status = "Destroyed";
+            world.metrics.targetsDestroyed += 1;
+            world.metrics.killTimeSec = round(event.time, 2);
+            services.logger.record(
+              world,
+              event.time,
+              "damage",
+              target.name + " was destroyed",
+              { targetId: target.id, trackId: track.id }
+            );
+          } else {
+            services.logger.record(
+              world,
+              event.time,
+              "damage",
+              target.name + " survived with " + round(target.runtime.health, 2) + " health",
+              { targetId: target.id, remainingHealth: round(target.runtime.health, 2) }
+            );
+          }
+
+          services.captureFrame(world, event.time, "damage");
+        }
+      }
+
+      class MonteCarloManager {
+        constructor(simulationManager) {
+          this.simulationManager = simulationManager;
+        }
+
+        run(iterations, options = {}) {
+          const rows = [];
+          for (let index = 0; index < iterations; index += 1) {
+            const seed = options.baseSeed + index;
+            const result = this.simulationManager.run({
+              seed,
+              captureFrames: false,
+              scenario: options.scenario
+            });
+            rows.push(createCsvRow(index + 1, result.report));
+            if (typeof options.onProgress === "function") {
+              options.onProgress(index + 1, iterations);
+            }
+          }
+          return rows;
+        }
+      }
+
+      class SimulationManager {
+        constructor() {
+          this.logger = new LoggingSystem();
+          this.environmentSystem = new EnvironmentSystem();
+          this.movementSystem = new MovementSystem();
+          this.sensorSystem = new SensorSystem();
+          this.trackSystem = new TrackSystem();
+          this.classificationSystem = new ClassificationSystem();
+          this.identificationSystem = new IdentificationSystem();
+          this.intentSystem = new IntentSystem();
+          this.c2System = new C2System();
+          this.effectSystem = new EffectSystem();
+          this.damageSystem = new DamageSystem();
+        }
+
+        run(options = {}) {
+          const seed = Number.isFinite(options.seed) ? options.seed : Math.floor((Date.now() % 2147483647));
+          const scenario = normalizeScenario(options.scenario || buildBaselineScenario());
+          const rng = new SeededRNG(seed);
+          const runtime = this.createRuntimeWorld(scenario, rng, options.captureFrames !== false);
+
+          const services = {
+            rng,
+            logger: this.logger,
+            events: runtime.eventManager,
+            captureFrame: (world, timeSec, reason) => {
+              if (!world.captureFrames) {
+                return;
+              }
+              world.frames.push(snapshotWorld(world, timeSec, reason));
+            }
+          };
+
+          this.environmentSystem.initialize(runtime, services);
+
+          runtime.objectIds.forEach((objectId) => {
+            const object = runtime.objects[objectId];
+            if (object.components.movement && object.runtime.mission.waypoints.length > 0) {
+              runtime.eventManager.schedule({
+                time: 0,
+                type: "movement.step",
+                priority: EVENT_PRIORITIES.movement,
+                payload: { objectId }
+              });
+            }
+            if ((object.components.sensors || []).length > 0) {
+              runtime.eventManager.schedule({
+                time: 0,
+                type: "sensor.scan",
+                priority: EVENT_PRIORITIES.sensor,
+                payload: { objectId }
+              });
+            }
+          });
+
+          services.captureFrame(runtime, 0, "initial");
+
+          while (runtime.eventManager.hasEvents()) {
+            const event = runtime.eventManager.next();
+            runtime.currentTimeSec = event.time;
+            if (runtime.currentTimeSec > runtime.config.maxTimeSec) {
+              break;
+            }
+
+            switch (event.type) {
+              case "movement.step":
+                this.movementSystem.process(event, runtime, services);
+                break;
+              case "sensor.scan":
+                this.sensorSystem.process(event, runtime, services);
+                break;
+              case "environment.spawnGhostTrack":
+                this.environmentSystem.spawnGhostTrack(event, runtime, services);
+                break;
+              case "track.process":
+                this.trackSystem.process(event, runtime, services);
+                break;
+              case "track.age":
+                this.trackSystem.age(event, runtime, services);
+                break;
+              case "classification.process":
+                this.classificationSystem.process(event, runtime, services);
+                break;
+              case "identification.process":
+                this.identificationSystem.process(event, runtime, services);
+                break;
+              case "intent.process":
+                this.intentSystem.process(event, runtime, services);
+                break;
+              case "c2.decide":
+                this.c2System.process(event, runtime, services);
+                break;
+              case "effector.fire":
+                this.effectSystem.fire(event, runtime, services);
+                break;
+              case "effect.resolve":
+                this.effectSystem.resolve(event, runtime, services);
+                break;
+              case "damage.resolve":
+                this.damageSystem.process(event, runtime, services);
+                break;
+              default:
+                break;
+            }
+
+            const allRedUasDestroyed = runtime.objectIds
+              .map((id) => runtime.objects[id])
+              .filter((object) => object.side === "Red" && object.roles.includes("UAS"))
+              .every((object) => object.runtime.destroyed);
+            if (allRedUasDestroyed) {
+              runtime.currentTimeSec = round(event.time, 2);
+              break;
+            }
+          }
+
+          services.captureFrame(runtime, runtime.currentTimeSec, "final");
+          return finalizeReport(runtime, seed);
+        }
+
+        createRuntimeWorld(scenario, rng, captureFrames) {
+          const eventManager = new EventManager();
+          const templateMap = {};
+          scenario.templates.forEach((template) => {
+            templateMap[template.id] = deepClone(template);
+          });
+
+          const objects = {};
+          const objectIds = [];
+          scenario.instances.forEach((instance) => {
+            const template = templateMap[instance.templateId];
+            if (!template) {
+              return;
+            }
+            const object = {
+              id: instance.id,
+              templateId: template.id,
+              name: instance.name,
+              side: instance.side,
+              roles: normalizeRoles(instance.roles, template.defaultRoles),
+              components: deepClone(template.components),
+              runtime: {
+                position: { x: instance.posX, y: instance.posY, z: instance.posZ },
+                health: template.components.health.maxHealth,
+                operationalStatus: "Active",
+                destroyed: false,
+                ammo: {},
+                lastFireTimeSec: {},
+                mission: {
+                  currentWaypointIndex: 0,
+                  waypoints: deepClone(instance.missionWaypoints || [])
+                }
+              }
+            };
+
+            (object.components.effectors || []).forEach((effector) => {
+              object.runtime.ammo[effector.id] = effector.ammoCapacity;
+              object.runtime.lastFireTimeSec[effector.id] = 0;
+            });
+
+            objects[object.id] = object;
+            objectIds.push(object.id);
+          });
+
+          return {
+            scenario: deepClone(scenario),
+            objects,
+            objectIds,
+            tracks: {},
+            nextTrackId: 1,
+            logs: [],
+            frames: [],
+            config: deepClone(scenario.config),
+            environment: deepClone(scenario.environment),
+            eventManager,
+            captureFrames,
+            currentTimeSec: 0,
+            randomization: {
+              classificationBias: clamp(rng.nextGaussian(0, 0.03), -0.08, 0.08),
+              identificationBias: clamp(rng.nextGaussian(0, 0.03), -0.08, 0.08),
+              intentBias: clamp(rng.nextGaussian(0, 0.02), -0.05, 0.05),
+              pkBias: clamp(rng.nextGaussian(0, 0.05), -0.12, 0.12)
+            },
+            metrics: {
+              detectionCandidates: 0,
+              tracksCreated: 0,
+              tracksDropped: 0,
+              ghostTracksGenerated: 0,
+              classifications: 0,
+              identifications: 0,
+              intentsAssessed: 0,
+              c2Decisions: 0,
+              shotsFired: 0,
+              damageResolutions: 0,
+              targetsDestroyed: 0,
+              firstDetectionTimeSec: null,
+              firstDetectionRangeM: null,
+              killTimeSec: null,
+              ammoExpended: {}
+            }
+          };
+        }
+      }
+
+      return {
+        EVENT_PRIORITIES,
+        clamp,
+        round,
+        deepClone,
+        normalizeScenario,
+        validateScenario,
+        buildBaselineScenario,
+        createCsvRow,
+        rowsToCsv,
+        SimulationManager,
+        MonteCarloManager
+      };
+    }
+
+    const SIMULATION_KERNEL = createSimulationKernel();
+
+    function downloadText(filename, text, mimeType) {
+      const blob = new Blob([text], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function buildSafeFileStem(name) {
+      return String(name || "scenario")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+        || "scenario";
+    }
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function createMonteCarloWorker() {
+      const workerSource = `
+        const createSimulationKernel = ${createSimulationKernel.toString()};
+        const kernel = createSimulationKernel();
+        const simulationManager = new kernel.SimulationManager();
+        const monteCarloManager = new kernel.MonteCarloManager(simulationManager);
+        self.onmessage = function (event) {
+          const message = event.data || {};
+          if (message.type !== "runMonteCarlo") {
+            return;
+          }
+          try {
+            const rows = monteCarloManager.run(message.iterations, {
+              baseSeed: message.baseSeed,
+              scenario: message.scenario,
+              onProgress: function (completed, total) {
+                if (completed % 5 === 0 || completed === total) {
+                  self.postMessage({ type: "progress", completed, total });
+                }
+              }
+            });
+            self.postMessage({ type: "complete", rows });
+          } catch (error) {
+            self.postMessage({ type: "error", message: error && error.message ? error.message : String(error) });
+          }
+        };
+      `;
+      const blob = new Blob([workerSource], { type: "application/javascript" });
+      const url = URL.createObjectURL(blob);
+      const worker = new Worker(url);
+      URL.revokeObjectURL(url);
+      return worker;
+    }
+
+    class MapRenderer {
+      constructor(canvas) {
+        this.canvas = canvas;
+        this.context = canvas.getContext("2d");
+        this.width = canvas.width;
+        this.height = canvas.height;
+      }
+
+      draw(frame, report) {
+        const ctx = this.context;
+        ctx.clearRect(0, 0, this.width, this.height);
+        this.drawTerrain(ctx);
+        this.drawScale(ctx);
+        if (!frame) {
+          return;
+        }
+
+        frame.objects.forEach((object) => {
+          if (object.side === "Blue") {
+            this.drawBlueObject(ctx, object);
+          } else {
+            this.drawRedObject(ctx, object);
+          }
+        });
+
+        frame.tracks.forEach((track) => {
+          if (track.x === null || track.status === "Destroyed") {
+            return;
+          }
+          this.drawTrack(ctx, track);
+        });
+
+        (frame.clutterPlaceholders || []).forEach((placeholder) => {
+          this.drawClutterPlaceholder(ctx, placeholder);
+        });
+
+        this.drawOverlay(ctx, frame, report);
+      }
+
+      drawTerrain(ctx) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+        gradient.addColorStop(0, "rgba(63, 116, 138, 0.45)");
+        gradient.addColorStop(0.55, "rgba(44, 86, 94, 0.26)");
+        gradient.addColorStop(1, "rgba(68, 59, 37, 0.55)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        ctx.strokeStyle = "rgba(255,255,255,0.06)";
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= this.width; x += 90) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, this.height);
+          ctx.stroke();
+        }
+        for (let y = 0; y <= this.height; y += 90) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(this.width, y);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "rgba(255, 220, 152, 0.08)";
+        ctx.beginPath();
+        ctx.moveTo(0, this.height * 0.82);
+        ctx.lineTo(this.width * 0.22, this.height * 0.74);
+        ctx.lineTo(this.width * 0.36, this.height * 0.85);
+        ctx.lineTo(0, this.height);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      drawScale(ctx) {
+        ctx.fillStyle = "rgba(10, 16, 20, 0.55)";
+        ctx.fillRect(18, this.height - 42, 120, 18);
+        ctx.fillStyle = "#f7f0df";
+        ctx.fillRect(18, this.height - 42, 60, 18);
+        ctx.strokeStyle = "rgba(255,255,255,0.3)";
+        ctx.strokeRect(18, this.height - 42, 120, 18);
+        ctx.fillStyle = "#f7f0df";
+        ctx.font = "12px Trebuchet MS";
+        ctx.fillText("0", 18, this.height - 48);
+        ctx.fillText("100m", 122, this.height - 48);
+      }
+
+      drawBlueObject(ctx, object) {
+        const position = { x: object.x, y: object.y };
+        ctx.save();
+        ctx.strokeStyle = "rgba(89, 183, 207, 0.24)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(position.x, position.y, 230, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.strokeStyle = "rgba(89, 183, 207, 0.18)";
+        ctx.beginPath();
+        ctx.moveTo(position.x, position.y);
+        ctx.arc(position.x, position.y, 420, Math.PI * 0.6, Math.PI * 1.4);
+        ctx.closePath();
+        ctx.stroke();
+
+        ctx.fillStyle = "#59b7cf";
+        ctx.beginPath();
+        ctx.arc(position.x, position.y, 13, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#d9f2f8";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = "#d9f2f8";
+        ctx.font = "bold 13px Trebuchet MS";
+        ctx.fillText(object.name, position.x + 16, position.y - 10);
+        ctx.restore();
+      }
+
+      drawRedObject(ctx, object) {
+        const position = { x: object.x, y: object.y };
+        ctx.save();
+        ctx.fillStyle = object.destroyed ? "rgba(216, 91, 74, 0.35)" : "#d85b4a";
+        ctx.beginPath();
+        ctx.moveTo(position.x, position.y - 12);
+        ctx.lineTo(position.x + 14, position.y);
+        ctx.lineTo(position.x, position.y + 12);
+        ctx.lineTo(position.x - 14, position.y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#ffd4c8";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        if (object.destroyed) {
+          ctx.beginPath();
+          ctx.moveTo(position.x - 16, position.y - 16);
+          ctx.lineTo(position.x + 16, position.y + 16);
+          ctx.moveTo(position.x + 16, position.y - 16);
+          ctx.lineTo(position.x - 16, position.y + 16);
+          ctx.stroke();
+        }
+
+        ctx.fillStyle = "#ffe6dd";
+        ctx.font = "bold 13px Trebuchet MS";
+        ctx.fillText(object.name, position.x + 16, position.y - 10);
+        ctx.restore();
+      }
+
+      drawTrack(ctx, track) {
+        const position = { x: track.x, y: track.y };
+        ctx.save();
+        if (track.status === "Dropped") {
+          ctx.setLineDash([5, 4]);
+          ctx.strokeStyle = "rgba(214, 214, 214, 0.9)";
+        } else {
+          ctx.strokeStyle = "#ffcc71";
+        }
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(position.x, position.y - 11);
+        ctx.lineTo(position.x + 11, position.y);
+        ctx.lineTo(position.x, position.y + 11);
+        ctx.lineTo(position.x - 11, position.y);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = track.status === "Dropped" ? "#d7d7d7" : "#ffcc71";
+        ctx.font = "12px Trebuchet MS";
+        ctx.fillText(track.id, position.x + 14, position.y + 4);
+        ctx.restore();
+      }
+
+      drawClutterPlaceholder(ctx, placeholder) {
+        ctx.save();
+        ctx.strokeStyle = "rgba(168, 85, 255, 0.48)";
+        ctx.fillStyle = "rgba(80, 216, 255, 0.08)";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([8, 6]);
+        ctx.beginPath();
+        ctx.arc(placeholder.centerX, placeholder.centerY, placeholder.radiusM, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#caa7ff";
+        ctx.font = "12px Trebuchet MS";
+        ctx.fillText(placeholder.label || "Clutter Placeholder", placeholder.centerX + 12, placeholder.centerY - 10);
+        ctx.restore();
+      }
+
+      drawOverlay(ctx, frame, report) {
+        ctx.save();
+        ctx.fillStyle = "rgba(12, 16, 20, 0.6)";
+        ctx.fillRect(this.width - 280, 14, 262, 116);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.strokeRect(this.width - 280, 14, 262, 116);
+        ctx.fillStyle = "#f7f0df";
+        ctx.font = "bold 14px Trebuchet MS";
+        ctx.fillText("Timeline Snapshot", this.width - 262, 36);
+        ctx.font = "13px Trebuchet MS";
+        ctx.fillText("Scenario: " + escapeHtml(report?.scenarioName || "Preview"), this.width - 262, 58);
+        ctx.fillText("Time: " + SIMULATION_KERNEL.round(frame.timeSec, 2) + " s", this.width - 262, 78);
+        ctx.fillText("Tracks: " + frame.tracks.length, this.width - 262, 98);
+        ctx.fillText("Destroyed: " + (report && report.targetDestroyed ? "Yes" : "No"), this.width - 262, 118);
+        ctx.restore();
+      }
+    }
+
+    class UIManager {
+      constructor() {
+        this.screens = {
+          dashboard: document.getElementById("screen-dashboard"),
+          run: document.getElementById("screen-run"),
+          report: document.getElementById("screen-report"),
+          export: document.getElementById("screen-export")
+        };
+      }
+
+      showScreen(screenId) {
+        Object.entries(this.screens).forEach(([key, element]) => {
+          element.classList.toggle("active", key === screenId);
+        });
+        document.querySelectorAll(".nav-button").forEach((button) => {
+          button.classList.toggle("active", button.dataset.screen === screenId);
+        });
+      }
+    }
+
+    class AppController {
+      constructor() {
+        this.kernel = SIMULATION_KERNEL;
+        this.uiManager = new UIManager();
+        this.simulationManager = new this.kernel.SimulationManager();
+        this.monteCarloManager = new this.kernel.MonteCarloManager(this.simulationManager);
+        this.renderer = new MapRenderer(document.getElementById("sim-canvas"));
+        this.state = {
+          currentScenario: this.kernel.buildBaselineScenario(),
+          singleRun: null,
+          monteCarloRows: [],
+          playbackTimer: null,
+          monteCarloWorker: null
+        };
+        this.bindEvents();
+        this.applyQueryParams();
+        this.updateScenarioLabel();
+        this.syncPlaceholderControls();
+        this.clearResults();
+        this.refreshValidationSummary();
+        this.renderScenarioSnapshot();
+        this.setExportPreview(JSON.stringify(this.state.currentScenario, null, 2));
+        this.handleAutorun();
+      }
+
+      bindEvents() {
+        document.querySelectorAll(".nav-button").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.uiManager.showScreen(button.dataset.screen);
+          });
+        });
+
+        document.getElementById("run-single-btn").addEventListener("click", () => {
+          this.runSingleScenario();
+        });
+
+        document.getElementById("run-monte-carlo-btn").addEventListener("click", () => {
+          this.runMonteCarlo();
+        });
+
+        document.getElementById("load-scenario-btn").addEventListener("click", () => {
+          document.getElementById("scenario-file-input").click();
+        });
+
+        document.getElementById("scenario-file-input").addEventListener("change", (event) => {
+          this.importScenarioFile(event);
+        });
+
+        document.getElementById("export-scenario-btn").addEventListener("click", () => {
+          this.exportCurrentScenario();
+        });
+
+        document.getElementById("export-scenario-file-btn").addEventListener("click", () => {
+          this.exportCurrentScenario();
+        });
+
+        document.getElementById("reset-view-btn").addEventListener("click", () => {
+          this.stopPlayback();
+          this.renderScenarioSnapshot();
+          this.setPlaybackStatus("Idle");
+          this.setStatus("Scenario preview reset");
+        });
+
+        document.getElementById("export-single-btn").addEventListener("click", () => {
+          if (!this.state.singleRun) {
+            return;
+          }
+          const csv = this.kernel.rowsToCsv([this.kernel.createCsvRow(1, this.state.singleRun.report)]);
+          this.setExportPreview(csv);
+          downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_single_run.csv", csv, "text/csv;charset=utf-8");
+        });
+
+        document.getElementById("export-monte-carlo-btn").addEventListener("click", () => {
+          if (!this.state.monteCarloRows.length) {
+            return;
+          }
+          const csv = this.kernel.rowsToCsv(this.state.monteCarloRows);
+          this.setExportPreview(csv);
+          downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + "_monte_carlo.csv", csv, "text/csv;charset=utf-8");
+        });
+
+        document.getElementById("export-log-btn").addEventListener("click", () => {
+          if (!this.state.singleRun) {
+            return;
+          }
+          const json = JSON.stringify(this.state.singleRun.report.logs, null, 2);
+          this.setExportPreview(json);
+          downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_event_log.json", json, "application/json;charset=utf-8");
+        });
+
+        document.getElementById("ghost-placeholder-toggle").addEventListener("change", (event) => {
+          this.state.currentScenario.environment.placeholderGhostTrack.enabled = event.target.checked;
+          this.syncPlaceholderCards();
+          this.refreshValidationSummary();
+          this.renderScenarioSnapshot();
+          this.setStatus("Ghost placeholder " + (event.target.checked ? "enabled" : "disabled"));
+        });
+
+        document.getElementById("clutter-placeholder-toggle").addEventListener("change", (event) => {
+          this.state.currentScenario.environment.placeholderClutterField.enabled = event.target.checked;
+          this.syncPlaceholderCards();
+          this.refreshValidationSummary();
+          this.renderScenarioSnapshot();
+          this.setStatus("Clutter placeholder " + (event.target.checked ? "enabled" : "disabled"));
+        });
+      }
+
+      setBusy(isBusy) {
+        [
+          "run-single-btn",
+          "run-monte-carlo-btn",
+          "load-scenario-btn",
+          "export-scenario-btn",
+          "reset-view-btn",
+          "export-single-btn",
+          "export-monte-carlo-btn",
+          "export-log-btn",
+          "export-scenario-file-btn"
+        ].forEach((id) => {
+          document.getElementById(id).disabled = isBusy;
+        });
+      }
+
+      setStatus(text) {
+        document.getElementById("status-text").textContent = text;
+      }
+
+      setPlaybackStatus(text) {
+        document.getElementById("playback-text").textContent = text;
+      }
+
+      updateScenarioLabel() {
+        document.getElementById("scenario-text").textContent = this.state.currentScenario.metadata.name;
+      }
+
+      applyQueryParams() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("ghostPlaceholder") === "1") {
+          this.state.currentScenario.environment.placeholderGhostTrack.enabled = true;
+        }
+        if (params.get("clutterPlaceholder") === "1") {
+          this.state.currentScenario.environment.placeholderClutterField.enabled = true;
+        }
+      }
+
+      handleAutorun() {
+        const params = new URLSearchParams(window.location.search);
+        const autorun = params.get("autorun");
+        if (autorun === "single") {
+          window.setTimeout(() => {
+            this.runSingleScenario();
+          }, 60);
+        } else if (autorun === "montecarlo") {
+          const iterations = Number(params.get("iterations"));
+          if (Number.isFinite(iterations) && iterations > 0) {
+            document.getElementById("monte-carlo-count").value = String(Math.min(250, iterations));
+          }
+          window.setTimeout(() => {
+            this.runMonteCarlo();
+          }, 60);
+        }
+      }
+
+      syncPlaceholderControls() {
+        document.getElementById("ghost-placeholder-toggle").checked = !!this.state.currentScenario.environment.placeholderGhostTrack?.enabled;
+        document.getElementById("clutter-placeholder-toggle").checked = !!this.state.currentScenario.environment.placeholderClutterField?.enabled;
+        this.syncPlaceholderCards();
+      }
+
+      syncPlaceholderCards() {
+        const ghost = this.state.currentScenario.environment.placeholderGhostTrack;
+        const clutter = this.state.currentScenario.environment.placeholderClutterField;
+        document.getElementById("ghost-placeholder-card").textContent = ghost.enabled
+          ? (ghost.label || "Ghost Track Placeholder") + " active at T+" + ghost.spawnTimeSec + "s"
+          : "Ghost placeholder inactive";
+        document.getElementById("clutter-placeholder-card").textContent = clutter.enabled
+          ? (clutter.label || "Clutter Placeholder") + " active around (" + clutter.centerX + ", " + clutter.centerY + ")"
+          : "Clutter placeholder inactive";
+      }
+
+      getScenarioValidation() {
+        return this.kernel.validateScenario(this.state.currentScenario);
+      }
+
+      refreshValidationSummary(importErrorMessage = "") {
+        const summary = document.getElementById("validation-summary");
+        const validation = this.getScenarioValidation();
+        const errors = validation.errors.slice();
+        const warnings = validation.warnings.slice();
+        if (importErrorMessage) {
+          errors.unshift(importErrorMessage);
+        }
+
+        const statusClass = errors.length ? "validation-error" : (warnings.length ? "validation-warning" : "validation-ok");
+        const statusText = errors.length ? "Validation blocked" : (warnings.length ? "Validation warnings" : "Validation passed");
+
+        summary.innerHTML =
+          "<div class=\"validation-box\">" +
+            "<h3 class=\"" + statusClass + "\">" + escapeHtml(statusText) + "</h3>" +
+            "<div style=\"color: var(--muted);\">Errors: " + errors.length + " | Warnings: " + warnings.length + "</div>" +
+          "</div>" +
+          "<div class=\"validation-box\">" +
+            "<h4 class=\"validation-error\">Errors</h4>" +
+            (errors.length
+              ? ("<ul class=\"validation-list\">" + errors.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") + "</ul>")
+              : "<div class=\"validation-ok\">No blocking errors.</div>") +
+          "</div>" +
+          "<div class=\"validation-box\">" +
+            "<h4 class=\"validation-warning\">Warnings</h4>" +
+            (warnings.length
+              ? ("<ul class=\"validation-list\">" + warnings.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") + "</ul>")
+              : "<div class=\"validation-ok\">No warnings.</div>") +
+          "</div>";
+
+        const statusNode = document.getElementById("status-text");
+        statusNode.classList.remove("status-ok", "status-warning", "status-error");
+        statusNode.classList.add(errors.length ? "status-error" : (warnings.length ? "status-warning" : "status-ok"));
+        return validation;
+      }
+
+      clearResults() {
+        document.getElementById("queue-text").textContent = "0";
+        document.getElementById("seed-text").textContent = "-";
+        this.state.singleRun = null;
+        this.state.monteCarloRows = [];
+        this.updateRunMetrics(null);
+        this.updateLog([]);
+        this.updateSingleRunReport(null);
+        this.updateMonteCarloReport([]);
+        this.setStatus("Ready");
+        this.setPlaybackStatus("Idle");
+      }
+
+      renderScenarioSnapshot() {
+        this.syncPlaceholderCards();
+        const frame = {
+          timeSec: 0,
+          reason: "scenario-preview",
+          objects: this.state.currentScenario.instances.map((instance) => ({
+            id: instance.id,
+            name: instance.name,
+            side: instance.side,
+            roles: this.kernel.deepClone(instance.roles),
+            x: instance.posX,
+            y: instance.posY,
+            z: instance.posZ,
+            destroyed: false,
+            status: "Active"
+          })),
+          tracks: []
+        };
+        this.renderer.draw(frame, { scenarioName: this.state.currentScenario.metadata.name, targetDestroyed: false });
+      }
+
+      stopPlayback() {
+        if (this.state.playbackTimer) {
+          window.clearInterval(this.state.playbackTimer);
+          this.state.playbackTimer = null;
+        }
+      }
+
+      playFrames(frames, report) {
+        this.stopPlayback();
+        if (!frames || !frames.length) {
+          return;
+        }
+        let index = 0;
+        this.setPlaybackStatus("Playing");
+        this.renderer.draw(frames[0], report);
+        this.state.playbackTimer = window.setInterval(() => {
+          this.renderer.draw(frames[index], report);
+          index += 1;
+          if (index >= frames.length) {
+            this.stopPlayback();
+            this.setPlaybackStatus("Complete");
+          }
+        }, 260);
+      }
+
+      async importScenarioFile(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+          return;
+        }
+
+        try {
+          const text = await file.text();
+          let parsed;
+          try {
+            parsed = JSON.parse(text);
+          } catch (parseError) {
+            throw new Error("Malformed JSON: " + parseError.message);
+          }
+
+          const validation = this.kernel.validateScenario(parsed);
+          const normalized = validation.scenario;
+          if (!normalized.metadata.name || normalized.metadata.name === "Baseline Vertical Slice") {
+            normalized.metadata.name = file.name.replace(/\.json$/i, "");
+          }
+          this.state.currentScenario = normalized;
+          this.updateScenarioLabel();
+          this.syncPlaceholderControls();
+          this.stopPlayback();
+          this.clearResults();
+          this.refreshValidationSummary();
+          this.renderScenarioSnapshot();
+          this.setExportPreview(JSON.stringify(normalized, null, 2));
+          this.setStatus(validation.valid
+            ? ("Loaded scenario " + normalized.metadata.name)
+            : ("Loaded scenario with validation issues: " + normalized.metadata.name));
+        } catch (error) {
+          this.setStatus("Scenario load failed");
+          const message = String(error && error.message ? error.message : error);
+          this.refreshValidationSummary(message);
+          this.setExportPreview(message);
+        } finally {
+          event.target.value = "";
+        }
+      }
+
+      exportCurrentScenario() {
+        const payload = JSON.stringify(this.state.currentScenario, null, 2);
+        this.setExportPreview(payload);
+        downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + "_scenario.json", payload, "application/json;charset=utf-8");
+      }
+
+      async runSingleScenario() {
+        const validation = this.refreshValidationSummary();
+        if (!validation.valid) {
+          this.setStatus("Fix validation errors before running");
+          return;
+        }
+        this.setBusy(true);
+        this.setStatus("Running single scenario");
+        this.setPlaybackStatus("Computing");
+        this.stopPlayback();
+
+        const result = this.simulationManager.run({
+          seed: Math.floor((Date.now() % 2147483647)),
+          captureFrames: true,
+          scenario: this.state.currentScenario
+        });
+
+        this.state.singleRun = result;
+        document.getElementById("queue-text").textContent = String(result.report.eventCount);
+        document.getElementById("seed-text").textContent = String(result.report.seed);
+        this.updateRunMetrics(result.report);
+        this.updateLog(result.report.logs);
+        this.updateSingleRunReport(result.report);
+        this.playFrames(result.report.frames, result.report);
+        this.setExportPreview(JSON.stringify(result.report, null, 2));
+        this.uiManager.showScreen("run");
+        this.setStatus("Single scenario complete");
+        this.setBusy(false);
+      }
+
+      async runMonteCarlo() {
+        const validation = this.refreshValidationSummary();
+        if (!validation.valid) {
+          this.setStatus("Fix validation errors before Monte Carlo");
+          return;
+        }
+        const iterations = this.kernel.clamp(Number(document.getElementById("monte-carlo-count").value) || 1, 1, 250);
+        const baseSeed = Math.floor((Date.now() % 2147483647));
+        this.setBusy(true);
+        this.setStatus("Running Monte Carlo");
+        this.setPlaybackStatus("Idle");
+        document.getElementById("seed-text").textContent = String(baseSeed);
+
+        try {
+          this.state.monteCarloRows = await this.runMonteCarloOffThread(iterations, baseSeed);
+          this.updateMonteCarloReport(this.state.monteCarloRows);
+          this.setExportPreview(this.kernel.rowsToCsv(this.state.monteCarloRows));
+          this.uiManager.showScreen("report");
+          this.setStatus("Monte Carlo complete");
+        } catch (error) {
+          this.setStatus("Monte Carlo failed");
+          this.setExportPreview(String(error && error.message ? error.message : error));
+        } finally {
+          this.setBusy(false);
+        }
+      }
+
+      runMonteCarloOffThread(iterations, baseSeed) {
+        if (typeof Worker === "undefined") {
+          return Promise.resolve(this.monteCarloManager.run(iterations, {
+            baseSeed,
+            scenario: this.state.currentScenario,
+            onProgress: (completed, total) => {
+              this.setStatus("Monte Carlo " + completed + " / " + total);
+            }
+          }));
+        }
+
+        return new Promise((resolve, reject) => {
+          const worker = createMonteCarloWorker();
+          this.state.monteCarloWorker = worker;
+
+          worker.onmessage = (messageEvent) => {
+            const message = messageEvent.data || {};
+            if (message.type === "progress") {
+              this.setStatus("Monte Carlo " + message.completed + " / " + message.total);
+            } else if (message.type === "complete") {
+              worker.terminate();
+              this.state.monteCarloWorker = null;
+              resolve(message.rows || []);
+            } else if (message.type === "error") {
+              worker.terminate();
+              this.state.monteCarloWorker = null;
+              reject(new Error(message.message || "Worker error"));
+            }
+          };
+
+          worker.onerror = (error) => {
+            worker.terminate();
+            this.state.monteCarloWorker = null;
+            reject(error);
+          };
+
+          worker.postMessage({
+            type: "runMonteCarlo",
+            iterations,
+            baseSeed,
+            scenario: this.state.currentScenario
+          });
+        });
+      }
+
+      updateRunMetrics(report) {
+        const container = document.getElementById("run-metrics");
+        const metrics = report ? [
+          { label: "Detected", value: report.detected ? "Yes" : "No" },
+          { label: "Ghost Tracks", value: report.ghostTracksGenerated },
+          { label: "Classified", value: report.classified ? report.finalClassificationStatus : "No" },
+          { label: "Identified", value: report.identified ? report.finalIdentificationStatus : "No" },
+          { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "No" },
+          { label: "Tracks Dropped", value: report.tracksDropped },
+          { label: "Shots Fired", value: report.shotsFired },
+          { label: "Destroyed", value: report.targetDestroyed ? "Yes" : "No" },
+          { label: "Kill Time", value: report.killTimeSec ?? "-" }
+        ] : [
+          { label: "Detected", value: "-" },
+          { label: "Classified", value: "-" },
+          { label: "Identified", value: "-" },
+          { label: "Intent", value: "-" },
+          { label: "Tracks Dropped", value: "-" },
+          { label: "Shots Fired", value: "-" },
+          { label: "Destroyed", value: "-" },
+          { label: "Kill Time", value: "-" }
+        ];
+
+        container.innerHTML = metrics.map((metric) => (
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
+        )).join("");
+      }
+
+      updateLog(logs) {
+        const container = document.getElementById("event-log");
+        if (!logs || !logs.length) {
+          container.innerHTML = "<div class=\"log-entry\">No events yet.</div>";
+          return;
+        }
+        container.innerHTML = logs.map((entry) => (
+          "<div class=\"log-entry\"><span class=\"time\">T+" + Number(entry.timeSec).toFixed(2) + "s</span>" + escapeHtml(entry.message) + "</div>"
+        )).join("");
+        container.scrollTop = 0;
+      }
+
+      updateSingleRunReport(report) {
+        const summaryContainer = document.getElementById("single-run-summary");
+        const detailsContainer = document.getElementById("single-run-details");
+        if (!report) {
+          summaryContainer.innerHTML = "";
+          detailsContainer.innerHTML = "";
+          return;
+        }
+
+        const summary = [
+          { label: "Detection", value: report.detected ? "Successful" : "Missed" },
+          { label: "Ghost Tracks", value: report.ghostTracksGenerated },
+          { label: "Identification", value: report.identified ? report.finalIdentificationStatus : "None" },
+          { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "None" },
+          { label: "Outcome", value: report.targetDestroyed ? "Threat destroyed" : "Threat survived" }
+        ];
+        summaryContainer.innerHTML = summary.map((metric) => (
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
+        )).join("");
+
+        const details = [
+          ["Scenario", report.scenarioName],
+          ["Seed", report.seed],
+          ["End time", report.endTimeSec + " s"],
+          ["First detection time", report.firstDetectionTimeSec ?? "Not detected"],
+          ["First detection range", report.firstDetectionRangeM ? report.firstDetectionRangeM + " m" : "Not detected"],
+          ["Classification", report.finalClassificationStatus],
+          ["Identification", report.finalIdentificationStatus],
+          ["Intent", report.finalIntentStatus],
+          ["Track status", report.finalTrackStatus],
+          ["Ghost tracks generated", report.ghostTracksGenerated],
+          ["Tracks dropped", report.tracksDropped],
+          ["Kill time", report.killTimeSec ? report.killTimeSec + " s" : "No kill"],
+          ["Blue assets survived", report.blueAssetsSurvived],
+          ["Threats destroyed", report.threatsDestroyed],
+          ["Shots fired", report.shotsFired],
+          ["Event count", report.eventCount],
+          ["Final target status", report.finalTargetStatus]
+        ];
+        detailsContainer.innerHTML = details.map(([label, value]) => (
+          "<li><span>" + escapeHtml(String(label)) + "</span><strong>" + escapeHtml(String(value)) + "</strong></li>"
+        )).join("");
+      }
+
+      updateMonteCarloReport(rows) {
+        const tableBody = document.getElementById("monte-carlo-table-body");
+        const summaryContainer = document.getElementById("monte-carlo-summary");
+        if (!rows.length) {
+          tableBody.innerHTML = "";
+          summaryContainer.innerHTML = "";
+          return;
+        }
+
+        tableBody.innerHTML = rows.slice(0, 20).map((row) => (
+          "<tr>" +
+            "<td>" + escapeHtml(String(row.Iteration_ID)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Detected)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Identified)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Intent_Status)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Engaged)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Threat_Destroyed)) + "</td>" +
+            "<td>" + escapeHtml(String(row.Tracks_Dropped)) + "</td>" +
+            "<td>" + escapeHtml(String(row.First_Detection_Time_s || "-")) + "</td>" +
+            "<td>" + escapeHtml(String(row.Kill_Time_s || "-")) + "</td>" +
+            "<td>" + escapeHtml(String(row.Shots_Fired)) + "</td>" +
+          "</tr>"
+        )).join("");
+
+        const total = rows.length;
+        const detectionRate = rows.filter((row) => row.Detected === "Yes").length / total;
+        const identificationRate = rows.filter((row) => row.Identified === "Yes").length / total;
+        const killRate = rows.filter((row) => row.Threat_Destroyed === "Yes").length / total;
+        const dropRate = rows.filter((row) => Number(row.Tracks_Dropped) > 0).length / total;
+        const ghostRate = rows.filter((row) => Number(row.Ghost_Tracks_Generated) > 0).length / total;
+        const averageShots = rows.reduce((sum, row) => sum + Number(row.Shots_Fired || 0), 0) / total;
+
+        const summary = [
+          { label: "Iterations", value: total },
+          { label: "Detection rate", value: this.kernel.round(detectionRate * 100, 1) + "%" },
+          { label: "Identification rate", value: this.kernel.round(identificationRate * 100, 1) + "%" },
+          { label: "Kill rate", value: this.kernel.round(killRate * 100, 1) + "%" },
+          { label: "Ghost-track rate", value: this.kernel.round(ghostRate * 100, 1) + "%" },
+          { label: "Drop rate", value: this.kernel.round(dropRate * 100, 1) + "%" },
+          { label: "Avg shots", value: this.kernel.round(averageShots, 2) }
+        ];
+        summaryContainer.innerHTML = summary.map((metric) => (
+          "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
+        )).join("");
+      }
+
+      setExportPreview(text) {
+        document.getElementById("export-preview").value = text;
+      }
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      window.appController = new AppController();
+    });
+  </script>
+</body>
+</html>
