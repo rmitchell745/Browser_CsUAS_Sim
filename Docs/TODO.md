@@ -12,10 +12,13 @@ Codex must review this file at the start of every work session and update it bef
 
 Stabilize and document the v2.4 refactor state: keep `index.html` as the ready-to-test build, keep `src/` aligned enough for modular review/Vite cutover, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
 
+- keep the standalone extractor under `external_util/` unified and schema-aligned with the main simulator
 - keep the extracted `src/` review tree synchronized with the June 15 physics/cognitive/environment changes
 - preserve the Vite bridge path while avoiding divergence between `src/` review slices and the runnable monolith
+- use the Vite build as the first real Phase 1 modularization path, starting with a native module-worker Monte Carlo cutover
 - close remaining behavior gaps in playtests under the new ballistic / spoof / endurance / environment rules
 - keep documentation explicit about what is authoritative in `index.html` versus what is transitional in `src/`
+- use Phase 1 modularization as the next main-program roadmap tranche before adding new spatial or physics-heavy feature sets
 
 ---
 
@@ -48,9 +51,17 @@ The current working prototype now includes:
 
 # Open Tasks
 
+- [ ] Finish Phase 1 modularization cutover by moving more runtime authority from legacy `index.html` extraction into `src/`, starting with shared kernel/report/bootstrap logic instead of more bridge-only overrides.
+- [ ] Re-run the focused playtest package against the bundled Vite path and close any bundle-only drift before treating `src/` as the primary implementation tree.
+- [ ] Decide the retirement boundary for the legacy bridge: when `src/` reaches parity, switch the authoritative ready-to-test artifact from direct `index.html` to the bundled single-file output.
+- [ ] Rework the standalone extractor terrain pass to detect terrain objects from **local relief thresholding** rather than global average-height comparison, so radar-relevant spikes/anomalies are captured without extracting broad smooth hills.
+- [ ] Add extractor controls and logs for local-relief tuning, including neighborhood size / sampling window and relief threshold reporting in the generation summary.
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
+- [ ] Smoke-test the unified standalone extractor in a browser, including flat-terrain CORS fallback and both download outputs.
+- [ ] Decide whether any extractor logic should migrate into shared module utilities after Phase 1 modularization, without making the utility itself depend on the app build.
 - [ ] Finish the v2.4 extracted-tree sync so `src/` mirrors the June 15 kernel behavior closely enough for modular review.
-- [ ] Wire module imports only after the split is approved; keep `index.html` as the runnable shell until the module build passes full playtest review.
+- [ ] Keep `index.html` as the runnable shell until the module build passes full playtest review, even though the Vite path now uses a native module-worker Monte Carlo implementation.
+- [ ] Continue the main-program Phase 1 modularization follow-on: remove remaining `index.html`/`src` behavior drift beyond the new native module-worker cutover.
 - [ ] Verify Red fallback hierarchy in-browser so `Networked` stays primary, `Loiter` is allowed when untasked, and fallback only appears after jam or C2 destruction.
 - [ ] Verify interceptor guidance split in-browser so command-guided launchers stay locked and autonomous launchers release cleanly.
 - [ ] Verify dynamic environment behavior in-browser so temporary anomalies/clutter create explainable false detections and noise penalties without overwhelming baseline runs.
@@ -159,6 +170,8 @@ The current working prototype now includes:
 - [x] Implemented multispectrum sensing plus first-pass jammer, meaconing, and telemetry-cyber runtime effects.
 - [x] Added focused playtests for multispectrum detection, jammer-driven RTB fallback, navigation spoofing, and telemetry injection.
 - [x] Implemented the June 15 v2.4 physics/cognitive/environment pass in the runnable kernel: dynamic anomalies/clutter, same-side telemetry spoofing, endurance depletion, ballistic spoof penalties, and command-guided interceptor cleanup.
+- [x] Unified the standalone environment extractor into one authoritative offline HTML utility with scenario JSON as the default output and environment-package export as an optional secondary output.
+- [x] Replaced the Vite-path Blob-string Monte Carlo worker with a native module worker that rehydrates the legacy kernel through shared bridge extraction logic.
 
 ---
 

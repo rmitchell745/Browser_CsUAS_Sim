@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>C-sUAS Environment Extractor</title>
+  <style>
+    body { font-family: "Segoe UI", Tahoma, sans-serif; background: #0f111a; color: #e2e8f0; margin: 0; padding: 20px; }
+    .container { max-width: 1140px; margin: 0 auto; background: #1a1d2e; padding: 20px; border-radius: 12px; border: 1px solid #2d3748; }
+    h1 { margin: 0 0 8px 0; color: #38d9ff; }
+    p { margin-top: 0; color: #b7c7da; }
+    .control-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 15px; }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 0.85rem; text-transform: uppercase; color: #a0aec0; font-weight: bold; }
+    input { background: #0f111a; border: 1px solid #4a5568; color: #fff; padding: 8px; border-radius: 6px; }
+    .button-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    button { background: #38d9ff; color: #000; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+    button:hover { background: #2bb0d4; }
+    button:disabled { background: #4a5568; opacity: 0.5; cursor: not-allowed; }
+    .secondary { background: #9c4dff; color: #fff; }
+    .secondary:hover { background: #8342d4; }
+    .tooltip-box { margin: 16px 0; padding: 10px; background: rgba(56, 217, 255, 0.1); border-left: 3px solid #38d9ff; border-radius: 4px; font-size: 0.85rem; color: #d9f2f8; }
+    .canvases { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+    .canvas-wrap { background: #000; border: 1px solid #4a5568; border-radius: 6px; overflow: hidden; }
+    canvas { display: block; width: 100%; height: auto; }
+    h3 { margin: 10px; font-size: 1rem; color: #a0aec0; text-align: center; }
+    #log { margin-top: 15px; padding: 12px; background: #000; border-radius: 6px; font-family: monospace; font-size: 0.88rem; color: #77ffb1; white-space: pre-wrap; max-height: 260px; overflow: auto; }
+    .error-text { color: #ff5f92; }
+    .warn-text { color: #ffd166; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Environment Extractor</h1>
+  <p>Extracts a centered map, decodes terrain, vectorizes blocking features, and packages a scenario JSON that matches the current simulator schema.</p>
+
+  <div class="control-grid">
+    <div class="field">
+      <label>Latitude (Center)</label>
+      <input type="number" id="input-lat" value="47.5952" step="0.0001">
+    </div>
+    <div class="field">
+      <label>Longitude (Center)</label>
+      <input type="number" id="input-lon" value="-122.3316" step="0.0001">
+    </div>
+    <div class="field">
+      <label>Zoom Level (12 to 18)</label>
+      <input type="number" id="input-zoom" value="15" min="12" max="18">
+    </div>
+    <div class="field">
+      <label>Local Relief Threshold (+m)</label>
+      <input type="number" id="input-threshold" value="15" min="1" step="1">
+    </div>
+    <div class="field">
+      <label>Local Window Size (px)</label>
+      <input type="number" id="input-window-size" value="21" min="3" step="2">
+    </div>
+  </div>
+
+  <div class="tooltip-box" id="scale-tooltip">Loading scale data...</div>
+
+  <div class="button-row">
+    <button id="btn-generate">1. Generate Scenario</button>
+    <button id="btn-download-scenario" class="secondary" disabled>2. Download Scenario JSON</button>
+    <button id="btn-download-package" class="secondary" disabled>3. Download Environment Package</button>
+  </div>
+
+  <div id="log">Ready. Enter coordinates and click Generate.</div>
+
+  <div class="canvases">
+    <div class="canvas-wrap">
+      <h3>Satellite Background</h3>
+      <canvas id="canvas-sat" width="512" height="512"></canvas>
+    </div>
+    <div class="canvas-wrap">
+      <h3>Vectorized Terrain Preview</h3>
+      <canvas id="canvas-height" width="512" height="512"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener("error", function(event) {
+  const logEl = document.getElementById("log");
+  if (logEl) {
+    logEl.innerHTML += "\n<span class=\"error-text\">FATAL ERROR: " + event.message + "</span>";
+  }
+});
+
+window.addEventListener("DOMContentLoaded", () => {
+  const TILE_SIZE = 256;
+  const OUTPUT_SIZE = 512;
+  const DEFAULT_BASE_NOISE_DB = 1.8;
+  const logEl = document.getElementById("log");
+  const satCanvas = document.getElementById("canvas-sat");
+  const previewCanvas = document.getElementById("canvas-height");
+  const btnGenerate = document.getElementById("btn-generate");
+  const btnDownloadScenario = document.getElementById("btn-download-scenario");
+  const btnDownloadPackage = document.getElementById("btn-download-package");
+  let outputScenario = null;
+  let outputPackage = null;
+
+  function stamp() {
+    const now = new Date();
+    return now.toLocaleTimeString();
+  }
+
+  function log(message, level = "info") {
+    const line = "[" + stamp() + "] " + message;
+    const prefix = level === "error"
+      ? "<span class=\"error-text\">" + line + "</span>"
+      : (level === "warn" ? "<span class=\"warn-text\">" + line + "</span>" : line);
+    logEl.innerHTML += (logEl.innerHTML ? "\n" : "") + prefix;
+    logEl.scrollTop = logEl.scrollHeight;
+    if (level === "error") {
+      console.error(line);
+    } else if (level === "warn") {
+      console.warn(line);
+    } else {
+      console.log(line);
+    }
+  }
+
+  function resetLog() {
+    logEl.textContent = "";
+  }
+
+  function setBusy(isBusy) {
+    btnGenerate.disabled = isBusy;
+    if (isBusy) {
+      btnDownloadScenario.disabled = true;
+      btnDownloadPackage.disabled = true;
+    }
+  }
+
+  function lonToPixelX(lon, zoom) { return ((lon + 180) / 360) * TILE_SIZE * Math.pow(2, zoom); }
+  function latToPixelY(lat, zoom) {
+    const sinLat = Math.sin(lat * Math.PI / 180);
+    return (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * TILE_SIZE * Math.pow(2, zoom);
+  }
+  function pixelXToLon(x, zoom) { return (x / (TILE_SIZE * Math.pow(2, zoom))) * 360 - 180; }
+  function pixelYToLat(y, zoom) {
+    const n = Math.PI - (2 * Math.PI * y) / (TILE_SIZE * Math.pow(2, zoom));
+    return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))));
+  }
+  function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+
+  function updateScaleTooltip() {
+    try {
+      const lat = parseFloat(document.getElementById("input-lat").value) || 0;
+      const z = parseInt(document.getElementById("input-zoom").value, 10) || 15;
+      const tooltip = document.getElementById("scale-tooltip");
+      const metersPerPixel = (156543.03392 * Math.cos(lat * Math.PI / 180)) / Math.pow(2, z);
+      const totalWidthMeters = Math.round(metersPerPixel * OUTPUT_SIZE);
+      tooltip.innerHTML = "<strong>Estimated Map Size:</strong> "
+        + totalWidthMeters.toLocaleString()
+        + " meters wide (" + metersPerPixel.toFixed(2) + " m/px). Scenario export is centered on the entered point.";
+    } catch (_error) {}
+  }
+
+  function loadTile(url) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        const blank = document.createElement("canvas");
+        blank.width = TILE_SIZE;
+        blank.height = TILE_SIZE;
+        resolve(blank);
+      };
+      img.src = url;
+    });
+  }
+
+  function safeCanvasToDataUrl(canvas, type, quality) {
+    try {
+      return canvas.toDataURL(type, quality);
+    } catch (_error) {
+      log("Canvas export was blocked. Falling back to an empty image payload.", "warn");
+      const blank = document.createElement("canvas");
+      blank.width = canvas.width;
+      blank.height = canvas.height;
+      return blank.toDataURL(type, quality);
+    }
+  }
+
+  function buildMetersPolygon(contour, metersPerPixel, stride) {
+    const polygon = [];
+    for (let i = 0; i < contour.length; i += stride) {
+      polygon.push({
+        x: Math.round(contour[i].x * metersPerPixel),
+        y: Math.round(contour[i].y * metersPerPixel)
+      });
+    }
+    if (polygon.length < 3) {
+      return [];
+    }
+    const first = polygon[0];
+    const last = polygon[polygon.length - 1];
+    if (first.x === last.x && first.y === last.y) {
+      polygon.pop();
+    }
+    return polygon;
+  }
+
+  function buildIntegralImage(values) {
+    const stride = OUTPUT_SIZE + 1;
+    const integral = new Float64Array(stride * stride);
+    for (let y = 1; y <= OUTPUT_SIZE; y += 1) {
+      let rowSum = 0;
+      for (let x = 1; x <= OUTPUT_SIZE; x += 1) {
+        rowSum += Number(values[((y - 1) * OUTPUT_SIZE) + (x - 1)] || 0);
+        integral[(y * stride) + x] = integral[((y - 1) * stride) + x] + rowSum;
+      }
+    }
+    return integral;
+  }
+
+  function getWindowMean(integral, centerX, centerY, radiusPx) {
+    const stride = OUTPUT_SIZE + 1;
+    const x0 = Math.max(0, centerX - radiusPx);
+    const y0 = Math.max(0, centerY - radiusPx);
+    const x1 = Math.min(OUTPUT_SIZE - 1, centerX + radiusPx);
+    const y1 = Math.min(OUTPUT_SIZE - 1, centerY + radiusPx);
+    const left = x0;
+    const top = y0;
+    const right = x1 + 1;
+    const bottom = y1 + 1;
+    const sum = integral[(bottom * stride) + right]
+      - integral[(top * stride) + right]
+      - integral[(bottom * stride) + left]
+      + integral[(top * stride) + left];
+    const sampleCount = Math.max(1, (x1 - x0 + 1) * (y1 - y0 + 1));
+    return sum / sampleCount;
+  }
+
+  function traceContour(mask, visited, startX, startY) {
+    const contour = [];
+    let currX = startX;
+    let currY = startY;
+    const dirX = [1, 1, 0, -1, -1, -1, 0, 1];
+    const dirY = [0, 1, 1, 1, 0, -1, -1, -1];
+    let dir = 7;
+    let guardCounter = 0;
+
+    do {
+      contour.push({ x: currX, y: currY });
+      const idx = (currY * OUTPUT_SIZE) + currX;
+      visited[idx] = 1;
+      guardCounter += 1;
+
+      let foundNext = false;
+      for (let i = 0; i < 8; i += 1) {
+        const checkDir = (dir + i) % 8;
+        const nx = currX + dirX[checkDir];
+        const ny = currY + dirY[checkDir];
+        if (nx < 0 || nx >= OUTPUT_SIZE || ny < 0 || ny >= OUTPUT_SIZE) {
+          continue;
+        }
+        if (mask[(ny * OUTPUT_SIZE) + nx] === 1) {
+          currX = nx;
+          currY = ny;
+          dir = (checkDir + 5) % 8;
+          foundNext = true;
+          break;
+        }
+      }
+
+      if (!foundNext) {
+        break;
+      }
+      if (guardCounter > 5000 || contour.length > 5000) {
+        log("Contour tracing hit the 5000-step safety limit. Closing polygon early.", "warn");
+        break;
+      }
+    } while (currX !== startX || currY !== startY);
+
+    return { contour };
+  }
+
+  function collectRegion(mask, consumed, trueHeights, startX, startY) {
+    const stack = [{ x: startX, y: startY }];
+    const dirX = [1, 1, 0, -1, -1, -1, 0, 1];
+    const dirY = [0, 1, 1, 1, 0, -1, -1, -1];
+    const startIdx = (startY * OUTPUT_SIZE) + startX;
+    consumed[startIdx] = 1;
+    let pixelCount = 0;
+    let maxZInRegion = 0;
+    let boundarySeed = null;
+
+    while (stack.length) {
+      const current = stack.pop();
+      const idx = (current.y * OUTPUT_SIZE) + current.x;
+      pixelCount += 1;
+      maxZInRegion = Math.max(maxZInRegion, trueHeights[idx]);
+
+      let isBoundary = false;
+      for (let dir = 0; dir < 8; dir += 1) {
+        const nx = current.x + dirX[dir];
+        const ny = current.y + dirY[dir];
+        if (nx < 0 || nx >= OUTPUT_SIZE || ny < 0 || ny >= OUTPUT_SIZE) {
+          isBoundary = true;
+          continue;
+        }
+        const neighborIdx = (ny * OUTPUT_SIZE) + nx;
+        if (mask[neighborIdx] !== 1) {
+          isBoundary = true;
+          continue;
+        }
+        if (consumed[neighborIdx] === 1) {
+          continue;
+        }
+        consumed[neighborIdx] = 1;
+        stack.push({ x: nx, y: ny });
+      }
+
+      if (isBoundary && !boundarySeed) {
+        boundarySeed = { x: current.x, y: current.y };
+      }
+    }
+
+    return {
+      pixelCount,
+      maxZInRegion,
+      boundarySeed: boundarySeed || { x: startX, y: startY }
+    };
+  }
+
+  function vectorizeTerrain(trueHeights, metersPerPixel, thresholdOffsetMeters, windowSizePx) {
+    log("Starting vectorization.");
+    const windowRadiusPx = Math.max(1, Math.floor(windowSizePx / 2));
+    const integral = buildIntegralImage(trueHeights);
+    const terrainObjects = [];
+    const mask = new Uint8Array(OUTPUT_SIZE * OUTPUT_SIZE);
+    const consumed = new Uint8Array(OUTPUT_SIZE * OUTPUT_SIZE);
+    let polyCount = 0;
+    let markedPixels = 0;
+    let minLocalRelief = Infinity;
+    let maxLocalRelief = -Infinity;
+    const minRegionPixels = 24;
+
+    log(
+      "Local relief threshold set to +"
+      + thresholdOffsetMeters
+      + "m using a "
+      + windowSizePx
+      + "px local mean window."
+    );
+
+    for (let y = 0; y < OUTPUT_SIZE; y += 1) {
+      for (let x = 0; x < OUTPUT_SIZE; x += 1) {
+        const idx = (y * OUTPUT_SIZE) + x;
+        const localBaseline = getWindowMean(integral, x, y, windowRadiusPx);
+        const localRelief = Number(trueHeights[idx] || 0) - localBaseline;
+        minLocalRelief = Math.min(minLocalRelief, localRelief);
+        maxLocalRelief = Math.max(maxLocalRelief, localRelief);
+        if (localRelief >= thresholdOffsetMeters) {
+          mask[idx] = 1;
+          markedPixels += 1;
+        }
+      }
+    }
+
+    log(
+      "Local relief range: "
+      + minLocalRelief.toFixed(1)
+      + "m to "
+      + maxLocalRelief.toFixed(1)
+      + "m. Marked pixels: "
+      + markedPixels
+      + "."
+    );
+
+    for (let y = 0; y < OUTPUT_SIZE; y += 1) {
+      for (let x = 0; x < OUTPUT_SIZE; x += 1) {
+        const idx = (y * OUTPUT_SIZE) + x;
+        if (mask[idx] !== 1 || consumed[idx] === 1) {
+          continue;
+        }
+        const region = collectRegion(mask, consumed, trueHeights, x, y);
+        if (region.pixelCount < minRegionPixels) {
+          continue;
+        }
+        const contourVisited = new Uint8Array(OUTPUT_SIZE * OUTPUT_SIZE);
+        const { contour } = traceContour(mask, contourVisited, region.boundarySeed.x, region.boundarySeed.y);
+        if (contour.length <= 6) {
+          continue;
+        }
+        const polygon = buildMetersPolygon(contour, metersPerPixel, 4);
+        if (polygon.length < 3) {
+          continue;
+        }
+        polyCount += 1;
+        terrainObjects.push({
+          id: "Terrain-Auto-" + polyCount,
+          label: "Elevation Feature " + polyCount,
+          interferenceType: "Block",
+          clutterPenaltyDb: 0,
+          heightZ: Math.round(region.maxZInRegion),
+          areaPolygon: polygon
+        });
+      }
+    }
+
+    log("Vectorization complete. Generated " + terrainObjects.length + " terrain polygons.");
+    return terrainObjects;
+  }
+
+  function renderTerrainPreview(canvas, terrainObjects, metersPerPixel) {
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    ctx.fillStyle = "#050a14";
+    ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+    ctx.strokeStyle = "#38d9ff";
+    ctx.fillStyle = "rgba(56, 217, 255, 0.28)";
+    ctx.lineWidth = 1.5;
+
+    terrainObjects.forEach((poly) => {
+      if (!poly.areaPolygon || poly.areaPolygon.length < 3) {
+        return;
+      }
+      ctx.beginPath();
+      poly.areaPolygon.forEach((pt, idx) => {
+        const px = pt.x / metersPerPixel;
+        const py = pt.y / metersPerPixel;
+        if (idx === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    });
+  }
+
+  function buildStarterScenario(lat, lon, mapWidthMeters, satCanvas, heightCanvas, terrainObjects) {
+    const center = Math.round(mapWidthMeters / 2);
+    const radarRange = Math.round(mapWidthMeters * 0.8);
+    return {
+      metadata: {
+        name: "Auto-Generated Map (" + lat.toFixed(4) + ", " + lon.toFixed(4) + ")",
+        description: "Generated by Environment_Extractor.html with " + terrainObjects.length + " extracted terrain polygons."
+      },
+      config: {
+        maxTimeSec: 90,
+        trackStaleAfterSec: 4,
+        attackRunRangeM: 240,
+        projectedPathToleranceM: 50
+      },
+      environment: {
+        baseNoiseDb: DEFAULT_BASE_NOISE_DB,
+        mapWidthMeters,
+        anomalySpawnChance: 0,
+        clutterSpawnChance: 0,
+        backgroundImageBase64: safeCanvasToDataUrl(satCanvas, "image/jpeg", 0.72),
+        placeholderGhostTrack: { enabled: false },
+        placeholderClutterField: { enabled: false }
+      },
+      terrainObjects,
+      networks: [],
+      powerGrids: [],
+      rosters: [],
+      templates: [
+        {
+          id: "Template-Blue-C2-Radar",
+          name: "Generated Blue C2 Radar",
+          defaultRoles: ["Asset", "Sensor", "C2"],
+          components: {
+            health: { maxHealth: 100, assetValuePts: 50, isHQ: true },
+            resistance: { kineticResistance: 0.1, ewResistance: 0.1, networkResistance: 0.1 },
+            signature: { radarSignatureDb: -5, acousticSignatureDb: 55, rfEmissionDb: 18 },
+            vulnerability: { commsResilience: 0.6, navResilience: 0.8, cyberResilience: 0.55 },
+            payload: { impactDamagePoints: 0, selfDestructOnImpact: false },
+            capability: { usesGPS: false, usesNetwork: true, usesRF: true, requiresPower: true, requiresC2: false, canOperateAutonomously: true },
+            powerConsumer: { powerConsumedKw: 8 },
+            sensors: [
+              {
+                id: "Sensor-Blue-Radar-1",
+                name: "Generated Early Warning Radar",
+                type: "Radar",
+                maxRangeM: radarRange,
+                horizontalFovDeg: 360,
+                verticalFovDeg: 120,
+                headingDeg: 0,
+                transmitPowerDb: 55,
+                noiseFloorDb: -94,
+                noiseSigmaDb: 1.2,
+                detectionThresholdDb: 15,
+                scanIntervalSec: 1,
+                classification: { canClassify: true, latencySec: 0.25, accuracyBase: 0.8 },
+                identification: { canIdentify: true, latencySec: 0.35, accuracyBase: 0.72 }
+              }
+            ],
+            effectors: [],
+            c2: { trackCapacity: 10, processingLatencySec: 0.5 }
+          }
+        },
+        {
+          id: "Template-Red-Drone",
+          name: "Generated Red Drone",
+          defaultRoles: ["UAS"],
+          missionProfile: { type: "Geographic", targetTemplateId: null },
+          components: {
+            health: { maxHealth: 50, assetValuePts: 5, isHQ: false },
+            resistance: { kineticResistance: 0.08, ewResistance: 0.08, networkResistance: 0.08 },
+            signature: { radarSignatureDb: -12, acousticSignatureDb: 48, rfEmissionDb: 14 },
+            vulnerability: { commsResilience: 0.45, navResilience: 0.45, cyberResilience: 0.4 },
+            payload: { impactDamagePoints: 0, selfDestructOnImpact: false },
+            capability: {
+              usesGPS: true,
+              usesNetwork: true,
+              usesRF: true,
+              requiresPower: false,
+              requiresC2: false,
+              canOperateAutonomously: true,
+              lostLinkBehavior: "ContinueDeadReckoning"
+            },
+            powerConsumer: { powerConsumedKw: 0 },
+            movement: {
+              speedMps: 25,
+              stepSec: 1,
+              waypointToleranceM: 10,
+              maxAccel: 8,
+              turnRate_dps: 60
+            },
+            sensors: [],
+            effectors: [],
+            c2: null
+          }
+        }
+      ],
+      instances: [
+        {
+          id: "Blue-Radar-1",
+          templateId: "Template-Blue-C2-Radar",
+          name: "Center Radar",
+          side: "Blue",
+          roles: ["Asset", "Sensor", "C2"],
+          posX: center,
+          posY: center,
+          posZ: 10,
+          missionWaypoints: []
+        },
+        {
+          id: "Red-Target-1",
+          templateId: "Template-Red-Drone",
+          name: "Incoming Drone",
+          side: "Red",
+          roles: ["UAS"],
+          posX: 100,
+          posY: 100,
+          posZ: 100,
+          missionWaypoints: [
+            { x: Math.max(120, mapWidthMeters - 100), y: Math.max(120, mapWidthMeters - 100), z: 100 }
+          ]
+        }
+      ],
+      extractedEnvironmentPackage: {
+        environmentPackage: true,
+        metadata: { name: "Extracted Map", latitude: lat, longitude: lon },
+        scale: { mapWidthMeters, minAltitudeMeters: 0, maxAltitudeMeters: 255 },
+        assets: {
+          satelliteImageBase64: safeCanvasToDataUrl(satCanvas, "image/png"),
+          heightmapImageBase64: safeCanvasToDataUrl(heightCanvas, "image/png")
+        }
+      }
+    };
+  }
+
+  function downloadJson(filename, payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function generateScenario() {
+    setBusy(true);
+    resetLog();
+    outputScenario = null;
+    outputPackage = null;
+
+    try {
+      const lat = parseFloat(document.getElementById("input-lat").value);
+      const lon = parseFloat(document.getElementById("input-lon").value);
+      const z = parseInt(document.getElementById("input-zoom").value, 10);
+      const thresholdOffsetMeters = Math.max(1, parseFloat(document.getElementById("input-threshold").value) || 15);
+      const rawWindowSizePx = Math.max(3, Math.floor(parseFloat(document.getElementById("input-window-size").value) || 21));
+      const windowSizePx = rawWindowSizePx % 2 === 0 ? rawWindowSizePx + 1 : rawWindowSizePx;
+      document.getElementById("input-window-size").value = String(windowSizePx);
+      const centerPx = lonToPixelX(lon, z);
+      const centerPy = latToPixelY(lat, z);
+      const startPx = centerPx - (OUTPUT_SIZE / 2);
+      const startPy = centerPy - (OUTPUT_SIZE / 2);
+      const minTX = Math.floor(startPx / TILE_SIZE);
+      const maxTX = Math.floor((startPx + OUTPUT_SIZE) / TILE_SIZE);
+      const minTY = Math.floor(startPy / TILE_SIZE);
+      const maxTY = Math.floor((startPy + OUTPUT_SIZE) / TILE_SIZE);
+      const north = pixelYToLat(startPy, z);
+      const south = pixelYToLat(startPy + OUTPUT_SIZE, z);
+      const west = pixelXToLon(startPx, z);
+      const east = pixelXToLon(startPx + OUTPUT_SIZE, z);
+      const metersPerPixel = (156543.03392 * Math.cos(lat * Math.PI / 180)) / Math.pow(2, z);
+      const mapWidthMeters = Math.round(metersPerPixel * OUTPUT_SIZE);
+
+      log("Starting tile fetch.");
+      const tempSatCanvas = document.createElement("canvas");
+      const tempDemCanvas = document.createElement("canvas");
+      tempSatCanvas.width = (maxTX - minTX + 1) * TILE_SIZE;
+      tempSatCanvas.height = (maxTY - minTY + 1) * TILE_SIZE;
+      tempDemCanvas.width = tempSatCanvas.width;
+      tempDemCanvas.height = tempSatCanvas.height;
+      const tSatCtx = tempSatCanvas.getContext("2d", { willReadFrequently: true });
+      const tDemCtx = tempDemCanvas.getContext("2d", { willReadFrequently: true });
+      const fetchPromises = [];
+
+      for (let tx = minTX; tx <= maxTX; tx += 1) {
+        for (let ty = minTY; ty <= maxTY; ty += 1) {
+          const drawX = (tx - minTX) * TILE_SIZE;
+          const drawY = (ty - minTY) * TILE_SIZE;
+          const satUrl = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + ty + "/" + tx;
+          const demUrl = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/" + z + "/" + tx + "/" + ty + ".png";
+          fetchPromises.push(loadTile(satUrl).then((img) => tSatCtx.drawImage(img, drawX, drawY)));
+          fetchPromises.push(loadTile(demUrl).then((img) => tDemCtx.drawImage(img, drawX, drawY)));
+        }
+      }
+      await Promise.all(fetchPromises);
+      log("Tiles fetched.");
+
+      log("Starting canvas crop.");
+      const cropX = startPx - (minTX * TILE_SIZE);
+      const cropY = startPy - (minTY * TILE_SIZE);
+      const satCtx = satCanvas.getContext("2d");
+      satCtx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      satCtx.drawImage(tempSatCanvas, cropX, cropY, OUTPUT_SIZE, OUTPUT_SIZE, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+
+      const terrainDataCanvas = document.createElement("canvas");
+      terrainDataCanvas.width = OUTPUT_SIZE;
+      terrainDataCanvas.height = OUTPUT_SIZE;
+      const terrainDataCtx = terrainDataCanvas.getContext("2d", { willReadFrequently: true });
+      terrainDataCtx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      terrainDataCtx.drawImage(tempDemCanvas, cropX, cropY, OUTPUT_SIZE, OUTPUT_SIZE, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      log("Canvas crop complete.");
+
+      log("Starting DEM decode.");
+      let trueHeights = new Float32Array(OUTPUT_SIZE * OUTPUT_SIZE);
+      let demData = null;
+      try {
+        demData = terrainDataCtx.getImageData(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      } catch (_corsError) {
+        log("CORS blocked pixel reading. Generating flat terrain.", "warn");
+      }
+
+      if (demData) {
+        const pixels = demData.data;
+        for (let i = 0; i < pixels.length; i += 4) {
+          let heightMeters = (pixels[i] * 256 + pixels[i + 1] + pixels[i + 2] / 256) - 32768;
+          if (heightMeters < 0) {
+            heightMeters = 0;
+          }
+          trueHeights[i / 4] = heightMeters;
+        }
+      }
+      log("DEM decode complete.");
+
+      log("Starting OSM fetch.");
+      const overpassQuery = "[out:json];way[\"building\"](" + south + "," + west + "," + north + "," + east + ");(._;>;);out body;";
+      let osmData = { elements: [] };
+      try {
+        const osmRes = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: overpassQuery });
+        if (osmRes.ok) {
+          osmData = await osmRes.json();
+          log("OSM fetch complete.");
+        } else {
+          log("OSM server did not return usable data. Proceeding without buildings.", "warn");
+        }
+      } catch (_osmError) {
+        log("OSM fetch failed. Proceeding without buildings.", "warn");
+      }
+
+      log("Starting building merge.");
+      const nodes = {};
+      osmData.elements.forEach((el) => {
+        if (el.type === "node") {
+          nodes[el.id] = { lat: el.lat, lon: el.lon };
+        }
+      });
+      terrainDataCtx.clearRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
+      osmData.elements.forEach((el) => {
+        if (!(el.type === "way" && el.tags && el.tags.building)) {
+          return;
+        }
+        const levels = parseInt(el.tags["building:levels"] || 2, 10);
+        const height = levels * 3.5;
+        terrainDataCtx.beginPath();
+        el.nodes.forEach((nodeId, idx) => {
+          const node = nodes[nodeId];
+          if (!node) {
+            return;
+          }
+          const px = ((node.lon - west) / (east - west)) * OUTPUT_SIZE;
+          const py = ((north - node.lat) / (north - south)) * OUTPUT_SIZE;
+          if (idx === 0) {
+            terrainDataCtx.moveTo(px, py);
+          } else {
+            terrainDataCtx.lineTo(px, py);
+          }
+        });
+        terrainDataCtx.closePath();
+        terrainDataCtx.fillStyle = "rgba(" + height + ", 0, 0, 1)";
+        terrainDataCtx.fill();
+      });
+
+      let buildingPixels = new Uint8ClampedArray(OUTPUT_SIZE * OUTPUT_SIZE * 4);
+      try {
+        buildingPixels = terrainDataCtx.getImageData(0, 0, OUTPUT_SIZE, OUTPUT_SIZE).data;
+      } catch (_corsError) {
+        log("CORS blocked building pixel reading. Proceeding with terrain-only heights.", "warn");
+      }
+      for (let i = 0; i < trueHeights.length; i += 1) {
+        trueHeights[i] += Number(buildingPixels[i * 4] || 0);
+      }
+      log("Building merge complete.");
+
+      log("Starting grayscale height render.");
+      const minHeight = trueHeights.reduce((min, value) => Math.min(min, value), Infinity);
+      const maxHeight = trueHeights.reduce((max, value) => Math.max(max, value), 0);
+      const heightRange = Math.max(1, maxHeight - minHeight);
+      const finalImgData = terrainDataCtx.createImageData(OUTPUT_SIZE, OUTPUT_SIZE);
+      for (let i = 0; i < trueHeights.length; i += 1) {
+        const normalized = clamp(Math.round(((trueHeights[i] - minHeight) / heightRange) * 255), 0, 255);
+        finalImgData.data[i * 4] = normalized;
+        finalImgData.data[i * 4 + 1] = normalized;
+        finalImgData.data[i * 4 + 2] = normalized;
+        finalImgData.data[i * 4 + 3] = 255;
+      }
+      terrainDataCtx.putImageData(finalImgData, 0, 0);
+      log("Grayscale height render complete.");
+
+      const terrainObjects = vectorizeTerrain(trueHeights, metersPerPixel, thresholdOffsetMeters, windowSizePx);
+      renderTerrainPreview(previewCanvas, terrainObjects, metersPerPixel);
+
+      log("Packaging scenario JSON.");
+      outputScenario = buildStarterScenario(lat, lon, mapWidthMeters, satCanvas, terrainDataCanvas, terrainObjects);
+      outputPackage = outputScenario.extractedEnvironmentPackage;
+      delete outputScenario.extractedEnvironmentPackage;
+      btnDownloadScenario.disabled = false;
+      btnDownloadPackage.disabled = false;
+      log(
+        "Scenario package ready. Map width "
+        + mapWidthMeters
+        + "m. Terrain polygons: "
+        + terrainObjects.length
+        + ". Relief threshold: +"
+        + thresholdOffsetMeters
+        + "m. Window: "
+        + windowSizePx
+        + "px."
+      );
+    } catch (error) {
+      log("Task failed: " + error.message, "error");
+    } finally {
+      btnGenerate.disabled = false;
+    }
+  }
+
+  btnGenerate.addEventListener("click", generateScenario);
+  btnDownloadScenario.addEventListener("click", () => {
+    if (!outputScenario) {
+      return;
+    }
+    downloadJson("Generated_Scenario_" + Date.now() + ".json", outputScenario);
+  });
+  btnDownloadPackage.addEventListener("click", () => {
+    if (!outputPackage) {
+      return;
+    }
+    downloadJson("Generated_Environment_Package_" + Date.now() + ".json", outputPackage);
+  });
+
+  document.getElementById("input-lat").addEventListener("input", updateScaleTooltip);
+  document.getElementById("input-zoom").addEventListener("input", updateScaleTooltip);
+  updateScaleTooltip();
+});
+</script>
+</body>
+</html>
