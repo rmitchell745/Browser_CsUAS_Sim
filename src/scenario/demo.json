@@ -1,6 +1,861 @@
 {
-  "name": "FOB Defense (Swarm Attack)",
-  "description": "Built-in demo scenario source reference extracted from buildBaselineScenario.",
-  "source": "buildBaselineScenario",
-  "status": "placeholder"
+  "metadata": {
+    "name": "FOB Defense (Swarm Attack)",
+    "description": "Blue defends a forward operating base against a Red recon drone and a three-drone kamikaze swarm.",
+    "notes": "Baseline FOB defense scenario loaded from src/scenario/demo.json for iterative editing.",
+    "tutorial": "Load the demo, inspect Blue effectors and terrain, then use Scenario Builder to move instances and debug line-of-sight."
+  },
+  "config": {
+    "maxTimeSec": 70,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.8,
+    "mapWidthMeters": 1080,
+    "backgroundImageBase64": "",
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    },
+    "anomalySpawnChance": 0.35,
+    "clutterSpawnChance": 0.28
+  },
+  "networks": [],
+  "powerGrids": [],
+  "rosters": [],
+  "terrainObjects": [
+    {
+      "id": "Terrain-Woods",
+      "label": "North Woods",
+      "interferenceType": "Noise",
+      "clutterPenaltyDb": 7,
+      "heightZ": 28,
+      "areaPolygon": [
+        {
+          "x": 150,
+          "y": 120
+        },
+        {
+          "x": 310,
+          "y": 110
+        },
+        {
+          "x": 335,
+          "y": 255
+        },
+        {
+          "x": 185,
+          "y": 285
+        }
+      ]
+    },
+    {
+      "id": "Terrain-Village",
+      "label": "Village",
+      "interferenceType": "Block",
+      "clutterPenaltyDb": 4,
+      "heightZ": 18,
+      "areaPolygon": [
+        {
+          "x": 410,
+          "y": 120
+        },
+        {
+          "x": 560,
+          "y": 120
+        },
+        {
+          "x": 575,
+          "y": 250
+        },
+        {
+          "x": 425,
+          "y": 255
+        }
+      ]
+    },
+    {
+      "id": "Terrain-Hill",
+      "label": "East Hill",
+      "interferenceType": "Noise",
+      "clutterPenaltyDb": 3,
+      "heightZ": 95,
+      "areaPolygon": [
+        {
+          "x": 745,
+          "y": 180
+        },
+        {
+          "x": 900,
+          "y": 145
+        },
+        {
+          "x": 950,
+          "y": 310
+        },
+        {
+          "x": 770,
+          "y": 335
+        }
+      ]
+    },
+    {
+      "id": "Terrain-FOB-Walls",
+      "label": "FOB Walls",
+      "interferenceType": "Block",
+      "clutterPenaltyDb": 0,
+      "heightZ": 12,
+      "areaPolygon": [
+        {
+          "x": 520,
+          "y": 260
+        },
+        {
+          "x": 720,
+          "y": 260
+        },
+        {
+          "x": 720,
+          "y": 420
+        },
+        {
+          "x": 520,
+          "y": 420
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "Template-Blue-C2-Node",
+      "name": "C2 Node",
+      "category": "Generic",
+      "defaultRoles": [
+        "Asset",
+        "C2"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 130,
+          "assetValuePts": 120,
+          "isHQ": true
+        },
+        "resistance": {
+          "kineticResistance": 0.15,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -6,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": false,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [],
+        "effectors": [],
+        "c2": {
+          "trackCapacity": 10,
+          "processingLatencySec": 0.25
+        }
+      }
+    },
+    {
+      "id": "Template-Blue-Early-Warning",
+      "name": "Early Warning Radar",
+      "category": "Generic",
+      "defaultRoles": [
+        "Sensor"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 22,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.08,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -4,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": false,
+          "usesRF": true,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [
+          {
+            "id": "Sensor-Blue-EWR-1",
+            "name": "Early Warning Radar",
+            "type": "Radar",
+            "maxRangeM": 2000,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 57,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.1,
+            "detectionThresholdDb": 16,
+            "scanIntervalSec": 1,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.82
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.35,
+              "accuracyBase": 0.75
+            }
+          }
+        ],
+        "effectors": [],
+        "c2": null
+      }
+    },
+    {
+      "id": "Template-Blue-Point-Defense",
+      "name": "Point Defense Gun",
+      "category": "Generic",
+      "defaultRoles": [
+        "Effector"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 80,
+          "assetValuePts": 18,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.18,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -5,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": false,
+          "usesRF": false,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [],
+        "effectors": [
+          {
+            "id": "Effector-Blue-PDG-1",
+            "name": "Point Defense Gun",
+            "type": "Kinetic",
+            "maxRangeM": 600,
+            "basePk": 0.72,
+            "basePe": 0,
+            "damagePoints": 110,
+            "ammoCapacity": 8,
+            "slewRateSec": 0.15,
+            "cooldownSec": 1.5,
+            "projectileSpeedMps": 900,
+            "terminalRadiusM": 12,
+            "maxFlightTimeSec": 8,
+            "effectDurationSec": 6,
+            "jamStrengthDb": 8,
+            "deliveryModel": "Ballistic",
+            "guidanceType": "Command",
+            "affectedDomains": []
+          }
+        ],
+        "c2": null
+      }
+    },
+    {
+      "id": "Template-Blue-Adaptive-Jammer",
+      "name": "Adaptive Jammer",
+      "category": "Generic",
+      "defaultRoles": [
+        "Effector"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 70,
+          "assetValuePts": 16,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.1,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -8,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": false,
+          "usesRF": true,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [],
+        "effectors": [
+          {
+            "id": "Effector-Blue-Jammer-1",
+            "name": "Adaptive Jammer",
+            "type": "Jammer",
+            "maxRangeM": 800,
+            "basePk": 0,
+            "basePe": 0.66,
+            "damagePoints": 0,
+            "ammoCapacity": 4,
+            "slewRateSec": 0.2,
+            "cooldownSec": 3,
+            "projectileSpeedMps": 0,
+            "terminalRadiusM": 12,
+            "maxFlightTimeSec": 8,
+            "effectDurationSec": 8,
+            "jamStrengthDb": 12,
+            "deliveryModel": "Instant",
+            "guidanceType": "Command",
+            "affectedDomains": [
+              "Sensor",
+              "Network",
+              "C2",
+              "Navigation"
+            ]
+          }
+        ],
+        "c2": null
+      }
+    },
+    {
+      "id": "Template-Red-Recon-Drone",
+      "name": "Recon Drone",
+      "category": "Generic",
+      "defaultRoles": [
+        "UAS",
+        "Sensor"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 70,
+          "assetValuePts": 10,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.15,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -16,
+          "acousticSignatureDb": -18,
+          "rfEmissionDb": -18
+        },
+        "vulnerability": {
+          "commsResilience": 0.45,
+          "navResilience": 0.55,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": false
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": true,
+          "requiresPower": false,
+          "requiresC2": true,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": {
+          "speedMps": 24,
+          "stepSec": 1,
+          "waypointToleranceM": 10,
+          "maxAccel": 9999,
+          "turnRate_dps": 360,
+          "maxEnduranceSec": null
+        },
+        "sensors": [
+          {
+            "id": "Sensor-Red-Recon-1",
+            "name": "Recon EO Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 1600,
+            "horizontalFovDeg": 300,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 49,
+            "noiseFloorDb": -95,
+            "noiseSigmaDb": 1,
+            "detectionThresholdDb": 16,
+            "scanIntervalSec": 1,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.78
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.35,
+              "accuracyBase": 0.7
+            }
+          }
+        ],
+        "effectors": [],
+        "c2": null
+      }
+    },
+    {
+      "id": "Template-Red-C2-Node",
+      "name": "Red C2 Node",
+      "category": "Generic",
+      "defaultRoles": [
+        "C2",
+        "Asset"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 95,
+          "assetValuePts": 15,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.1,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -10,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": false,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [],
+        "effectors": [],
+        "c2": {
+          "trackCapacity": 8,
+          "processingLatencySec": 0.25
+        }
+      }
+    },
+    {
+      "id": "Template-Red-Swarm-Kamikaze",
+      "name": "Kamikaze Drone",
+      "category": "Generic",
+      "defaultRoles": [
+        "UAS"
+      ],
+      "missionProfile": {
+        "type": "MaxDamage",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 85,
+          "assetValuePts": 12,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.12,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -12,
+          "acousticSignatureDb": -15,
+          "rfEmissionDb": -10
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.48,
+          "cyberResilience": 0.44
+        },
+        "payload": {
+          "impactDamagePoints": 140,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": true,
+          "requiresPower": false,
+          "requiresC2": true,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 0
+        },
+        "movement": {
+          "speedMps": 40,
+          "stepSec": 1,
+          "waypointToleranceM": 10,
+          "maxAccel": 9999,
+          "turnRate_dps": 360,
+          "maxEnduranceSec": null
+        },
+        "sensors": [],
+        "effectors": [],
+        "c2": null
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-C2-01",
+      "templateId": "Template-Blue-C2-Node",
+      "name": "C2 Node",
+      "side": "Blue",
+      "roles": [
+        "Asset",
+        "C2"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 580,
+      "posY": 330,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-EWR-01",
+      "templateId": "Template-Blue-Early-Warning",
+      "name": "Early Warning Radar",
+      "side": "Blue",
+      "roles": [
+        "Sensor"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 520,
+      "posY": 310,
+      "posZ": 24,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-PDG-01",
+      "templateId": "Template-Blue-Point-Defense",
+      "name": "Point Defense Gun 01",
+      "side": "Blue",
+      "roles": [
+        "Effector"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 555,
+      "posY": 360,
+      "posZ": 18,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-PDG-02",
+      "templateId": "Template-Blue-Point-Defense",
+      "name": "Point Defense Gun 02",
+      "side": "Blue",
+      "roles": [
+        "Effector"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 610,
+      "posY": 365,
+      "posZ": 18,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Jammer-01",
+      "templateId": "Template-Blue-Adaptive-Jammer",
+      "name": "Adaptive Jammer",
+      "side": "Blue",
+      "roles": [
+        "Effector"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 640,
+      "posY": 300,
+      "posZ": 18,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Recon-01",
+      "templateId": "Template-Red-Recon-Drone",
+      "name": "Recon Drone",
+      "side": "Red",
+      "roles": [
+        "UAS",
+        "Sensor"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 75,
+      "posY": 120,
+      "posZ": 140,
+      "missionWaypoints": [
+        {
+          "x": 240,
+          "y": 170,
+          "z": 140
+        },
+        {
+          "x": 360,
+          "y": 220,
+          "z": 120
+        },
+        {
+          "x": 470,
+          "y": 260,
+          "z": 110
+        }
+      ]
+    },
+    {
+      "id": "Red-C2-01",
+      "templateId": "Template-Red-C2-Node",
+      "name": "Red C2 Node",
+      "side": "Red",
+      "roles": [
+        "C2",
+        "Asset"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 115,
+      "posY": 80,
+      "posZ": 28,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Red-Swarm-01",
+      "templateId": "Template-Red-Swarm-Kamikaze",
+      "name": "Swarm Group 01",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 40,
+      "posY": 500,
+      "posZ": 150,
+      "missionWaypoints": [
+        {
+          "x": 290,
+          "y": 450,
+          "z": 135
+        },
+        {
+          "x": 470,
+          "y": 390,
+          "z": 110
+        },
+        {
+          "x": 610,
+          "y": 335,
+          "z": 90
+        }
+      ]
+    },
+    {
+      "id": "Red-Swarm-02",
+      "templateId": "Template-Red-Swarm-Kamikaze",
+      "name": "Swarm Group 02",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 65,
+      "posY": 560,
+      "posZ": 150,
+      "missionWaypoints": [
+        {
+          "x": 305,
+          "y": 500,
+          "z": 135
+        },
+        {
+          "x": 505,
+          "y": 425,
+          "z": 110
+        },
+        {
+          "x": 655,
+          "y": 355,
+          "z": 90
+        }
+      ]
+    },
+    {
+      "id": "Red-Swarm-03",
+      "templateId": "Template-Red-Swarm-Kamikaze",
+      "name": "Swarm Group 03",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 110,
+      "posY": 615,
+      "posZ": 150,
+      "missionWaypoints": [
+        {
+          "x": 345,
+          "y": 545,
+          "z": 135
+        },
+        {
+          "x": 540,
+          "y": 465,
+          "z": 110
+        },
+        {
+          "x": 690,
+          "y": 360,
+          "z": 90
+        }
+      ]
+    }
+  ]
 }

@@ -1,0 +1,40 @@
+{
+  "scenarioName": "Editor Baseline",
+  "description": "Single-UAS baseline built from the quick-start wizard.",
+  "notes": "Useful for first-pass kill-chain checks.",
+  "tutorial": "Generate this preset when you want a very small baseline replacement instead of editing the live demo scenario.",
+  "mapWidth": 1080,
+  "blueAssets": [
+    {
+      "name": "Blue Site 01",
+      "templateRef": "preset:blue-site",
+      "posX": 670,
+      "posY": 315,
+      "posZ": 20,
+      "isHQ": true
+    }
+  ],
+  "threatGroups": [
+    {
+      "templateName": "Red Recon Strike UAS",
+      "templateRef": "preset:red-uas",
+      "instancePrefix": "Red UAS",
+      "profile": "recon-strike",
+      "count": 1,
+      "speed": 35,
+      "health": 90,
+      "signature": -14,
+      "routePattern": "direct",
+      "startX": 90,
+      "startY": 315,
+      "startZ": 120,
+      "endX": 980,
+      "endY": 315,
+      "endZ": 120,
+      "startSpacingY": 0,
+      "endSpacingY": 0
+    }
+  ],
+  "ghost": false,
+  "clutter": false
+}

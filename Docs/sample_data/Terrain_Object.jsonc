@@ -1,0 +1,16 @@
+{
+  "id": "Terrain-FOB-Walls",
+  "label": "FOB Walls",
+  // Common values: Block, Noise, No
+  "interferenceType": "Block",
+  // Used mainly by Noise terrain; harmless on pure Block terrain.
+  "clutterPenaltyDb": 0,
+  // Absolute top height of the terrain object in simulator Z meters.
+  "heightZ": 12,
+  "areaPolygon": [
+    { "x": 580, "y": 240 },
+    { "x": 760, "y": 240 },
+    { "x": 760, "y": 390 },
+    { "x": 580, "y": 390 }
+  ]
+}

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>C-sUAS Template Library Manager</title>
+  <style>
+    :root {
+      --bg-dark: #080212;
+      --bg-panel: #120528;
+      --border: rgba(110, 92, 255, 0.34);
+      --text: #f4f1ff;
+      --muted: #a49bc9;
+      --accent: #38d9ff;
+      --danger: #ff5f92;
+      --panel-glow: rgba(66, 225, 255, 0.18);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; height: 100vh; display: flex; flex-direction: column;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg-dark); color: var(--text);
+    }
+    /* Header */
+    header {
+      padding: 15px 25px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    h1 { margin: 0; font-size: 1.4rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; }
+    .header-controls { display: flex; gap: 10px; }
+    
+    /* Layout */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+    .sidebar {
+      width: 320px; background: rgba(18, 13, 50, 0.5); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .main-editor {
+      flex: 1; overflow-y: auto; padding: 25px;
+    }
+
+    /* Sidebar Items */
+    .sidebar-header { padding: 15px; border-bottom: 1px solid var(--border); }
+    .template-list { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+    .template-item {
+      padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      border-radius: 8px; cursor: pointer; transition: 0.2s;
+    }
+    .template-item:hover { border-color: var(--accent); }
+    .template-item.active { background: rgba(56, 217, 255, 0.1); border-color: var(--accent); box-shadow: 0 0 10px var(--panel-glow); }
+    .template-title { font-weight: bold; margin-bottom: 4px; }
+    .template-subtitle { font-size: 0.8rem; color: var(--muted); }
+
+    /* Buttons & Inputs */
+    button {
+      background: rgba(56, 217, 255, 0.1); border: 1px solid var(--accent); color: var(--text);
+      padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;
+    }
+    button:hover { background: rgba(56, 217, 255, 0.2); }
+    button.danger { border-color: var(--danger); color: var(--danger); background: rgba(255, 95, 146, 0.1); }
+    button.danger:hover { background: rgba(255, 95, 146, 0.2); }
+    
+    .form-section {
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 20px;
+    }
+    .form-section h3 { margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; color: var(--accent); }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+    
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
+    .field label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .field input, .field select {
+      background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.2); color: var(--text);
+      padding: 10px; border-radius: 6px; font-family: inherit;
+    }
+    .field input[type="checkbox"] { width: auto; align-self: flex-start; transform: scale(1.2); }
+    .field.checkbox-field { flex-direction: row; align-items: center; gap: 10px; }
+    .field.checkbox-field label { margin: 0; }
+
+    /* Subcomponent Cards (Sensors/Effectors) */
+    .sub-card {
+      background: rgba(0,0,0,0.3); border: 1px dashed var(--muted); border-radius: 8px;
+      padding: 15px; margin-bottom: 15px; position: relative;
+    }
+    .sub-card-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+    .sub-card-header h4 { margin: 0; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Template Library Manager</h1>
+    <div class="header-controls">
+      <input type="file" id="import-file" accept=".json" style="display:none;">
+      <button onclick="document.getElementById('import-file').click()">Import Library JSON</button>
+      <button onclick="exportLibrary()">Export Library JSON</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <!-- LEFT SIDEBAR: ROSTER/LIBRARY -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div style="display: flex; gap: 10px;">
+          <select id="preset-selector" style="flex:1; padding: 8px; background: #000; color: #fff; border: 1px solid var(--border);">
+            <option value="blue-site">Blue Defense Site</option>
+            <option value="red-uas">Red UAS Drone</option>
+            <option value="radar">Standalone Radar</option>
+            <option value="gun">Point Defense Gun</option>
+          </select>
+          <button onclick="createNewTemplate()">Add</button>
+        </div>
+      </div>
+      <div class="template-list" id="template-list">
+        <!-- Javascript populates templates here -->
+      </div>
+    </aside>
+
+    <!-- RIGHT PANEL: DEEP EDITOR -->
+    <main class="main-editor" id="editor-pane" style="display:none;">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;" id="editor-title">Editing: Template</h2>
+        <div style="display: flex; gap: 10px;">
+          <button onclick="duplicateCurrentTemplate()">Duplicate</button>
+          <button class="danger" onclick="deleteCurrentTemplate()">Delete</button>
+        </div>
+      </div>
+
+      <form id="template-form">
+        <!-- Core Identity -->
+        <div class="form-section">
+          <h3>Identity & Roles</h3>
+          <div class="grid-2">
+            <div class="field">
+              <label>Template ID (Must be unique)</label>
+              <input type="text" name="id" required>
+            </div>
+            <div class="field">
+              <label>Display Name</label>
+              <input type="text" name="name">
+            </div>
+            <div class="field">
+              <label>Category</label>
+              <input type="text" name="category" placeholder="e.g. UAS, Defense, Asset">
+            </div>
+            <div class="field">
+              <label>Default Roles (Comma Separated)</label>
+              <input type="text" name="defaultRoles" placeholder="e.g. Asset, Sensor, C2">
+            </div>
+          </div>
+        </div>
+
+        <!-- Health & Signatures -->
+        <div class="form-section">
+          <h3>Survivability & Signatures</h3>
+          <div class="grid-3">
+            <div class="field"><label>Max Health</label><input type="number" name="components.health.maxHealth"></div>
+            <div class="field"><label>Asset Value (Pts)</label><input type="number" name="components.health.assetValuePts"></div>
+            <div class="field checkbox-field"><input type="checkbox" name="components.health.isHQ"><label>Is HQ Priority Target</label></div>
+            <div class="field"><label>Kinetic Resistance (0-1)</label><input type="number" step="0.05" name="components.resistance.kineticResistance"></div>
+            <div class="field"><label>Radar Signature (dB)</label><input type="number" step="0.5" name="components.signature.radarSignatureDb"></div>
+            <div class="field"><label>RF Emission (dB)</label><input type="number" step="0.5" name="components.signature.rfEmissionDb"></div>
+            <div class="field"><label>Acoustic Signature (dB)</label><input type="number" step="0.5" name="components.signature.acousticSignatureDb"></div>
+            <div class="field"><label>Comms Resilience (0-1)</label><input type="number" step="0.05" name="components.vulnerability.commsResilience"></div>
+            <div class="field"><label>Nav/Spoof Resilience (0-1)</label><input type="number" step="0.05" name="components.vulnerability.navResilience"></div>
+          </div>
+        </div>
+
+        <!-- Movement -->
+        <div class="form-section">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Movement (Kinematics)</h3>
+            <div class="field checkbox-field" style="margin:0;"><input type="checkbox" id="toggle-movement"><label>Enable Movement</label></div>
+          </div>
+          <div id="movement-container" class="grid-3" style="display:none; margin-top: 15px;">
+            <div class="field"><label>Speed (m/s)</label><input type="number" name="components.movement.speedMps"></div>
+            <div class="field"><label>Max Accel (m/s²)</label><input type="number" name="components.movement.maxAccel"></div>
+            <div class="field"><label>Turn Rate (deg/s)</label><input type="number" name="components.movement.turnRate_dps"></div>
+            <div class="field"><label>Max Endurance (sec)</label><input type="number" name="components.movement.maxEnduranceSec"></div>
+          </div>
+        </div>
+
+        <!-- C2 -->
+        <div class="form-section">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Command & Control (C2 Node)</h3>
+            <div class="field checkbox-field" style="margin:0;"><input type="checkbox" id="toggle-c2"><label>Enable C2 Node</label></div>
+          </div>
+          <div id="c2-container" class="grid-2" style="display:none; margin-top: 15px;">
+            <div class="field"><label>Max Track Capacity</label><input type="number" name="components.c2.trackCapacity"></div>
+            <div class="field"><label>Processing Latency (sec)</label><input type="number" step="0.1" name="components.c2.processingLatencySec"></div>
+          </div>
+        </div>
+
+        <!-- Sensors Array -->
+        <div class="form-section">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Sensors</h3>
+            <button type="button" onclick="addSubcomponent('sensors')">+ Add Sensor</button>
+          </div>
+          <div id="sensors-container" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Effectors Array -->
+        <div class="form-section">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Effectors (Weapons/EW)</h3>
+            <button type="button" onclick="addSubcomponent('effectors')">+ Add Effector</button>
+          </div>
+          <div id="effectors-container" style="margin-top: 15px;"></div>
+        </div>
+
+      </form>
+    </main>
+  </div>
+
+<script>
+// --- DATA STATE ---
+let library = [];
+let activeTemplateId = null;
+
+// --- DYNAMIC DATA BINDING ENGINE ---
+// This allows HTML inputs to map directly to deeply nested JSON keys like "components.health.maxHealth"
+function getNestedValue(obj, path) {
+  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+}
+
+function setNestedValue(obj, path, value) {
+  const parts = path.split('.');
+  const last = parts.pop();
+  let current = obj;
+  for (let part of parts) {
+    if (current[part] === undefined) current[part] = {};
+    current = current[part];
+  }
+  current[last] = value;
+}
+
+// Watch ALL inputs in the form. If an input changes, instantly update the JSON object.
+document.getElementById('template-form').addEventListener('input', (e) => {
+  if (!activeTemplateId || !e.target.name) return;
+  const template = library.find(t => t.id === activeTemplateId);
+  if (!template) return;
+
+  let value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  if (e.target.type === 'number') value = Number(value);
+  
+  // Handle Array Strings (Roles)
+  if (e.target.name === 'defaultRoles') {
+    value = value.split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  setNestedValue(template, e.target.name, value);
+  renderLibraryList(); // Update sidebar name instantly
+});
+
+// --- SUBCOMPONENT RENDERERS ---
+function renderSubcomponents() {
+  const template = library.find(t => t.id === activeTemplateId);
+  if (!template) return;
+
+  // Render Sensors
+  const sensContainer = document.getElementById('sensors-container');
+  sensContainer.innerHTML = '';
+  (template.components.sensors || []).forEach((sensor, idx) => {
+    const html = `
+      <div class="sub-card">
+        <div class="sub-card-header">
+          <h4>Sensor ${idx + 1}: ${sensor.type}</h4>
+          <button type="button" class="danger" onclick="removeSubcomponent('sensors', ${idx})">Remove</button>
+        </div>
+        <div class="grid-3">
+          <div class="field"><label>ID</label><input type="text" name="components.sensors.${idx}.id" value="${sensor.id || ''}"></div>
+          <div class="field"><label>Type</label>
+            <select name="components.sensors.${idx}.type">
+              <option value="Radar" ${sensor.type === 'Radar' ? 'selected' : ''}>Radar</option>
+              <option value="EO_IR" ${sensor.type === 'EO_IR' ? 'selected' : ''}>EO/IR Camera</option>
+              <option value="RF_Passive" ${sensor.type === 'RF_Passive' ? 'selected' : ''}>RF Scanner</option>
+            </select>
+          </div>
+          <div class="field"><label>Max Range (m)</label><input type="number" name="components.sensors.${idx}.maxRangeM" value="${sensor.maxRangeM || 0}"></div>
+          <div class="field"><label>Horiz FOV (deg)</label><input type="number" name="components.sensors.${idx}.horizontalFovDeg" value="${sensor.horizontalFovDeg || 360}"></div>
+          <div class="field"><label>Sweep Rate (sec)</label><input type="number" step="0.1" name="components.sensors.${idx}.scanIntervalSec" value="${sensor.scanIntervalSec || 1}"></div>
+        </div>
+      </div>
+    `;
+    sensContainer.insertAdjacentHTML('beforeend', html);
+  });
+
+  // Render Effectors
+  const effContainer = document.getElementById('effectors-container');
+  effContainer.innerHTML = '';
+  (template.components.effectors || []).forEach((eff, idx) => {
+    const html = `
+      <div class="sub-card">
+        <div class="sub-card-header">
+          <h4>Effector ${idx + 1}: ${eff.type}</h4>
+          <button type="button" class="danger" onclick="removeSubcomponent('effectors', ${idx})">Remove</button>
+        </div>
+        <div class="grid-3">
+          <div class="field"><label>ID</label><input type="text" name="components.effectors.${idx}.id" value="${eff.id || ''}"></div>
+          <div class="field"><label>Type</label>
+            <select name="components.effectors.${idx}.type">
+              <option value="Kinetic" ${eff.type === 'Kinetic' ? 'selected' : ''}>Kinetic Gun</option>
+              <option value="Jammer" ${eff.type === 'Jammer' ? 'selected' : ''}>RF Jammer</option>
+              <option value="Interceptor" ${eff.type === 'Interceptor' ? 'selected' : ''}>Interceptor Drone</option>
+            </select>
+          </div>
+          <div class="field"><label>Guidance</label>
+            <select name="components.effectors.${idx}.guidanceType">
+              <option value="Command" ${eff.guidanceType === 'Command' ? 'selected' : ''}>Command (Fire Control)</option>
+              <option value="Autonomous" ${eff.guidanceType === 'Autonomous' ? 'selected' : ''}>Autonomous (Fire & Forget)</option>
+            </select>
+          </div>
+          <div class="field"><label>Max Range (m)</label><input type="number" name="components.effectors.${idx}.maxRangeM" value="${eff.maxRangeM || 0}"></div>
+          <div class="field"><label>Base Pk</label><input type="number" step="0.01" name="components.effectors.${idx}.basePk" value="${eff.basePk || 0}"></div>
+          <div class="field"><label>Ammo Capacity</label><input type="number" name="components.effectors.${idx}.ammoCapacity" value="${eff.ammoCapacity || 0}"></div>
+          <div class="field"><label>Proj Speed (m/s)</label><input type="number" name="components.effectors.${idx}.projectileSpeedMps" value="${eff.projectileSpeedMps || 0}"></div>
+        </div>
+      </div>
+    `;
+    effContainer.insertAdjacentHTML('beforeend', html);
+  });
+}
+
+// Add/Remove Subcomponents (Sensors & Effectors)
+window.addSubcomponent = (arrayName) => {
+  const template = library.find(t => t.id === activeTemplateId);
+  if (!template) return;
+  if (!template.components[arrayName]) template.components[arrayName] = [];
+  
+  if (arrayName === 'sensors') {
+    template.components.sensors.push({ id: `S-${Date.now()}`, type: "Radar", maxRangeM: 1000 });
+  } else {
+    template.components.effectors.push({ id: `E-${Date.now()}`, type: "Kinetic", maxRangeM: 500, guidanceType: "Command" });
+  }
+  renderSubcomponents();
+};
+
+window.removeSubcomponent = (arrayName, index) => {
+  const template = library.find(t => t.id === activeTemplateId);
+  template.components[arrayName].splice(index, 1);
+  renderSubcomponents();
+};
+
+// --- CORE UI BEHAVIORS ---
+function loadTemplateIntoForm(templateId) {
+  activeTemplateId = templateId;
+  const template = library.find(t => t.id === templateId);
+  if (!template) return;
+
+  document.getElementById('editor-pane').style.display = 'block';
+  document.getElementById('editor-title').innerText = `Editing: ${template.name || template.id}`;
+
+  // Populate generic inputs
+  const inputs = document.getElementById('template-form').querySelectorAll('input, select');
+  inputs.forEach(input => {
+    if (!input.name || input.name.includes('.sensors.') || input.name.includes('.effectors.')) return;
+    
+    let val = getNestedValue(template, input.name);
+    
+    if (input.name === 'defaultRoles') val = (val || []).join(', ');
+
+    if (input.type === 'checkbox') input.checked = !!val;
+    else input.value = val !== undefined ? val : '';
+  });
+
+  // Handle Toggles for large blocks
+  document.getElementById('toggle-movement').checked = !!template.components.movement;
+  document.getElementById('movement-container').style.display = template.components.movement ? 'grid' : 'none';
+  
+  document.getElementById('toggle-c2').checked = !!template.components.c2;
+  document.getElementById('c2-container').style.display = template.components.c2 ? 'grid' : 'none';
+
+  renderSubcomponents();
+  renderLibraryList();
+}
+
+// Special Toggles to inject/delete blocks
+document.getElementById('toggle-movement').addEventListener('change', (e) => {
+  const template = library.find(t => t.id === activeTemplateId);
+  document.getElementById('movement-container').style.display = e.target.checked ? 'grid' : 'none';
+  if (e.target.checked) template.components.movement = { speedMps: 25, maxAccel: 5, turnRate_dps: 180 };
+  else delete template.components.movement;
+});
+document.getElementById('toggle-c2').addEventListener('change', (e) => {
+  const template = library.find(t => t.id === activeTemplateId);
+  document.getElementById('c2-container').style.display = e.target.checked ? 'grid' : 'none';
+  if (e.target.checked) template.components.c2 = { trackCapacity: 10, processingLatencySec: 0.5 };
+  else delete template.components.c2;
+});
+
+// --- LIBRARY MANAGEMENT ---
+function renderLibraryList() {
+  const list = document.getElementById('template-list');
+  list.innerHTML = library.map(t => `
+    <div class="template-item ${t.id === activeTemplateId ? 'active' : ''}" onclick="loadTemplateIntoForm('${t.id}')">
+      <div class="template-title">${t.name || 'Unnamed Template'}</div>
+      <div class="template-subtitle">${t.id} | ${t.category || 'N/A'}</div>
+    </div>
+  `).join('');
+}
+
+window.createNewTemplate = () => {
+  const preset = document.getElementById('preset-selector').value;
+  const newId = `Template-${Date.now()}`;
+  const newTemplate = {
+    id: newId,
+    name: "New " + preset,
+    category: "Generic",
+    defaultRoles: [],
+    components: {
+      health: { maxHealth: 100, assetValuePts: 10 },
+      resistance: { kineticResistance: 0.1 },
+      signature: { radarSignatureDb: -10, rfEmissionDb: 0 },
+      vulnerability: { commsResilience: 0.5, navResilience: 0.5, cyberResilience: 0.5 }
+    }
+  };
+
+  // Seed presets
+  if (preset === 'red-uas') {
+    newTemplate.defaultRoles = ["UAS"];
+    newTemplate.components.movement = { speedMps: 30, maxAccel: 5, turnRate_dps: 180 };
+  } else if (preset === 'radar') {
+    newTemplate.defaultRoles = ["Sensor", "Asset"];
+    newTemplate.components.sensors = [{ id: "S1", type: "Radar", maxRangeM: 2000, horizontalFovDeg: 360 }];
+  } else if (preset === 'blue-site') {
+    newTemplate.defaultRoles = ["Asset", "C2"];
+    newTemplate.components.health.isHQ = true;
+    newTemplate.components.c2 = { trackCapacity: 10, processingLatencySec: 0.5 };
+  }
+
+  library.push(newTemplate);
+  loadTemplateIntoForm(newId);
+};
+
+window.duplicateCurrentTemplate = () => {
+  if (!activeTemplateId) return;
+  const current = library.find(t => t.id === activeTemplateId);
+  const dup = JSON.parse(JSON.stringify(current));
+  dup.id = `Template-${Date.now()}`;
+  dup.name = dup.name + " (Copy)";
+  library.push(dup);
+  loadTemplateIntoForm(dup.id);
+};
+
+window.deleteCurrentTemplate = () => {
+  if (!activeTemplateId) return;
+  library = library.filter(t => t.id !== activeTemplateId);
+  document.getElementById('editor-pane').style.display = 'none';
+  activeTemplateId = null;
+  renderLibraryList();
+};
+
+// --- FILE I/O ---
+window.exportLibrary = () => {
+  if (library.length === 0) return alert("Library is empty!");
+  const payload = { type: "TemplateLibrary", version: "1.0", templates: library };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `CsUAS_Templates_${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+};
+
+document.getElementById('import-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if (data.templates && Array.isArray(data.templates)) {
+      library = data.templates;
+      renderLibraryList();
+      if (library.length > 0) loadTemplateIntoForm(library[0].id);
+    } else {
+      alert("Invalid JSON format. Expected a TemplateLibrary wrapper.");
+    }
+  } catch (err) {
+    alert("Error reading file: " + err.message);
+  }
+  e.target.value = ''; // Reset input
+});
+</script>
+</body>
+</html>

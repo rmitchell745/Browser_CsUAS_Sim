@@ -1,6 +1,43 @@
 {
-  "name": "Blank Scratch Scenario",
-  "description": "Built-in scratch scenario source reference extracted from buildScratchScenario.",
-  "source": "buildScratchScenario",
-  "status": "placeholder"
+  "metadata": {
+    "name": "Blank Scratch Scenario",
+    "description": "Empty starting point for terrain and object authoring.",
+    "notes": "Blank scenario source loaded from src/scenario/scratch.json.",
+    "tutorial": "Start with terrain or add Blue and Red instances from the Scenario Builder."
+  },
+  "config": {
+    "maxTimeSec": 55,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.8,
+    "mapWidthMeters": 1080,
+    "backgroundImageBase64": "",
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    },
+    "anomalySpawnChance": 0.35,
+    "clutterSpawnChance": 0.28
+  },
+  "networks": [],
+  "powerGrids": [],
+  "rosters": [],
+  "terrainObjects": [],
+  "templates": [],
+  "instances": []
 }

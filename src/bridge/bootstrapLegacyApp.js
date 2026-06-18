@@ -7,6 +7,12 @@ import {
   extractLegacyShell
 } from "./legacyRuntime.js";
 import { createModuleMonteCarloWorker } from "../ui/moduleWorkerClient.js";
+import demoScenario from "../scenario/demo.json";
+import scratchScenario from "../scenario/scratch.json";
+import presetBlankScratch from "../scenario/presets/blank-scratch.json";
+import presetBaselineSingle from "../scenario/presets/baseline-single.json";
+import presetLockRefire from "../scenario/presets/lock-refire.json";
+import presetTewaPriority from "../scenario/presets/tewa-priority.json";
 
 export function bootstrapLegacyApp() {
   // Recreate the legacy shell verbatim so bundle-vs-monolith behavior stays aligned.
@@ -17,6 +23,14 @@ export function bootstrapLegacyApp() {
   document.write(shellHtml);
   document.close();
 
+  globalThis.__CSUAS_SCENARIO_SOURCES = {
+    "scenario:demo": demoScenario,
+    "scenario:scratch": scratchScenario,
+    "wizard-preset:blank-scratch": presetBlankScratch,
+    "wizard-preset:baseline-single": presetBaselineSingle,
+    "wizard-preset:lock-refire": presetLockRefire,
+    "wizard-preset:tewa-priority": presetTewaPriority
+  };
   window.eval(scriptSource);
   // Override the legacy Blob-string worker factory only in the bundled build.
   // The live monolith remains unchanged, but Vite now uses a native module

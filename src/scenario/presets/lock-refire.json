@@ -1,0 +1,40 @@
+{
+  "scenarioName": "Editor Lock Refire",
+  "description": "Two threats to review locked engagements and autonomous refire behavior.",
+  "notes": "Generator preset for target-lock persistence and refire checks.",
+  "tutorial": "Use this when you want the generator to create a fresh two-threat layout rather than editing the live scenario manually.",
+  "mapWidth": 1080,
+  "blueAssets": [
+    {
+      "name": "Blue Lock Site",
+      "templateRef": "preset:blue-site",
+      "posX": 650,
+      "posY": 315,
+      "posZ": 20,
+      "isHQ": true
+    }
+  ],
+  "threatGroups": [
+    {
+      "templateName": "Red Attack UAS",
+      "templateRef": "preset:red-uas",
+      "instancePrefix": "Raid UAS",
+      "profile": "attack",
+      "count": 2,
+      "speed": 34,
+      "health": 95,
+      "signature": -12,
+      "routePattern": "staggered",
+      "startX": 110,
+      "startY": 315,
+      "startZ": 120,
+      "endX": 930,
+      "endY": 315,
+      "endZ": 120,
+      "startSpacingY": 110,
+      "endSpacingY": 40
+    }
+  ],
+  "ghost": false,
+  "clutter": false
+}

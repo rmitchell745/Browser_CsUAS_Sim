@@ -1,0 +1,67 @@
+{
+  "scenarioName": "Editor TEWA Priority",
+  "description": "Two defended assets and mixed Red threats for TEWA priority review.",
+  "notes": "Generator preset for defended-asset prioritization and mixed threat behavior.",
+  "tutorial": "Generate this when you want a clean TEWA comparison scenario instead of reshaping the FOB demo by hand.",
+  "mapWidth": 1080,
+  "blueAssets": [
+    {
+      "name": "Blue HQ Node",
+      "templateRef": "preset:blue-site",
+      "posX": 700,
+      "posY": 275,
+      "posZ": 20,
+      "isHQ": true
+    },
+    {
+      "name": "Water Tank",
+      "templateRef": "preset:asset",
+      "posX": 680,
+      "posY": 415,
+      "posZ": 10,
+      "isHQ": false
+    }
+  ],
+  "threatGroups": [
+    {
+      "templateName": "Red Bomber UAS",
+      "templateRef": "preset:red-uas",
+      "instancePrefix": "Bomber",
+      "profile": "bomber",
+      "count": 1,
+      "speed": 38,
+      "health": 120,
+      "signature": -7,
+      "routePattern": "direct",
+      "startX": 70,
+      "startY": 260,
+      "startZ": 120,
+      "endX": 940,
+      "endY": 275,
+      "endZ": 120,
+      "startSpacingY": 0,
+      "endSpacingY": 0
+    },
+    {
+      "templateName": "Red ISR UAS",
+      "templateRef": "preset:red-uas",
+      "instancePrefix": "ISR Decoy",
+      "profile": "isr",
+      "count": 1,
+      "speed": 22,
+      "health": 85,
+      "signature": -18,
+      "routePattern": "direct",
+      "startX": 100,
+      "startY": 385,
+      "startZ": 120,
+      "endX": 880,
+      "endY": 420,
+      "endZ": 120,
+      "startSpacingY": 0,
+      "endSpacingY": 0
+    }
+  ],
+  "ghost": false,
+  "clutter": false
+}

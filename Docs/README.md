@@ -2,20 +2,19 @@
 
 This repository currently contains a browser-only component-system Counter-small UAS discrete event simulation prototype with a three-tier authoring workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
 
-Current review version: `v2.4`
+Current review version: `v2.5`
 
 The repo also includes a standalone offline environment/scenario extraction utility at `external_util/Environment_Extractor.html`.
 
 ## Current prototype
 
 - Single-file `index.html`
-- Tactical workstation shell centered on the live map
+- 6-module top-navigation shell for demo/tutorial, template building, environment workflow handoff, scenario building, single-run ops, and Monte Carlo review
 - Local scenario JSON import/export for the current template + instance format
-- `Scenario Wizard` drawer for terrain/environment, Blue placement, Red threat layout, and spatial assignment
-- `Template Editor` drawer with helper placeholders plus detailed scenario-local template editing and selected-template JSON editing
-- `Instance Manager` drawer content inside the Scenario Wizard for per-instance control plus read-only hidden per-side network / power status
-- `Debrief` drawer with event timeline and top failure-driver surfaces
-- `Export` drawer with scenario/report/log/Monte Carlo export previews
+- `Demo & Tutorial` landing module with read-only scenario preview and fast demo/scratch loading
+- `Scenario Builder` live editor for terrain/environment, instance placement, and optional generator-draft review
+- `Template Builder` split-pane editor with helper actions, subcomponent editing, advanced JSON, and explicit power/network fields
+- `Monte Carlo Run` analysis screen with event timeline, aggregate summaries, and failure-driver surfaces
 - Sample baseline scenario with a Blue FOB defense package versus a Red swarm attack
 - Discrete event queue with movement, sensing, tracking, classification, identification, intent, C2, firing, effect, and damage resolution
 - Spawned child interceptor runtime objects for launcher effects
@@ -37,22 +36,24 @@ The repo also includes a standalone offline environment/scenario extraction util
 - Vite single-file bridge with a native module-worker Monte Carlo path layered over the legacy shell
 - Export preview tabs for scenario JSON, single-run report JSON, event log JSON, and Monte Carlo CSV
 - Click-to-select and click-to-move geographic editing for placed scenario objects after build/import
+- Commented JSONC reference examples under `Docs/sample_data/` for template, instance, terrain, and system-object authoring
 
 ## Usage
 
 1. Open `index.html` directly in a browser.
 2. Use `Load Scenario JSON` to import a local scenario file, or keep the built-in baseline scenario.
-3. Use `Scenario Wizard` when you want to create or adjust a runnable scenario without hand-editing JSON.
-4. Use `Build Scenario From Wizard` before running if the current wizard draft differs from the active scenario.
-5. Use `Template Editor` for major capability edits, helper-oriented template work, and selected-template JSON edits.
-6. Use the `Instance Manager` inside the Scenario Wizard for per-instance placement and review plus hidden per-side infrastructure status.
+3. Use `Scenario Builder` when you want to edit the live scenario directly without hand-editing JSON.
+4. Use `Generate From Wizard` only when you want the generator draft to replace the live scenario.
+5. Use `Template Builder` for major capability edits, helper-oriented template work, and selected-template JSON edits.
+6. Use the `Instance Manager` inside the Scenario Builder for per-instance placement and review plus hidden per-side infrastructure status.
 7. Review the validation panel before running to catch blockers, warnings, and quality notes.
 8. Use `Run Single Scenario` to execute the current scenario and animate the resulting frames on the canvas.
 9. Use `Run Monte Carlo` to execute repeated seeded runs in an inline Web Worker and populate the aggregate report table.
-10. Use `Debrief` to inspect event sequencing, Blue/Red feeds, and failure-driver summaries.
-11. Use `Export` to download the current scenario JSON, single-run outputs, Monte Carlo CSV, or event log JSON.
+10. Use `Run (Monte Carlo)` to inspect event sequencing, single-run details, aggregate summaries, and failure-driver surfaces.
+11. Use the export surfaces inside the analysis modules to download the current scenario JSON, single-run outputs, Monte Carlo CSV, or event log JSON.
 12. Inspect the single-run report JSON when needed to review `assessmentSnapshots` for stateful refresh/skip behavior.
 13. Use the Vite path when reviewing the modularization effort; it now runs Monte Carlo through a native module worker, while `index.html` remains the direct ready-to-test reference build.
+14. Use `Docs/sample_data/` when authoring template or scenario JSON by hand or when prompting external tools/LLMs to generate compatible objects.
 
 ## Playtest package
 

@@ -1,0 +1,49 @@
+{
+  "id": "Template-Blue-StandIn-Jammer",
+  "name": "Adaptive Jammer",
+  "category": "EW Node",
+  "defaultRoles": ["Effector"],
+  "components": {
+    "health": { "maxHealth": 100, "assetValuePts": 16, "isHQ": false },
+    "resistance": { "kineticResistance": 0.1, "ewResistance": 0.35, "networkResistance": 0.3 },
+    "signature": { "radarSignatureDb": 8, "acousticSignatureDb": 48, "rfEmissionDb": 22 },
+    "vulnerability": { "commsResilience": 0.75, "navResilience": 0.9, "cyberResilience": 0.65 },
+    "capability": {
+      "usesNetwork": true,
+      "usesRF": true,
+      "requiresC2": true,
+      "requiresPower": true,
+      "isPowerGen": false,
+      "canOperateAutonomously": false,
+      "lostLinkBehavior": "Hover/Loiter"
+    },
+    "powerConsumer": { "powerConsumedKw": 14 },
+    "powerProducer": { "powerProducedKw": 0 },
+    "sensors": [],
+    "effectors": [
+      {
+        "id": "Effector-Jammer-1",
+        "name": "Stand-In Jammer",
+        "type": "Jammer",
+        "deliveryModel": "Instant",
+        "guidanceType": "Command",
+        "maxRangeM": 520,
+        "basePk": 0,
+        "basePe": 0.92,
+        "damagePoints": 0,
+        "ammoCapacity": 4,
+        "slewRateSec": 0.2,
+        "cooldownSec": 2,
+        "projectileSpeedMps": 0,
+        "terminalRadiusM": 0,
+        "maxFlightTimeSec": 0,
+        "effectDurationSec": 8,
+        "jamStrengthDb": 14,
+        // Common domains: Sensor, Network, C2, Navigation, Track, Telemetry
+        "affectedDomains": ["Sensor", "Network", "C2"]
+      }
+    ],
+    "c2": null,
+    "movement": null
+  }
+}

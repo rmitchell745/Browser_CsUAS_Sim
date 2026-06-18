@@ -1,0 +1,55 @@
+{
+  // Unique template identifier used by instances.
+  "id": "Template-Blue-HQ-Bunker",
+  "name": "Blue HQ Bunker",
+  "category": "Asset",
+  "defaultRoles": ["Asset"],
+  "components": {
+    "health": {
+      "maxHealth": 500,
+      "assetValuePts": 100,
+      "isHQ": true
+    },
+    "resistance": {
+      // 0.0 = no resistance, 1.0 = near-invulnerable to that effect.
+      "kineticResistance": 0.6,
+      "ewResistance": 0.2,
+      "networkResistance": 0.25
+    },
+    "signature": {
+      // Signatures are relative simulator values in dB-like units.
+      "radarSignatureDb": 25,
+      "acousticSignatureDb": 70,
+      "rfEmissionDb": 0
+    },
+    "vulnerability": {
+      "commsResilience": 0.8,
+      "navResilience": 1.0,
+      "cyberResilience": 0.7
+    },
+    "payload": {
+      "impactDamagePoints": 0,
+      "selfDestructOnImpact": false
+    },
+    "capability": {
+      "usesNetwork": true,
+      "usesRF": false,
+      "requiresC2": false,
+      "requiresPower": true,
+      "isPowerGen": false,
+      "canOperateAutonomously": true,
+      // Allowed examples: ContinueDeadReckoning, RTB, Hover/Loiter, ExecuteTerminalDive
+      "lostLinkBehavior": "ContinueDeadReckoning"
+    },
+    "powerConsumer": {
+      "powerConsumedKw": 18
+    },
+    "powerProducer": {
+      "powerProducedKw": 0
+    },
+    "sensors": [],
+    "effectors": [],
+    "c2": null,
+    "movement": null
+  }
+}

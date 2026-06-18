@@ -1,0 +1,20 @@
+{
+  "scenarioName": "New Scenario",
+  "description": "Start from scratch, then add Blue assets, Red threat groups, and optional environment placeholders.",
+  "notes": "Generator draft for a blank authoring start.",
+  "tutorial": "Use Environment first, then Blue and Red subtabs for live instances, then Generator Draft only if you want to replace the whole scenario.",
+  "mapWidth": 1080,
+  "blueAssets": [
+    {
+      "name": "Blue Site",
+      "templateRef": "preset:blue-site",
+      "posX": 670,
+      "posY": 315,
+      "posZ": 20,
+      "isHQ": true
+    }
+  ],
+  "threatGroups": [],
+  "ghost": false,
+  "clutter": false
+}

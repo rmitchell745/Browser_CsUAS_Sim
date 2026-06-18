@@ -1,0 +1,43 @@
+{
+  "id": "Template-Red-OWA-UAS",
+  "name": "One-Way Attack Drone",
+  "category": "UAS",
+  "defaultRoles": ["UAS"],
+  "components": {
+    "health": { "maxHealth": 90, "assetValuePts": 8, "isHQ": false },
+    "resistance": { "kineticResistance": 0.18, "ewResistance": 0.12, "networkResistance": 0.15 },
+    "signature": { "radarSignatureDb": -14, "acousticSignatureDb": 62, "rfEmissionDb": 18 },
+    "vulnerability": { "commsResilience": 0.45, "navResilience": 0.4, "cyberResilience": 0.35 },
+    "payload": {
+      "impactDamagePoints": 160,
+      "selfDestructOnImpact": true
+    },
+    "capability": {
+      "usesNetwork": true,
+      "usesRF": true,
+      "requiresC2": true,
+      "requiresPower": true,
+      "isPowerGen": false,
+      "canOperateAutonomously": true,
+      "lostLinkBehavior": "ExecuteTerminalDive"
+    },
+    "powerConsumer": { "powerConsumedKw": 5 },
+    "powerProducer": { "powerProducedKw": 0 },
+    "movement": {
+      "speedMps": 32,
+      "stepSec": 1,
+      "waypointToleranceM": 10,
+      "maxAccel": 8,
+      "turnRate_dps": 35,
+      "maxEnduranceSec": 1800
+    },
+    "sensors": [],
+    "effectors": [],
+    "c2": null
+  },
+  "missionProfile": {
+    // Common mission profile types already used in the sim: SpecificAsset, Geographic, MaxDamage
+    "type": "SpecificAsset",
+    "targetTemplateId": "Template-Blue-HQ-Bunker"
+  }
+}
