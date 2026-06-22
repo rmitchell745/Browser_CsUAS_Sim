@@ -1,0 +1,45 @@
+{
+  "id": "Template-Blue-EWR",
+  "name": "Early Warning Radar",
+  "category": "Sensor Node",
+  "defaultRoles": ["Sensor"],
+  "components": {
+    "health": { "maxHealth": 120, "assetValuePts": 20, "isHQ": false },
+    "resistance": { "kineticResistance": 0.15, "ewResistance": 0.25, "networkResistance": 0.2 },
+    "signature": { "radarSignatureDb": 10, "acousticSignatureDb": 45, "rfEmissionDb": 25 },
+    "vulnerability": { "commsResilience": 0.7, "navResilience": 0.9, "cyberResilience": 0.6 },
+    "capability": {
+      "usesNetwork": true,
+      "usesRF": true,
+      "requiresC2": false,
+      "requiresPower": true,
+      "isPowerGen": false,
+      "canOperateAutonomously": true,
+      "lostLinkBehavior": "ContinueDeadReckoning"
+    },
+    "powerConsumer": { "powerConsumedKw": 12 },
+    "powerProducer": { "powerProducedKw": 0 },
+    "sensors": [
+      {
+        "id": "Sensor-EWR-1",
+        "name": "Wide Area Radar",
+        // Common options: Radar, EO_IR, RF_Passive, Acoustic, FPV
+        "type": "Radar",
+        "maxRangeM": 900,
+        "headingDeg": 0,
+        "horizontalFovDeg": 360,
+        "verticalFovDeg": 120,
+        "scanIntervalSec": 1,
+        "detectionThresholdDb": 17,
+        "transmitPowerDb": 53,
+        "noiseFloorDb": -94,
+        "noiseSigmaDb": 1.2,
+        "classification": { "canClassify": true, "latencySec": 0.25, "accuracyBase": 0.82 },
+        "identification": { "canIdentify": true, "latencySec": 0.35, "accuracyBase": 0.72 }
+      }
+    ],
+    "effectors": [],
+    "c2": null,
+    "movement": null
+  }
+}

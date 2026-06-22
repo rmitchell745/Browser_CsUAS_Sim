@@ -1,0 +1,78 @@
+<section class="screen active" id="screen-dashboard">
+      <div class="screen-grid">
+        <div class="stack">
+          <div class="panel">
+            <h2>Demo &amp; Tutorial</h2>
+            <p class="panel-caption">
+              Welcome to C-sUAS Sim. Start by loading the baseline FOB swarm-defense scenario, then move to
+              Template Builder for capability edits, Scenario Builder for live placement and terrain debugging,
+              and the run modules for single-pass or Monte Carlo analysis.
+            </p>
+            <div class="controls" style="margin-top: 12px;">
+              <button id="demo-load-scenario-btn">Load Demo Scenario</button>
+              <button id="demo-load-scratch-btn">Load Scratch Scenario</button>
+              <button id="demo-open-builder-btn">Open Scenario Builder</button>
+              <button id="open-tutorial-btn">Tutorial</button>
+            </div>
+            <ul class="report-list" style="margin-top: 12px;">
+              <li><span>Recommended start</span><strong>Load Demo Scenario, inspect terrain and Blue effectors, then run single.</strong></li>
+              <li><span>Template work</span><strong>Edit power, network, sensors, effectors, and subcomponents in the Template Builder.</strong></li>
+              <li><span>Scenario work</span><strong>Use the Scenario Builder instance manager and live map placement for debugging terrain behavior.</strong></li>
+              <li><span>Monte Carlo</span><strong>Use the Monte Carlo module for aggregate failure drivers and export-ready summaries.</strong></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h2>Workflow Summary</h2>
+            <div class="placeholder-list">
+              <div class="placeholder-card">The active scenario is edited live in Scenario Builder. Generator drafts only replace the live scenario when you explicitly click Generate From Wizard.</div>
+              <div class="placeholder-card">Template duplication is blocked by fresh generator builds and deterministic template-reference handling.</div>
+              <div class="placeholder-card">Environment Extractor and Template Manager remain standalone utilities in <code>external_util/</code>, with an in-app reference module for workflow handoff.</div>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Scenario Notes</h2>
+            <p class="panel-caption" id="demo-scenario-notes">No scenario notes provided.</p>
+            <h3 style="margin-top: 16px;">Tutorial Guidance</h3>
+            <p class="panel-caption" id="demo-scenario-tutorial">No tutorial guidance provided.</p>
+          </div>
+          <div class="panel">
+            <h2>Environment Flags</h2>
+            <div class="toggle-row">
+              <label class="toggle-chip">
+                <input type="checkbox" id="ghost-placeholder-toggle">
+                <span>Ghost track placeholder</span>
+              </label>
+              <label class="toggle-chip">
+                <input type="checkbox" id="clutter-placeholder-toggle">
+                <span>Clutter field placeholder</span>
+              </label>
+            </div>
+            <div class="placeholder-list" style="margin-top: 12px;">
+              <div class="placeholder-card" id="ghost-placeholder-card">Ghost placeholder inactive</div>
+              <div class="placeholder-card" id="clutter-placeholder-card">Clutter placeholder inactive</div>
+            </div>
+          </div>
+        </div>
+        <div class="stack">
+          <div class="panel">
+            <h2>Read-Only Scenario Preview</h2>
+            <div class="canvas-wrap">
+              <canvas id="demo-preview-canvas" width="1080" height="630"></canvas>
+            </div>
+            <div class="legend">
+              <span class="blue">Blue object / coverage</span>
+              <span class="red">Red physical object / threat route</span>
+              <span class="track">Preview-only tracks</span>
+            </div>
+          </div>
+          <div class="panel">
+            <h2>Scenario Validation</h2>
+            <div class="validation-summary" id="validation-summary"></div>
+          </div>
+          <div class="panel">
+            <h2>Scenario Intake</h2>
+            <div class="summary-grid" id="import-summary"></div>
+          </div>
+        </div>
+      </div>
+    </section>

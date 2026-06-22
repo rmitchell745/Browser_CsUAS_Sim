@@ -1,0 +1,51 @@
+{
+  "id": "Template-Blue-PointDefense-Gun",
+  "name": "Point Defense Gun",
+  "category": "Effector Node",
+  "defaultRoles": ["Effector"],
+  "components": {
+    "health": { "maxHealth": 140, "assetValuePts": 18, "isHQ": false },
+    "resistance": { "kineticResistance": 0.12, "ewResistance": 0.15, "networkResistance": 0.2 },
+    "signature": { "radarSignatureDb": 9, "acousticSignatureDb": 55, "rfEmissionDb": 8 },
+    "vulnerability": { "commsResilience": 0.65, "navResilience": 1.0, "cyberResilience": 0.55 },
+    "capability": {
+      "usesNetwork": true,
+      "usesRF": false,
+      "requiresC2": true,
+      "requiresPower": true,
+      "isPowerGen": false,
+      "canOperateAutonomously": false,
+      "lostLinkBehavior": "Hover/Loiter"
+    },
+    "powerConsumer": { "powerConsumedKw": 9 },
+    "powerProducer": { "powerProducedKw": 0 },
+    "sensors": [],
+    "effectors": [
+      {
+        "id": "Effector-Gun-1",
+        "name": "30mm Gun",
+        // Common effector options: Kinetic, Interceptor, DirectedEnergy, Jammer, Spoofer, Cyber
+        "type": "Kinetic",
+        // Common delivery models: Ballistic, Guided, Instant
+        "deliveryModel": "Ballistic",
+        // Common guidance types: Command, Autonomous
+        "guidanceType": "Command",
+        "maxRangeM": 230,
+        "basePk": 0.72,
+        "basePe": 0,
+        "damagePoints": 140,
+        "ammoCapacity": 200,
+        "slewRateSec": 0.2,
+        "cooldownSec": 0.4,
+        "projectileSpeedMps": 900,
+        "terminalRadiusM": 6,
+        "maxFlightTimeSec": 1.5,
+        "effectDurationSec": 0,
+        "jamStrengthDb": 0,
+        "affectedDomains": []
+      }
+    ],
+    "c2": null,
+    "movement": null
+  }
+}

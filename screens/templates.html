@@ -1,0 +1,431 @@
+<section class="screen" id="screen-templates">
+      <div class="stack">
+        <div class="panel">
+          <div class="sidebar-header">
+            <div>
+              <h2>Template Builder</h2>
+              <p class="panel-caption">
+                Deep template editing surface for component structure, power/network posture, subcomponents, and advanced JSON review.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Template Helpers</h3>
+          <p class="panel-caption">The helper area now changes with the selected template and can seed common component bundles without dropping into raw JSON.</p>
+          <div class="helper-button-grid" style="margin-top: 12px;">
+            <button id="template-helper-static-asset-btn">Make Static Asset</button>
+            <button id="template-helper-mobile-uas-btn">Make Mobile UAS</button>
+            <button id="template-helper-add-radar-btn">Add Radar Sensor</button>
+            <button id="template-helper-add-interceptor-btn">Add Interceptor Effector</button>
+            <button id="template-helper-add-jammer-btn">Add Jammer Effector</button>
+          </div>
+          <div class="summary-grid" id="template-helper-summary" style="margin-top: 12px;"></div>
+        </div>
+
+        <div class="editor-grid">
+          <div class="editor-sidebar">
+            <div class="panel">
+              <div class="controls">
+                <div class="field">
+                  <label for="template-search">Find Template</label>
+                  <input id="template-search" type="text" style="width: 180px;">
+                </div>
+                <div class="field">
+                  <label for="new-template-preset">New Template</label>
+                  <select id="new-template-preset">
+                    <option value="blue-site">Blue Site</option>
+                    <option value="red-uas">Red UAS</option>
+                    <option value="sensor-node">Sensor Node</option>
+                    <option value="effector-node">Effector Node</option>
+                    <option value="asset">Asset</option>
+                  </select>
+                </div>
+              </div>
+              <div class="controls">
+                <button id="create-template-btn">Add Template</button>
+              </div>
+              <div class="summary-grid" id="template-library-summary" style="margin-bottom: 12px;"></div>
+              <div class="template-list" id="template-list"></div>
+            </div>
+          </div>
+
+          <div class="split-stack">
+            <div class="template-workbench">
+            <div class="panel">
+              <h3>Detailed Template Editor</h3>
+              <div class="controls">
+                <button id="save-template-form-btn">Save Common Fields</button>
+                <button id="duplicate-template-btn">Duplicate Template</button>
+                <button id="delete-template-btn">Delete Template</button>
+                <button id="export-selected-template-btn">Export Template</button>
+                <button id="import-template-btn">Import Template</button>
+                <input id="template-file-input" type="file" accept=".json,application/json" hidden>
+              </div>
+              <div class="summary-grid" id="template-usage-summary" style="margin-bottom: 12px;"></div>
+              <div class="summary-grid" id="template-structure-summary" style="margin-bottom: 12px;"></div>
+
+              <div class="builder-section">
+                <h3>Identity</h3>
+                <div class="form-grid">
+                  <div class="field-stack">
+                    <label for="template-id-input">Template ID</label>
+                    <input id="template-id-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-name-input">Template Name</label>
+                    <input id="template-name-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-category-input">Category</label>
+                    <input id="template-category-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-roles-input">Default Roles (comma separated)</label>
+                    <input id="template-roles-input" type="text">
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Health + Signature</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack">
+                    <label for="template-health-input">Max Health</label>
+                    <input id="template-health-input" name="components.health.maxHealth" data-template-bind="components.health.maxHealth" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-asset-value-input">Asset Value</label>
+                    <input id="template-asset-value-input" name="components.health.assetValuePts" data-template-bind="components.health.assetValuePts" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-resistance-input">Kinetic Resistance</label>
+                    <input id="template-resistance-input" name="components.resistance.kineticResistance" data-template-bind="components.resistance.kineticResistance" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-ew-resistance-input">EW Resistance</label>
+                    <input id="template-ew-resistance-input" name="components.resistance.ewResistance" data-template-bind="components.resistance.ewResistance" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-network-resistance-input">Network Resistance</label>
+                    <input id="template-network-resistance-input" name="components.resistance.networkResistance" data-template-bind="components.resistance.networkResistance" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-signature-input">Radar Signature (dB)</label>
+                    <input id="template-signature-input" name="components.signature.radarSignatureDb" data-template-bind="components.signature.radarSignatureDb" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-acoustic-signature-input">Acoustic Signature (dB)</label>
+                    <input id="template-acoustic-signature-input" name="components.signature.acousticSignatureDb" data-template-bind="components.signature.acousticSignatureDb" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-rf-signature-input">RF Emission (dB)</label>
+                    <input id="template-rf-signature-input" name="components.signature.rfEmissionDb" data-template-bind="components.signature.rfEmissionDb" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-comms-resilience-input">Comms Resilience</label>
+                    <input id="template-comms-resilience-input" name="components.vulnerability.commsResilience" data-template-bind="components.vulnerability.commsResilience" type="number" min="0" max="1" step="0.05">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-nav-resilience-input">Nav Resilience</label>
+                    <input id="template-nav-resilience-input" name="components.vulnerability.navResilience" data-template-bind="components.vulnerability.navResilience" type="number" min="0" max="1" step="0.05">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-cyber-resilience-input">Cyber Resilience</label>
+                    <input id="template-cyber-resilience-input" name="components.vulnerability.cyberResilience" data-template-bind="components.vulnerability.cyberResilience" type="number" min="0" max="1" step="0.05">
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-ishq-input" name="components.health.isHQ" data-template-bind="components.health.isHQ" type="checkbox">
+                    <label for="template-ishq-input">HQ / primary defended asset</label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Payload + Behavior</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack">
+                    <label for="template-impact-damage-input">Impact Damage</label>
+                    <input id="template-impact-damage-input" name="components.payload.impactDamagePoints" data-template-bind="components.payload.impactDamagePoints" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-lost-link-behavior-input">Lost Link Behavior</label>
+                    <select id="template-lost-link-behavior-input" name="components.capability.lostLinkBehavior" data-template-bind="components.capability.lostLinkBehavior">
+                      <option value="ContinueDeadReckoning">Continue Dead Reckoning</option>
+                      <option value="RTB">RTB</option>
+                      <option value="Hover/Loiter">Hover / Loiter</option>
+                      <option value="ExecuteTerminalDive">Execute Terminal Dive</option>
+                    </select>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-self-destruct-input" name="components.payload.selfDestructOnImpact" data-template-bind="components.payload.selfDestructOnImpact" type="checkbox">
+                    <label for="template-self-destruct-input">Self destruct on impact</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-uses-network-input" name="components.capability.usesNetwork" data-template-bind="components.capability.usesNetwork" type="checkbox">
+                    <label for="template-uses-network-input">Uses network</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-uses-rf-input" name="components.capability.usesRF" data-template-bind="components.capability.usesRF" type="checkbox">
+                    <label for="template-uses-rf-input">Uses RF emissions</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-requires-c2-input" name="components.capability.requiresC2" data-template-bind="components.capability.requiresC2" type="checkbox">
+                    <label for="template-requires-c2-input">Requires C2</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-autonomy-input" name="components.capability.canOperateAutonomously" data-template-bind="components.capability.canOperateAutonomously" type="checkbox">
+                    <label for="template-autonomy-input">Can operate autonomously</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-requires-power-input" name="components.capability.requiresPower" data-template-bind="components.capability.requiresPower" type="checkbox">
+                    <label for="template-requires-power-input">Requires power</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-is-powergen-input" name="components.capability.isPowerGen" data-template-bind="components.capability.isPowerGen" type="checkbox">
+                    <label for="template-is-powergen-input">Acts as power generator</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-power-consumed-input">Power Draw (kW)</label>
+                    <input id="template-power-consumed-input" name="components.powerConsumer.powerConsumedKw" data-template-bind="components.powerConsumer.powerConsumedKw" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-power-produced-input">Power Produced (kW)</label>
+                    <input id="template-power-produced-input" name="components.powerProducer.powerProducedKw" data-template-bind="components.powerProducer.powerProducedKw" type="number" step="0.1">
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <h3>Movement</h3>
+                <div class="form-grid tight">
+                  <div class="field-stack inline-check">
+                    <input id="template-movement-enabled" type="checkbox">
+                    <label for="template-movement-enabled">Enable movement component</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-speed-input">Speed (m/s)</label>
+                    <input id="template-speed-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-step-input">Step (sec)</label>
+                    <input id="template-step-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-waypoint-tolerance-input">Waypoint Tolerance (m)</label>
+                    <input id="template-waypoint-tolerance-input" type="number">
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <div class="toolbar-row" style="justify-content: space-between; margin-bottom: 12px;">
+                  <h3 style="margin: 0;">Sensors</h3>
+                  <div class="toolbar-row">
+                    <button class="button-link" id="add-template-sensor-btn" type="button">Add Sensor</button>
+                    <button class="button-link" id="duplicate-template-sensor-btn" type="button">Duplicate Sensor</button>
+                    <button class="button-link" id="remove-template-sensor-btn" type="button">Remove Sensor</button>
+                  </div>
+                </div>
+                <div class="template-subcomponent-grid">
+                  <div class="subcomponent-list" id="template-sensor-list"></div>
+                  <div class="builder-section" style="margin-top: 0; padding-top: 0; border-top: none;">
+                <div class="form-grid tight">
+                  <div class="field-stack inline-check">
+                    <input id="template-sensor-enabled" type="checkbox">
+                    <label for="template-sensor-enabled">Enable selected sensor slot</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-id-input">Sensor ID</label>
+                    <input id="template-sensor-id-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-name-input">Sensor Name</label>
+                    <input id="template-sensor-name-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-type-input">Sensor Type</label>
+                    <select id="template-sensor-type-input">
+                      <option value="Radar">Radar</option>
+                      <option value="EO_IR">EO / IR</option>
+                      <option value="RF_Passive">RF Passive</option>
+                      <option value="Acoustic">Acoustic</option>
+                      <option value="FPV">FPV</option>
+                    </select>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-range-input">Max Range (m)</label>
+                    <input id="template-sensor-range-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-heading-input">Heading (deg)</label>
+                    <input id="template-sensor-heading-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-hfov-input">Horizontal FOV (deg)</label>
+                    <input id="template-sensor-hfov-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-vfov-input">Vertical FOV (deg)</label>
+                    <input id="template-sensor-vfov-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-scan-input">Scan Interval (sec)</label>
+                    <input id="template-sensor-scan-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-threshold-input">Detection Threshold (dB)</label>
+                    <input id="template-sensor-threshold-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-transmit-input">Transmit Power (dB)</label>
+                    <input id="template-sensor-transmit-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-noise-floor-input">Noise Floor (dB)</label>
+                    <input id="template-sensor-noise-floor-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-noise-sigma-input">Noise Sigma (dB)</label>
+                    <input id="template-sensor-noise-sigma-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-classify-accuracy-input">Classification Accuracy</label>
+                    <input id="template-sensor-classify-accuracy-input" type="number" min="0" max="1" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-sensor-identify-accuracy-input">Identification Accuracy</label>
+                    <input id="template-sensor-identify-accuracy-input" type="number" min="0" max="1" step="0.01">
+                  </div>
+                </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="builder-section">
+                <div class="toolbar-row" style="justify-content: space-between; margin-bottom: 12px;">
+                  <h3 style="margin: 0;">Effectors</h3>
+                  <div class="toolbar-row">
+                    <button class="button-link" id="add-template-effector-btn" type="button">Add Effector</button>
+                    <button class="button-link" id="duplicate-template-effector-btn" type="button">Duplicate Effector</button>
+                    <button class="button-link" id="remove-template-effector-btn" type="button">Remove Effector</button>
+                  </div>
+                </div>
+                <div class="template-subcomponent-grid">
+                  <div class="subcomponent-list" id="template-effector-list"></div>
+                  <div class="builder-section" style="margin-top: 0; padding-top: 0; border-top: none;">
+                <div class="form-grid tight">
+                  <div class="field-stack inline-check">
+                    <input id="template-effector-enabled" type="checkbox">
+                    <label for="template-effector-enabled">Enable selected effector slot</label>
+                  </div>
+                  <div class="field-stack inline-check">
+                    <input id="template-c2-enabled" type="checkbox">
+                    <label for="template-c2-enabled">Enable C2 component</label>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-id-input">Effector ID</label>
+                    <input id="template-effector-id-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-name-input">Effector Name</label>
+                    <input id="template-effector-name-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-type-input">Effector Type</label>
+                    <select id="template-effector-type-input">
+                      <option value="Kinetic">Kinetic</option>
+                      <option value="Jammer">Jammer</option>
+                      <option value="DirectedEnergy">Directed Energy</option>
+                      <option value="Interceptor">Interceptor</option>
+                      <option value="Spoofer">Spoofer</option>
+                      <option value="Cyber">Cyber</option>
+                    </select>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-guidance-input">Guidance Type</label>
+                    <select id="template-effector-guidance-input">
+                      <option value="Command">Command</option>
+                      <option value="Autonomous">Autonomous</option>
+                    </select>
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-range-input">Max Range (m)</label>
+                    <input id="template-effector-range-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-basepk-input">Base Pk</label>
+                    <input id="template-effector-basepk-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-basepe-input">Base Pe</label>
+                    <input id="template-effector-basepe-input" type="number" step="0.01">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-damage-input">Damage</label>
+                    <input id="template-effector-damage-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-ammo-input">Ammo Capacity</label>
+                    <input id="template-effector-ammo-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-slew-input">Slew / Delay (sec)</label>
+                    <input id="template-effector-slew-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-cooldown-input">Cooldown (sec)</label>
+                    <input id="template-effector-cooldown-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-speed-input">Projectile Speed (m/s)</label>
+                    <input id="template-effector-speed-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-terminal-radius-input">Terminal Radius (m)</label>
+                    <input id="template-effector-terminal-radius-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-flight-time-input">Max Flight Time (sec)</label>
+                    <input id="template-effector-flight-time-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-effect-duration-input">Effect Duration (sec)</label>
+                    <input id="template-effector-effect-duration-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-jam-strength-input">Jam Strength (dB)</label>
+                    <input id="template-effector-jam-strength-input" type="number" step="0.1">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-effector-domains-input">Affected Domains</label>
+                    <input id="template-effector-domains-input" type="text">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-c2-capacity-input">C2 Track Capacity</label>
+                    <input id="template-c2-capacity-input" type="number">
+                  </div>
+                  <div class="field-stack">
+                    <label for="template-c2-latency-input">C2 Latency (sec)</label>
+                    <input id="template-c2-latency-input" type="number" step="0.1">
+                  </div>
+                </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <h3>Advanced Template JSON</h3>
+              <p class="panel-caption">Use this for multiple sensors/effectors or any field not exposed in the common editor.</p>
+              <textarea id="template-json-editor" spellcheck="false"></textarea>
+              <div class="controls" style="margin-top: 12px;">
+                <button id="apply-template-json-btn">Apply Template JSON</button>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>

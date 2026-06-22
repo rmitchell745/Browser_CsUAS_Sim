@@ -1,0 +1,55 @@
+{
+  "id": "Template-Example",
+  "name": "Example Template",
+  "category": "Generic",
+  "defaultRoles": ["Asset"],
+  "components": {
+    "health": {
+      "maxHealth": 100,
+      "assetValuePts": 10,
+      "isHQ": false
+    },
+    "resistance": {
+      "kineticResistance": 0.1,
+      "ewResistance": 0.1,
+      "networkResistance": 0.1
+    },
+    "signature": {
+      "radarSignatureDb": 0,
+      "acousticSignatureDb": 60,
+      "rfEmissionDb": 10
+    },
+    "vulnerability": {
+      "commsResilience": 0.5,
+      "navResilience": 0.5,
+      "cyberResilience": 0.5
+    },
+    "payload": {
+      "impactDamagePoints": 0,
+      "selfDestructOnImpact": false
+    },
+    "capability": {
+      "usesNetwork": true,
+      "usesRF": false,
+      "requiresC2": false,
+      "requiresPower": false,
+      "isPowerGen": false,
+      "canOperateAutonomously": true,
+      "lostLinkBehavior": "ContinueDeadReckoning"
+    },
+    "powerConsumer": {
+      "powerConsumedKw": 0
+    },
+    "powerProducer": {
+      "powerProducedKw": 0
+    },
+    "movement": null,
+    "sensors": [],
+    "effectors": [],
+    "c2": null
+  },
+  "missionProfile": {
+    "type": "SpecificAsset",
+    "targetTemplateId": null
+  }
+}

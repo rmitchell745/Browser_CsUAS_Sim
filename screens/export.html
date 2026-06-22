@@ -1,0 +1,45 @@
+<section class="screen" id="screen-export" style="display:none;">
+      <div class="stack">
+        <div class="panel">
+          <div class="sidebar-header">
+            <div>
+              <h2>Raw Data / Export</h2>
+              <p class="panel-caption">Export the normalized scenario, report payloads, logs, and Monte Carlo outputs.</p>
+            </div>
+            <button class="sidebar-close" data-close-sidebar="export">Close</button>
+          </div>
+          <div class="controls">
+            <button id="export-single-btn">Export Single Run CSV</button>
+            <button id="export-monte-carlo-btn">Export Monte Carlo CSV</button>
+            <button id="export-log-btn">Export Event Log JSON</button>
+            <button id="export-scenario-file-btn">Export Scenario JSON</button>
+          </div>
+          <div class="json-toolbar">
+            <div class="tab-strip">
+              <button class="tab-button active" data-export-tab="scenario" id="tab-scenario-btn">Scenario JSON</button>
+              <button class="tab-button" data-export-tab="report" id="tab-report-btn">Single Run Report</button>
+              <button class="tab-button" data-export-tab="eventLog" id="tab-eventlog-btn">Event Log</button>
+              <button class="tab-button" data-export-tab="monteCarlo" id="tab-montecarlo-btn">Monte Carlo CSV</button>
+            </div>
+            <div class="toolbar-row">
+              <div class="field">
+                <label for="scenario-export-source">Scenario Source</label>
+                <select id="scenario-export-source">
+                  <option value="normalized">Normalized runnable scenario</option>
+                  <option value="original">Original imported payload</option>
+                </select>
+              </div>
+              <label class="toggle-chip">
+                <input type="checkbox" id="export-pretty-toggle" checked>
+                <span>Pretty-print JSON</span>
+              </label>
+              <button id="copy-export-preview-btn">Copy Preview</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Export Preview</h2>
+          <textarea id="export-preview" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+    </section>

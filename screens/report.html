@@ -1,0 +1,51 @@
+<section class="screen" id="screen-report">
+      <div class="stack">
+        <div class="panel">
+          <div class="sidebar-header">
+            <div>
+              <h2>Monte Carlo Run</h2>
+              <p class="panel-caption">Single-run debrief, Monte Carlo aggregate review, failure drivers, and export-ready analysis surfaces.</p>
+            </div>
+          </div>
+          <div class="metrics-grid" id="single-run-summary"></div>
+        </div>
+        <div class="screen-grid">
+          <div class="panel">
+            <h3>Report Details</h3>
+            <ul class="report-list" id="single-run-details"></ul>
+          </div>
+          <div class="panel">
+            <h3>Monte Carlo Aggregate</h3>
+            <div class="metrics-grid" id="monte-carlo-summary"></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h3>Event Timeline</h3>
+          <div class="timeline-list" id="event-timeline-list"></div>
+        </div>
+        <div class="panel">
+          <h3>Top Failure Drivers</h3>
+          <div class="analysis-grid" id="failure-drivers-list"></div>
+        </div>
+        <div class="panel">
+          <h3>Monte Carlo Results</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Iteration</th>
+                <th>Detected</th>
+                <th>Identified</th>
+                <th>Intent</th>
+                <th>Engaged</th>
+                <th>Destroyed</th>
+                <th>Dropped</th>
+                <th>Detect Time (s)</th>
+                <th>Kill Time (s)</th>
+                <th>Shots</th>
+              </tr>
+            </thead>
+            <tbody id="monte-carlo-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>

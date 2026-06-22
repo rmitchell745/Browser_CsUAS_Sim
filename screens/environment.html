@@ -1,0 +1,35 @@
+<section class="screen" id="screen-environment">
+      <div class="stack">
+        <div class="panel">
+          <h2>Environment Extractor</h2>
+          <p class="panel-caption">
+            The extractor remains a standalone utility so terrain extraction, DEM handling, and scenario packaging can evolve
+            without destabilizing the simulator shell. Use the buttons below to launch the external tools, then import the
+            generated scenario JSON back into the simulator.
+          </p>
+          <div class="controls" style="margin-top: 12px;">
+            <button id="open-environment-extractor-btn">Open Environment Extractor Utility</button>
+            <button id="open-template-manager-btn">Open Template Manager Utility</button>
+            <button id="environment-load-scenario-btn">Import Scenario JSON</button>
+          </div>
+          <input id="environment-scenario-file-input" type="file" accept=".json,application/json" hidden>
+        </div>
+        <div class="screen-grid">
+          <div class="panel">
+            <h3>Recommended Workflow</h3>
+            <ul class="report-list">
+              <li><span>1. Extract terrain</span><strong>Use the standalone extractor for imagery, DEM, local-relief terrain segmentation, and scenario packaging.</strong></li>
+              <li><span>2. Review templates</span><strong>Use Template Manager for bulk template authoring and reference JSON generation.</strong></li>
+              <li><span>3. Import and refine</span><strong>Load the generated scenario here, then use Scenario Builder for live object and terrain debugging.</strong></li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Extractor Notes</h3>
+            <div class="placeholder-list">
+              <div class="placeholder-card">Current extractor terrain detection uses local relief, not map-wide average height, to emphasize radar-relevant spikes and anomalies.</div>
+              <div class="placeholder-card">The standalone utility still handles CORS fallbacks, contour guard rails, and scenario-ready JSON packaging outside the simulator shell.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>

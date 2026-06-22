@@ -1,0 +1,18 @@
+{
+  // Unique runtime object ID.
+  "id": "Blue-HQ-Bunker-01",
+  // Must match a template id in scenario.templates.
+  "templateId": "Template-Blue-HQ-Bunker",
+  "name": "FOB HQ",
+  // Common sides: Blue, Red
+  "side": "Blue",
+  // Roles usually inherit from the template, but can be overridden here.
+  "roles": ["Asset"],
+  "networkId": null,
+  "connectedPowerGridId": null,
+  "posX": 680,
+  "posY": 315,
+  "posZ": 20,
+  // Mission waypoints matter most for movers and Red threats.
+  "missionWaypoints": []
+}
