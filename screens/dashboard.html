@@ -1,78 +1,103 @@
 <section class="screen active" id="screen-dashboard">
-      <div class="screen-grid">
+  <div class="stack">
+    <div class="panel">
+      <div class="sidebar-header" style="margin-bottom: 0;">
+        <div>
+          <h2>Welcome to C-sUAS Tactical Simulator</h2>
+          <p class="panel-caption">Evaluate system resilience across multi-domain environments.</p>
+        </div>
+      </div>
+      <div class="toolbar-row" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <button class="button-link dashboard-tab-btn active" data-dashboard-tab="demo" type="button">Demo &amp; Quick Start</button>
+        <button class="button-link dashboard-tab-btn" data-dashboard-tab="tutorial" type="button">Interactive Tutorial</button>
+      </div>
+    </div>
+
+    <div id="dashboard-tab-demo" class="builder-tab-panel active">
+      <div class="workspace-layout">
         <div class="stack">
           <div class="panel">
-            <h2>Demo &amp; Tutorial</h2>
-            <p class="panel-caption">
-              Welcome to C-sUAS Sim. Start by loading the baseline FOB swarm-defense scenario, then move to
-              Template Builder for capability edits, Scenario Builder for live placement and terrain debugging,
-              and the run modules for single-pass or Monte Carlo analysis.
-            </p>
+            <h3>Quick Start Actions</h3>
+            <p class="panel-caption">Load a baseline scenario to explore the tools, or start with a blank slate.</p>
             <div class="controls" style="margin-top: 12px;">
-              <button id="demo-load-scenario-btn">Load Demo Scenario</button>
-              <button id="demo-load-scratch-btn">Load Scratch Scenario</button>
-              <button id="demo-open-builder-btn">Open Scenario Builder</button>
-              <button id="open-tutorial-btn">Tutorial</button>
-            </div>
-            <ul class="report-list" style="margin-top: 12px;">
-              <li><span>Recommended start</span><strong>Load Demo Scenario, inspect terrain and Blue effectors, then run single.</strong></li>
-              <li><span>Template work</span><strong>Edit power, network, sensors, effectors, and subcomponents in the Template Builder.</strong></li>
-              <li><span>Scenario work</span><strong>Use the Scenario Builder instance manager and live map placement for debugging terrain behavior.</strong></li>
-              <li><span>Monte Carlo</span><strong>Use the Monte Carlo module for aggregate failure drivers and export-ready summaries.</strong></li>
-            </ul>
-          </div>
-          <div class="panel">
-            <h2>Workflow Summary</h2>
-            <div class="placeholder-list">
-              <div class="placeholder-card">The active scenario is edited live in Scenario Builder. Generator drafts only replace the live scenario when you explicitly click Generate From Wizard.</div>
-              <div class="placeholder-card">Template duplication is blocked by fresh generator builds and deterministic template-reference handling.</div>
-              <div class="placeholder-card">Environment Extractor and Template Manager remain standalone utilities in <code>external_util/</code>, with an in-app reference module for workflow handoff.</div>
+              <button type="button" id="demo-load-scenario-btn" style="border-color: var(--neon-blue); color: var(--neon-blue);">Load Built-in Demo</button>
+              <button type="button" id="demo-load-scratch-btn">Load Scratch Scenario</button>
+              <button type="button" id="demo-open-builder-btn">Open Scenario Editor</button>
             </div>
           </div>
+
           <div class="panel">
-            <h2>Scenario Notes</h2>
-            <p class="panel-caption" id="demo-scenario-notes">No scenario notes provided.</p>
-            <h3 style="margin-top: 16px;">Tutorial Guidance</h3>
-            <p class="panel-caption" id="demo-scenario-tutorial">No tutorial guidance provided.</p>
+            <h3>Scenario Overview</h3>
+            <p class="panel-caption" id="demo-scenario-notes">No scenario loaded. Click 'Load Built-in Demo' to begin.</p>
           </div>
+
           <div class="panel">
-            <h2>Environment Flags</h2>
+            <h3>Environment Configuration</h3>
             <div class="toggle-row">
               <label class="toggle-chip">
-                <input type="checkbox" id="ghost-placeholder-toggle">
+                <input type="checkbox" id="dashboard-ghost-placeholder-toggle">
                 <span>Ghost track placeholder</span>
               </label>
               <label class="toggle-chip">
-                <input type="checkbox" id="clutter-placeholder-toggle">
+                <input type="checkbox" id="dashboard-clutter-placeholder-toggle">
                 <span>Clutter field placeholder</span>
               </label>
             </div>
             <div class="placeholder-list" style="margin-top: 12px;">
-              <div class="placeholder-card" id="ghost-placeholder-card">Ghost placeholder inactive</div>
-              <div class="placeholder-card" id="clutter-placeholder-card">Clutter placeholder inactive</div>
+              <div class="placeholder-card" id="ghost-placeholder-card">Ghost track placeholder is disabled.</div>
+              <div class="placeholder-card" id="clutter-placeholder-card">Clutter field placeholder is disabled.</div>
             </div>
           </div>
         </div>
+
         <div class="stack">
-          <div class="panel">
-            <h2>Read-Only Scenario Preview</h2>
+          <div class="panel map-panel" style="min-height: auto;">
+            <div class="sidebar-header" style="align-items: center;">
+              <h3 style="margin: 0;">Live Preview &amp; Execution</h3>
+              <div class="toolbar-row">
+                <button id="demo-play-btn" style="color: var(--green); border-color: var(--green);">Run Live Demo</button>
+              </div>
+            </div>
             <div class="canvas-wrap">
-              <canvas id="demo-preview-canvas" width="1080" height="630"></canvas>
+              <canvas id="demo-canvas" width="1080" height="630"></canvas>
             </div>
             <div class="legend">
               <span class="blue">Blue object / coverage</span>
-              <span class="red">Red physical object / threat route</span>
-              <span class="track">Preview-only tracks</span>
+              <span class="red">Red physical object / intent heading</span>
+              <span class="track">Track belief</span>
             </div>
-          </div>
-          <div class="panel">
-            <h2>Scenario Validation</h2>
-            <div class="validation-summary" id="validation-summary"></div>
-          </div>
-          <div class="panel">
-            <h2>Scenario Intake</h2>
-            <div class="summary-grid" id="import-summary"></div>
           </div>
         </div>
       </div>
-    </section>
+    </div>
+
+    <div id="dashboard-tab-tutorial" class="builder-tab-panel">
+      <div class="workspace-layout">
+        <div class="stack">
+          <div class="panel">
+            <h3>Select a Lesson</h3>
+            <p class="panel-caption">Choose a module to load its quick reference guidance.</p>
+            <div class="issue-list" id="tutorial-lesson-list" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="panel" style="background: rgba(80, 216, 255, 0.05); border-color: var(--neon-blue);">
+            <h2 id="tutorial-title" style="margin-top: 0; color: var(--neon-blue);">Lesson 1</h2>
+            <p class="panel-caption" id="demo-scenario-tutorial" style="font-size: 1.05rem; line-height: 1.6; color: var(--text);">
+              No tutorial guidance provided.
+            </p>
+          </div>
+
+          <div class="panel">
+            <h3>Tutorial Notes</h3>
+            <div class="placeholder-list">
+              <div class="placeholder-card">Tutorial cards are content-only in this version. Use them as guided workflow references while building and running scenarios.</div>
+              <div class="placeholder-card">Use Run Scenario for actual playback and View Reports for debrief and export surfaces.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

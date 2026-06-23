@@ -1,83 +1,98 @@
 <section class="screen workspace-screen" id="screen-run">
-      <div class="panel">
-        <div class="controls">
-          <button id="run-single-btn">Run Single Scenario</button>
-          <button id="run-monte-carlo-btn">Run Monte Carlo</button>
-          <button id="load-scenario-btn">Load Scenario JSON</button>
-          <button id="export-scenario-btn">Export Scenario JSON</button>
-          <button id="reset-view-btn">Reset Scenario View</button>
-          <input id="scenario-file-input" type="file" accept=".json,application/json" hidden>
-          <div class="field">
-            <label for="monte-carlo-count">Iterations</label>
-            <input id="monte-carlo-count" type="number" min="1" max="250" value="25">
-          </div>
+  <div class="panel">
+    <div class="controls">
+      <button id="load-scenario-btn">Load Scenario JSON</button>
+      <input id="scenario-file-input" type="file" accept=".json,application/json" hidden>
+      <button id="run-single-btn">Run Single Scenario</button>
+      <button id="run-monte-carlo-btn">Run Monte Carlo</button>
+      <button id="export-scenario-btn">Export Draft Scenario JSON</button>
+      <div class="field">
+        <label for="monte-carlo-count">Iterations</label>
+        <input id="monte-carlo-count" type="number" min="1" max="1000" value="25">
+      </div>
+    </div>
+    <div class="status-row">
+      <div class="badge"><span>Status</span><strong id="status-text">Ready</strong></div>
+      <div class="badge"><span>Playback</span><strong id="playback-text">Idle</strong></div>
+      <div class="badge"><span>Queue</span><strong id="queue-text">0</strong></div>
+      <div class="badge"><span>Last seed</span><strong id="seed-text">-</strong></div>
+      <div class="badge"><span>Scenario</span><strong id="scenario-text">C-sUAS Tactical Simulator</strong></div>
+    </div>
+    <div id="run-reminder"></div>
+  </div>
+
+  <div class="run-layout" style="margin-top: 16px;">
+    <div class="panel map-panel run-map-panel">
+      <div class="canvas-toolbar">
+        <div>
+          <h2 style="margin: 0 0 6px;">Simulation Map</h2>
+          <p class="panel-caption">Live tactical view with track, cueing, threat-heading, and field-of-view overlays.</p>
         </div>
-        <div class="status-row">
-          <div class="badge"><span>Status</span><strong id="status-text">Ready</strong></div>
-          <div class="badge"><span>Playback</span><strong id="playback-text">Idle</strong></div>
-          <div class="badge"><span>Queue</span><strong id="queue-text">0</strong></div>
-          <div class="badge"><span>Last seed</span><strong id="seed-text">-</strong></div>
-          <div class="badge"><span>Scenario</span><strong id="scenario-text">C-sUAS Tactical Simulator</strong></div>
+        <div class="toolbar-row">
+          <button id="zoom-reset-btn">Reset Zoom</button>
+          <button id="open-scenario-builder-inline-btn">Open Scenario Editor</button>
+          <button id="open-template-library-inline-btn">Open Template Editor</button>
+          <button id="open-analysis-inline-btn">Open Reports</button>
         </div>
-        <div id="run-reminder"></div>
       </div>
 
-      <div class="run-layout" style="margin-top: 16px;">
-        <div class="panel map-panel run-map-panel">
-          <div class="canvas-toolbar">
-            <div>
-              <h2 style="margin: 0 0 6px;">Simulation Map</h2>
-              <p class="panel-caption">Live tactical view with track, cueing, threat-heading, and field-of-view overlays.</p>
-            </div>
-            <div class="toolbar-row">
-              <button id="zoom-reset-btn">Reset Zoom</button>
-              <button id="open-scenario-builder-inline-btn">Build / Edit Scenario</button>
-              <button id="open-template-library-inline-btn">Edit Templates</button>
-              <button id="open-analysis-inline-btn">Review Analysis</button>
-            </div>
-          </div>
-          <div class="canvas-wrap">
-              <canvas id="sim-canvas" width="1080" height="630"></canvas>
-          </div>
-          <div class="legend">
-            <span class="blue">Blue object / coverage</span>
-            <span class="red">Red physical object / intent heading</span>
-            <span class="track">Track belief</span>
-          </div>
-        </div>
-
-        <div class="run-feed-grid">
-          <div class="panel feed-panel">
-            <div class="feed-header">
-              <div>
-                <h3 style="margin: 0;">Blue Force Feed</h3>
-                <span>Blue sensing, cueing, C2, and engagement actions</span>
-              </div>
-              <strong class="feed-count" id="blue-feed-count">0</strong>
-            </div>
-            <div class="log-feed blue-feed" id="blue-feed"></div>
-          </div>
-          <div class="panel feed-panel">
-            <div class="feed-header">
-              <div>
-                <h3 style="margin: 0;">Red Force Feed</h3>
-                <span>Threat route, attack-run, and terminal behavior</span>
-              </div>
-              <strong class="feed-count" id="red-feed-count">0</strong>
-            </div>
-            <div class="log-feed red-feed" id="red-feed"></div>
-          </div>
-          <div class="panel feed-panel">
-            <div class="feed-header">
-              <div>
-                <h3 style="margin: 0;">Live Metrics</h3>
-                <span>Current run status, snapshots, and fast debrief</span>
-              </div>
-            </div>
-            <div class="metrics-grid" id="run-metrics"></div>
-            <div class="analysis-grid" id="live-analysis-summary"></div>
-            <div class="log-feed" id="event-log" style="display: none;"></div>
-          </div>
+      <div class="panel" style="margin-bottom: 12px; background: rgba(0,0,0,0.2);">
+        <h3 style="margin: 0 0 8px 0; font-size: 1rem;">Selected Object</h3>
+        <div id="run-selected-object-info" class="summary-grid">
+          <div class="empty-state" style="padding: 10px;">Click an object or track on the map during playback to view its live telemetry.</div>
         </div>
       </div>
-    </section>
+
+      <div class="controls" style="margin-bottom: 12px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 12px; justify-content: center;">
+        <button id="reset-view-btn">Reset</button>
+        <button id="back-btn">Step Back</button>
+        <button id="play-btn" style="border-color: var(--neon-blue); color: var(--neon-blue);">Play</button>
+        <button id="pause-btn">Pause</button>
+        <button id="forward-btn">Step Forward</button>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="sim-canvas" width="1080" height="630"></canvas>
+      </div>
+      <div class="legend">
+        <span class="blue">Blue object / coverage</span>
+        <span class="red">Red physical object / intent heading</span>
+        <span class="track">Track belief</span>
+      </div>
+    </div>
+
+    <div class="run-feed-grid">
+      <div class="panel feed-panel">
+        <div class="feed-header">
+          <div>
+            <h3 style="margin: 0;">Blue Force Feed</h3>
+            <span>Blue sensing, cueing, C2, and engagement</span>
+          </div>
+          <strong class="feed-count" id="blue-feed-count">0</strong>
+        </div>
+        <div class="log-feed blue-feed" id="blue-feed"></div>
+      </div>
+      <div class="panel feed-panel">
+        <div class="feed-header">
+          <div>
+            <h3 style="margin: 0;">Red Force Feed</h3>
+            <span>Threat route, attack-run, and terminal behavior</span>
+          </div>
+          <strong class="feed-count" id="red-feed-count">0</strong>
+        </div>
+        <div class="log-feed red-feed" id="red-feed"></div>
+      </div>
+      <div class="panel feed-panel">
+        <div class="feed-header">
+          <div>
+            <h3 style="margin: 0;">Live Metrics</h3>
+            <span>Current run status and fast debrief</span>
+          </div>
+        </div>
+        <div class="metrics-grid" id="run-metrics"></div>
+        <div class="analysis-grid" id="live-analysis-summary"></div>
+        <div class="log-feed" id="event-log" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+</section>

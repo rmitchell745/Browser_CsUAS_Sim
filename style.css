@@ -1027,6 +1027,18 @@
       display: flex !important;
     }
 
+    .helper-nav {
+      margin-top: 0;
+      margin-bottom: 18px;
+    }
+
+    .dashboard-tab-btn.active,
+    .report-tab-btn.active {
+      border-color: rgba(80, 216, 255, 0.72);
+      background: rgba(80, 216, 255, 0.1);
+      box-shadow: 0 0 18px rgba(80, 216, 255, 0.15);
+    }
+
     .side-tray {
       display: none !important;
     }

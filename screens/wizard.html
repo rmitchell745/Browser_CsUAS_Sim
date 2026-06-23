@@ -1,183 +1,202 @@
-<section class="screen" id="screen-wizard">
+<section id="screen-wizard" class="screen">
+  <div class="stack">
+    <div class="panel">
+      <div class="sidebar-header">
+        <div>
+          <h2>Scenario Editor</h2>
+          <p class="panel-caption">Import, edit, validate, stage, and export complete scenarios while keeping the map visible.</p>
+        </div>
+      </div>
+      <div class="toolbar-row">
+        <button type="button" data-builder-tab="environment" class="button-link scenario-builder-tab active">Environment</button>
+        <button type="button" data-builder-tab="draft" class="button-link scenario-builder-tab">Draft Scenario</button>
+        <button type="button" data-builder-tab="blue-groups" class="button-link scenario-builder-tab">Blue Groups</button>
+        <button type="button" data-builder-tab="red-groups" class="button-link scenario-builder-tab">Red Groups</button>
+        <button type="button" data-builder-tab="blue-instances" class="button-link scenario-builder-tab">Blue Instances</button>
+        <button type="button" data-builder-tab="red-instances" class="button-link scenario-builder-tab">Red Instances</button>
+      </div>
+    </div>
+
+    <div class="workspace-layout">
       <div class="stack">
-        <div class="panel">
-          <div class="sidebar-header">
-            <div>
-              <h2>Scenario Builder</h2>
-              <p class="panel-caption">
-                The map stays fixed while the left editor changes by subtab. Keep the active instance list visible when using click-to-place.
-              </p>
+        <div id="builder-tab-environment" class="builder-tab-panel active">
+          <div class="panel" id="wizard-environment-panel">
+            <h3>Terrain + Environment</h3>
+            <div class="form-grid">
+              <div class="field-stack">
+                <label for="map-width-input">Map Width (m)</label>
+                <input type="number" id="map-width-input">
+              </div>
+              <div class="field-stack inline-check">
+                <input type="checkbox" id="wizard-ghost-enabled">
+                <label for="wizard-ghost-enabled">Enable ghost placeholder</label>
+              </div>
+              <div class="field-stack inline-check">
+                <input type="checkbox" id="wizard-clutter-enabled">
+                <label for="wizard-clutter-enabled">Enable clutter placeholder</label>
+              </div>
             </div>
-          </div>
-          <div class="toolbar-row" style="margin-top: 12px;">
-            <button class="button-link scenario-builder-tab active" data-builder-tab="environment" type="button">Environment</button>
-            <button class="button-link scenario-builder-tab" data-builder-tab="blue" type="button">Blue Instances</button>
-            <button class="button-link scenario-builder-tab" data-builder-tab="red" type="button">Red Instances</button>
-            <button class="button-link scenario-builder-tab" data-builder-tab="generator" type="button">Generator Draft</button>
+            <div class="controls" style="margin-top: 12px;">
+              <button type="button" id="map-background-upload-btn">Upload Map Background</button>
+              <button type="button" id="clear-map-background-btn">Clear Background</button>
+              <input type="file" id="map-background-input" accept="image/*" hidden>
+            </div>
+            <div class="controls" style="margin-top: 12px;">
+              <button type="button" id="add-block-terrain-btn">Add Block Terrain</button>
+              <button type="button" id="add-noise-terrain-btn">Add Noise Terrain</button>
+            </div>
+            <div id="terrain-object-list"></div>
           </div>
         </div>
 
-        <div class="workspace-layout" style="margin-top: 16px;">
-          <div class="stack">
-            <div class="builder-tab-panel active" id="builder-tab-environment">
-              <div class="panel">
-                <h3>Scenario Metadata</h3>
-                <div class="form-grid">
-                  <div class="field-stack">
-                    <label for="wizard-scenario-name">Scenario Name</label>
-                    <input id="wizard-scenario-name" type="text">
-                  </div>
-                  <div class="field-stack">
-                    <label for="wizard-scenario-description">Description</label>
-                    <textarea id="wizard-scenario-description"></textarea>
-                  </div>
-                </div>
-              </div>
-              <div class="panel" id="wizard-environment-panel">
-                <h3>Terrain + Environment</h3>
-                <div class="form-grid">
-                  <div class="field-stack">
-                    <label for="map-width-input">Map Width (m)</label>
-                    <input id="map-width-input" type="number">
-                  </div>
-                  <div class="field-stack inline-check">
-                    <input id="wizard-ghost-enabled" type="checkbox">
-                    <label for="wizard-ghost-enabled">Enable ghost placeholder</label>
-                  </div>
-                  <div class="field-stack inline-check">
-                    <input id="wizard-clutter-enabled" type="checkbox">
-                    <label for="wizard-clutter-enabled">Enable clutter placeholder</label>
-                  </div>
-                </div>
-                <div class="controls" style="margin-top: 12px;">
-                  <button id="map-background-upload-btn">Upload Map Background</button>
-                  <button id="clear-map-background-btn">Clear Background</button>
-                  <input id="map-background-input" type="file" accept="image/*" hidden>
-                </div>
-                <div class="controls" style="margin-top: 12px;">
-                  <button id="add-block-terrain-btn">Add Block Terrain</button>
-                  <button id="add-noise-terrain-btn">Add Noise Terrain</button>
-                </div>
-                <div id="terrain-object-list" style="margin-top:12px;"></div>
+        <div id="builder-tab-draft" class="builder-tab-panel">
+          <div class="panel">
+            <h3>Draft Scenario Controls</h3>
+            <div class="controls">
+              <button type="button" id="wizard-load-demo-btn">Load Demo Scenario</button>
+              <button type="button" id="wizard-load-scratch-btn">New Blank Scenario</button>
+              <button type="button" id="wizard-import-scenario-btn">Import Scenario JSON</button>
+              <input type="file" id="wizard-scenario-file-input" accept=".json,application/json" hidden>
+            </div>
+            <div class="field-stack" style="margin-top: 16px;">
+              <label for="wizard-preset">Pre-Built Scenarios</label>
+              <div class="controls">
+                <select id="wizard-preset">
+                  <option value="blank-scratch">Blank From Scratch</option>
+                  <option value="baseline-single">Single-UAS Baseline</option>
+                  <option value="lock-refire">Lock / Refire Two-Threat</option>
+                  <option value="tewa-priority">TEWA Priority Review</option>
+                </select>
+                <button type="button" id="wizard-load-preset-btn">Load Pre-Built Scenario</button>
               </div>
             </div>
-
-            <div class="builder-tab-panel" id="builder-tab-blue">
-              <div class="panel" id="wizard-roster-panel-blue">
-                <h3>Blue Instance Manager</h3>
-                <p class="panel-caption">Choose a Blue template, add the instance, select it, then click the map to place it.</p>
-                <div class="controls">
-                  <div class="field">
-                    <label for="instance-template-select-blue">Template</label>
-                    <select id="instance-template-select-blue"></select>
-                  </div>
-                  <button id="add-blue-instance-btn">Add Blue Instance</button>
-                </div>
-                <div class="analysis-grid" id="roster-summary-blue"></div>
-                <div id="roster-item-list-blue" style="margin-top:12px;"></div>
-              </div>
-              <div class="panel">
-                <h3>Selected Object</h3>
-                <div id="selected-object-editor-blue"></div>
-              </div>
+            <div class="controls">
+              <button type="button" id="wizard-validate-scenario-btn">Validate Scenario</button>
+              <button type="button" id="wizard-stage-current-scenario-btn">Stage Current Scenario</button>
+              <button type="button" id="wizard-export-scenario-btn">Export Scenario</button>
             </div>
+          </div>
 
-            <div class="builder-tab-panel" id="builder-tab-red">
-              <div class="panel" id="wizard-roster-panel-red">
-                <h3>Red Instance Manager</h3>
-                <p class="panel-caption">Choose a Red template, add the instance, then place or reroute it directly on the live scenario map.</p>
-                <div class="controls">
-                  <div class="field">
-                    <label for="instance-template-select-red">Template</label>
-                    <select id="instance-template-select-red"></select>
-                  </div>
-                  <button id="add-red-instance-btn">Add Red Instance</button>
-                </div>
-                <div class="analysis-grid" id="roster-summary-red"></div>
-                <div id="roster-item-list-red" style="margin-top:12px;"></div>
+          <div class="panel">
+            <h3>Scenario Metadata</h3>
+            <div class="form-grid">
+              <div class="field-stack">
+                <label for="wizard-scenario-name">Scenario Name</label>
+                <input type="text" id="wizard-scenario-name">
               </div>
-              <div class="panel">
-                <h3>Selected Object</h3>
-                <div id="selected-object-editor-red"></div>
-              </div>
-            </div>
-
-            <div class="builder-tab-panel" id="builder-tab-generator">
-              <div class="panel">
-                <h3>Generator Draft Controls</h3>
-                <div class="controls" style="margin-top: 12px;">
-                  <div class="field">
-                    <label for="wizard-preset">Generator Pattern</label>
-                    <select id="wizard-preset">
-                      <option value="blank-scratch">Blank From Scratch</option>
-                      <option value="baseline-single">Single-UAS Baseline</option>
-                      <option value="lock-refire">Lock / Refire Two-Threat</option>
-                      <option value="tewa-priority">TEWA Priority Review</option>
-                    </select>
-                  </div>
-                  <button id="wizard-load-demo-btn">Load Demo Scenario</button>
-                  <button id="wizard-load-scratch-btn">Load Scratch Scenario</button>
-                  <button id="wizard-load-preset-btn">Load Generator Pattern</button>
-                  <button id="wizard-preview-btn">Preview Generator</button>
-                  <button id="wizard-build-btn">Generate From Wizard</button>
-                  <button id="wizard-apply-btn">Apply Generated Scenario</button>
-                </div>
-              </div>
-              <div class="panel" id="wizard-blue-panel">
-                <h3>Generator Blue Assets</h3>
-                <div class="controls" style="margin-top: 12px;">
-                  <button id="wizard-add-blue-asset-btn">Add Blue Asset</button>
-                </div>
-                <div class="threat-group-list" id="wizard-blue-asset-list"></div>
-              </div>
-              <div class="panel" id="wizard-red-panel">
-                <h3>Generator Red Threat Groups</h3>
-                <p class="panel-caption">
-                  Use these draft groups only when composing a fresh scenario replacement from the generator.
-                </p>
-                <div class="controls" style="margin-top: 12px;">
-                  <button id="wizard-add-threat-group-btn">Add Threat Group</button>
-                </div>
-                <div class="threat-group-list" id="wizard-threat-group-list"></div>
-              </div>
-              <div class="panel" id="wizard-review-panel">
-                <h3>Scenario Review</h3>
-                <div class="summary-grid" id="wizard-summary"></div>
-                <div id="wizard-reminder" style="margin-top: 12px;"></div>
+              <div class="field-stack">
+                <label for="wizard-scenario-description">Description</label>
+                <textarea id="wizard-scenario-description"></textarea>
               </div>
             </div>
           </div>
 
-          <div class="panel map-panel">
-            <div class="canvas-toolbar">
-              <div>
-                <h2 style="margin: 0 0 6px;">Scenario Map</h2>
-                <p class="panel-caption">The map stays fixed while builder subtabs change. Select an instance and click the map to place it.</p>
+          <div class="panel" id="wizard-review-panel">
+            <h3>Scenario Review</h3>
+            <div class="summary-grid" id="wizard-summary"></div>
+            <div id="wizard-reminder" style="margin-top: 12px;"></div>
+          </div>
+        </div>
+
+        <div id="builder-tab-blue-groups" class="builder-tab-panel">
+          <div class="panel">
+            <h3>Blue Asset Groups</h3>
+            <div class="controls">
+              <div class="field">
+                <label for="wizard-template-select-blue-group">Template</label>
+                <select id="wizard-template-select-blue-group"></select>
               </div>
-              <div class="toolbar-row">
-                <div class="selection-chip" id="map-selection-chip">No map selection</div>
-                <button id="builder-zoom-reset-btn">Reset Zoom</button>
+              <button type="button" id="wizard-add-blue-group-btn">Add Blue Group</button>
+            </div>
+            <div id="wizard-blue-asset-list" class="threat-group-list" style="margin-top: 16px;"></div>
+          </div>
+        </div>
+
+        <div id="builder-tab-red-groups" class="builder-tab-panel">
+          <div class="panel">
+            <h3>Red Threat Groups</h3>
+            <div class="controls">
+              <div class="field">
+                <label for="wizard-template-select-red-group">Template</label>
+                <select id="wizard-template-select-red-group"></select>
               </div>
+              <button type="button" id="wizard-add-threat-group-btn">Add Threat Group</button>
             </div>
-            <div class="canvas-wrap">
-              <canvas id="builder-canvas" width="1080" height="630"></canvas>
-            </div>
-            <div class="legend">
-              <span class="blue">Blue object / coverage</span>
-              <span class="red">Red object / route</span>
-              <span class="track">Preview state</span>
-            </div>
-            <div class="screen-grid" style="margin-top: 12px;">
-              <div class="panel">
-                <h3>Implicit C2 Networks</h3>
-                <div id="network-list"></div>
+            <div id="wizard-threat-group-list" class="threat-group-list" style="margin-top: 16px;"></div>
+          </div>
+        </div>
+
+        <div id="builder-tab-blue-instances" class="builder-tab-panel">
+          <div id="wizard-roster-panel-blue" class="panel">
+            <h3>Blue Instance Manager</h3>
+            <p class="panel-caption">Choose a Blue template, add the instance, select it, then click the map to place it.</p>
+            <div class="controls">
+              <div class="field">
+                <label for="instance-template-select-blue">Template</label>
+                <select id="instance-template-select-blue"></select>
               </div>
-              <div class="panel">
-                <h3>Implicit Power Grids</h3>
-                <div id="power-grid-list"></div>
-              </div>
+              <button type="button" id="add-blue-instance-btn">Add Blue Instance</button>
             </div>
+            <div id="roster-summary-blue" class="analysis-grid"></div>
+            <div id="roster-item-list-blue" style="margin-top:12px;"></div>
+          </div>
+          <div class="panel">
+            <h3>Selected Object</h3>
+            <div id="selected-object-editor-blue"></div>
+          </div>
+        </div>
+
+        <div id="builder-tab-red-instances" class="builder-tab-panel">
+          <div id="wizard-roster-panel-red" class="panel">
+            <h3>Red Instance Manager</h3>
+            <p class="panel-caption">Choose a Red template, add the instance, then place or reroute it directly on the draft scenario map.</p>
+            <div class="controls">
+              <div class="field">
+                <label for="instance-template-select-red">Template</label>
+                <select id="instance-template-select-red"></select>
+              </div>
+              <button type="button" id="add-red-instance-btn">Add Red Instance</button>
+            </div>
+            <div id="roster-summary-red" class="analysis-grid"></div>
+            <div id="roster-item-list-red" style="margin-top:12px;"></div>
+          </div>
+          <div class="panel">
+            <h3>Selected Object</h3>
+            <div id="selected-object-editor-red"></div>
           </div>
         </div>
       </div>
-    </section>
+
+      <div class="panel map-panel">
+        <div class="canvas-toolbar">
+          <div>
+            <h2>Scenario Map</h2>
+            <p class="panel-caption">The map stays fixed while editor subtabs change. Select an instance and click the map to place it.</p>
+          </div>
+          <div class="toolbar-row">
+            <div id="map-selection-chip" class="selection-chip">No map selection</div>
+            <button type="button" id="builder-zoom-reset-btn">Reset Zoom</button>
+          </div>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="builder-canvas" width="1080" height="630"></canvas>
+        </div>
+        <div class="legend">
+          <span class="blue">Blue object / coverage</span>
+          <span class="red">Red object / route</span>
+          <span class="track">Preview state</span>
+        </div>
+        <div class="screen-grid" style="margin-top: 12px;">
+          <div class="panel">
+            <h3>Implicit C2 Networks</h3>
+            <div id="network-list"></div>
+          </div>
+          <div class="panel">
+            <h3>Implicit Power Grids</h3>
+            <div id="power-grid-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

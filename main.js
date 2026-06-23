@@ -509,7 +509,7 @@
         }
 
         if (!scenario.instances.length) {
-          addIssue("error", "At least one instance is required.", "Use the Scenario Wizard or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
+          addIssue("error", "At least one instance is required.", "Use the Scenario Editor or raw JSON import to add Blue and Red instances.", { targetScreen: "wizard" });
         }
 
         const templateIds = new Set();
@@ -5702,6 +5702,8 @@
         this.lastPointer = null;
         this.onViewportChange = null;
         this.selectedEntity = null;
+        this.lastFrame = null;
+        this.lastReport = null;
         this.bindInteractions();
       }
 
@@ -5834,6 +5836,8 @@
 
       draw(frame, report) {
         const ctx = this.context;
+        this.lastFrame = frame || null;
+        this.lastReport = report || null;
         ctx.clearRect(0, 0, this.width, this.height);
         this.drawTerrain(ctx);
         this.drawBackground(ctx);
@@ -6195,12 +6199,12 @@
       constructor() {
         this.screens = {
           "demo-tutorial": document.getElementById("screen-dashboard"),
-          "template-builder": document.getElementById("screen-templates"),
+          "template-editor": document.getElementById("screen-templates"),
           "environment-extractor": document.getElementById("screen-environment"),
-          "scenario-builder": document.getElementById("screen-wizard"),
-          "scenario-run": document.getElementById("screen-run"),
-          "monte-carlo-run": document.getElementById("screen-report"),
-          "raw-export": document.getElementById("screen-export")
+          "scenario-editor": document.getElementById("screen-wizard"),
+          "run-scenario": document.getElementById("screen-run"),
+          "view-reports": document.getElementById("screen-report"),
+          about: document.getElementById("screen-export")
         };
         this.defaultModule = "demo-tutorial";
       }
@@ -6208,11 +6212,11 @@
       showScreen(moduleId) {
         const aliases = {
           dashboard: "demo-tutorial",
-          templates: "template-builder",
-          wizard: "scenario-builder",
-          run: "scenario-run",
-          report: "monte-carlo-run",
-          export: "monte-carlo-run"
+          templates: "template-editor",
+          wizard: "scenario-editor",
+          run: "run-scenario",
+          report: "view-reports",
+          export: "about"
         };
         const resolvedId = aliases[moduleId] || moduleId;
         const targetId = this.screens[resolvedId] ? resolvedId : this.defaultModule;
@@ -6248,21 +6252,28 @@
         const initialScenario = bundledDemoScenario
           ? this.kernel.normalizeScenario(JSON.parse(JSON.stringify(bundledDemoScenario)))
           : this.kernel.buildDemoScenario();
+        const initialStagedScenario = this.kernel.deepClone(initialScenario);
         this.renderer = new MapRenderer(document.getElementById("sim-canvas"));
         this.builderRenderer = new MapRenderer(document.getElementById("builder-canvas"));
-        this.demoRenderer = new MapRenderer(document.getElementById("demo-preview-canvas"));
+        this.demoRenderer = new MapRenderer(document.getElementById("demo-canvas"));
+        this.debriefRenderer = new MapRenderer(document.getElementById("debrief-canvas"));
         this.demoRenderer.canvas.style.pointerEvents = "none";
         this.renderer.onViewportChange = () => this.renderCurrentView();
         this.builderRenderer.onViewportChange = () => this.renderBuilderView();
         this.demoRenderer.onViewportChange = () => this.renderDemoPreview();
+        this.debriefRenderer.onViewportChange = () => this.renderDebriefView();
         this.state = {
           currentScenario: initialScenario,
           currentScenarioSource: "demo",
+          stagedScenario: initialStagedScenario,
+          stagedScenarioSource: "demo",
           singleRun: null,
           monteCarloRows: [],
           currentFrame: null,
           currentReport: null,
           playbackTimer: null,
+          playbackFrames: [],
+          playbackIndex: 0,
           monteCarloWorker: null,
           selectedTemplateId: null,
           templateEditorSensors: [],
@@ -6271,19 +6282,23 @@
           activeTemplateEffectorIndex: 0,
           templateJsonDirty: false,
           templateSearch: "",
-          exportTab: "scenario",
+          dashboardTab: "demo",
+          reportTab: "monte-carlo",
+          exportTab: "report",
           exportPrettyJson: true,
           scenarioExportSource: "normalized",
           originalScenarioPayloadText: "",
-          scenarioBuilderTab: "environment",
+          scenarioBuilderTab: "draft",
           scenarioSourceCache: {},
-          wizardGeneratedCandidate: null,
           wizardBlueAssets: [],
           wizardThreatGroups: [],
           activeWizardBlueAssetId: null,
           activeWizardThreatGroupId: null,
           mapInteraction: null,
           selectedMapEntity: null,
+          selectedTutorialLessonId: "1",
+          selectedRunTelemetry: null,
+          selectedMonteCarloRowIndex: null,
           nextWizardBlueAssetId: 1,
           nextWizardThreatGroupId: 1,
           lastImportSummary: {
@@ -6301,6 +6316,8 @@
         this.syncWizardDraftFromScenario();
         this.refreshScenarioEditors();
         this.uiManager.showScreen("demo-tutorial");
+        this.renderDashboardTabs();
+        this.renderReportTabs();
         this.updateMapSelectionChip();
         this.handleAutorun();
       }
@@ -6330,9 +6347,19 @@
             this.uiManager.showScreen(button.dataset.module);
           });
         });
+        document.querySelectorAll(".dashboard-tab-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.setDashboardTab(button.dataset.dashboardTab);
+          });
+        });
         document.querySelectorAll(".scenario-builder-tab").forEach((button) => {
           button.addEventListener("click", () => {
             this.setScenarioBuilderTab(button.dataset.builderTab);
+          });
+        });
+        document.querySelectorAll(".report-tab-btn").forEach((button) => {
+          button.addEventListener("click", () => {
+            this.setReportTab(button.dataset.reportTab);
           });
         });
 
@@ -6340,24 +6367,24 @@
           await this.resetToBaselineScenario();
         });
         bindClick("demo-load-scenario-btn", async () => {
-          await this.loadDemoScenario();
-          this.uiManager.showScreen("scenario-builder");
+          await this.loadDemoScenario(true);
+          this.uiManager.showScreen("demo-tutorial");
         });
         bindClick("demo-load-scratch-btn", async () => {
-          await this.loadScratchScenario();
-          this.uiManager.showScreen("scenario-builder");
+          await this.loadScratchScenario(true);
+          this.uiManager.showScreen("demo-tutorial");
         });
         bindClick("demo-open-builder-btn", () => {
-          this.uiManager.showScreen("scenario-builder");
+          this.uiManager.showScreen("scenario-editor");
         });
         bindClick("open-scenario-sidebar-btn", () => {
-          this.uiManager.showScreen("scenario-builder");
+          this.uiManager.showScreen("scenario-editor");
         });
         bindClick("open-scenario-builder-inline-btn", () => {
-          this.uiManager.showScreen("scenario-builder");
+          this.uiManager.showScreen("scenario-editor");
         });
         bindClick("open-roster-inline-btn", () => {
-          this.uiManager.showScreen("scenario-builder");
+          this.uiManager.showScreen("scenario-editor");
           document.getElementById("wizard-roster-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
         });
         bindClick("load-scenario-header-btn", () => {
@@ -6370,29 +6397,34 @@
           this.exportCurrentScenario();
         });
         bindClick("open-template-sidebar-btn", () => {
-          this.uiManager.showScreen("template-builder");
+          this.uiManager.showScreen("template-editor");
         });
         bindClick("open-template-library-inline-btn", () => {
-          this.uiManager.showScreen("template-builder");
+          this.uiManager.showScreen("template-editor");
         });
         bindClick("open-analysis-sidebar-btn", () => {
-          this.uiManager.showScreen("monte-carlo-run");
+          this.uiManager.showScreen("view-reports");
         });
         bindClick("open-analysis-inline-btn", () => {
-          this.uiManager.showScreen("monte-carlo-run");
+          this.uiManager.showScreen("view-reports");
         });
         bindClick("open-export-sidebar-btn", () => {
-          this.uiManager.showScreen("monte-carlo-run");
-        });
-        bindClick("open-tutorial-btn", () => {
-          console.log("Tutorial placeholder");
-          this.setStatus("Tutorial placeholder");
+          this.uiManager.showScreen("view-reports");
         });
         bindClick("open-environment-extractor-btn", () => {
           window.open("external_util/Environment_Extractor.html", "_blank", "noopener");
         });
         bindClick("open-template-manager-btn", () => {
           window.open("external_util/Template_Manager.html", "_blank", "noopener");
+        });
+        bindClick("about-open-environment-extractor-btn", () => {
+          window.open("external_util/Environment_Extractor.html", "_blank", "noopener");
+        });
+        bindClick("about-open-template-manager-btn", () => {
+          window.open("external_util/Template_Manager.html", "_blank", "noopener");
+        });
+        bindClick("demo-play-btn", () => {
+          this.runSingleScenario({ targetScreen: "demo-tutorial", targetRenderers: [this.demoRenderer] });
         });
         bindClick("add-instance-btn", () => {
           this.addRosterInstance();
@@ -6435,43 +6467,66 @@
         });
 
         bindChange("scenario-file-input", (event) => {
-          this.importScenarioFile(event);
+          this.importScenarioFile(event, "both");
         });
         bindChange("environment-scenario-file-input", (event) => {
-          this.importScenarioFile(event);
+          this.importScenarioFile(event, "both");
+        });
+        bindChange("wizard-scenario-file-input", (event) => {
+          this.importScenarioFile(event, "draft");
         });
 
         bindClick("wizard-load-demo-btn", async () => {
-          await this.loadDemoScenario();
+          await this.loadDemoScenario(false);
         });
 
         bindClick("wizard-load-scratch-btn", async () => {
-          await this.loadScratchScenario();
+          await this.loadScratchScenario(false);
+        });
+
+        bindClick("wizard-import-scenario-btn", () => {
+          document.getElementById("wizard-scenario-file-input").click();
         });
 
         bindClick("wizard-load-preset-btn", async () => {
           await this.loadWizardGeneratorPattern(document.getElementById("wizard-preset").value);
           this.refreshWizardSummary();
-          this.setStatus("Generator pattern loaded");
+          this.setStatus("Pre-built scenario loaded into draft");
         });
 
-        bindClick("wizard-preview-btn", () => {
+        bindClick("wizard-validate-scenario-btn", () => {
+          this.refreshValidationSummary();
           this.refreshWizardSummary();
-          this.setStatus("Scenario editor preview refreshed");
+          this.setStatus("Draft scenario validated");
         });
 
-        bindClick("wizard-build-btn", () => {
-          this.generateScenarioFromWizard();
+        bindClick("wizard-stage-current-scenario-btn", () => {
+          this.stageCurrentScenario();
         });
-        bindClick("wizard-apply-btn", () => {
-          this.applyGeneratedScenarioFromWizard();
+        bindClick("wizard-export-scenario-btn", () => {
+          this.exportCurrentScenario();
         });
 
         bindClick("wizard-add-threat-group-btn", () => {
           this.addWizardThreatGroup();
         });
-        bindClick("wizard-add-blue-asset-btn", () => {
+        bindClick("wizard-add-blue-group-btn", () => {
           this.addWizardBlueAsset();
+        });
+        bindClick("debrief-play-btn", () => {
+          this.replayDebrief();
+        });
+        bindClick("back-btn", () => {
+          this.stepPlayback(-1);
+        });
+        bindClick("play-btn", () => {
+          this.resumePlayback();
+        });
+        bindClick("pause-btn", () => {
+          this.pausePlayback();
+        });
+        bindClick("forward-btn", () => {
+          this.stepPlayback(1);
         });
         document.querySelectorAll(".wizard-jump-btn").forEach((button) => {
           button.addEventListener("click", () => {
@@ -6512,9 +6567,23 @@
           this.addPowerGrid();
         });
 
+        const syncDraftScenarioMetadata = () => {
+          this.state.currentScenario.metadata = this.state.currentScenario.metadata || {};
+          this.state.currentScenario.metadata.name = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Editor Draft";
+          this.state.currentScenario.metadata.description = document.getElementById("wizard-scenario-description").value.trim();
+          this.state.lastImportSummary = {
+            ...(this.state.lastImportSummary || {}),
+            dirty: true
+          };
+          this.refreshWizardSummary();
+          this.refreshExportPreview();
+          this.renderRunReminder();
+        };
+        ["wizard-scenario-name", "wizard-scenario-description"].forEach((id) => {
+          document.getElementById(id).addEventListener("input", syncDraftScenarioMetadata);
+          document.getElementById(id).addEventListener("change", syncDraftScenarioMetadata);
+        });
         [
-          "wizard-scenario-name",
-          "wizard-scenario-description",
           "map-width-input",
           "wizard-ghost-enabled",
           "wizard-clutter-enabled",
@@ -6538,9 +6607,12 @@
 
         document.getElementById("reset-view-btn").addEventListener("click", () => {
           this.stopPlayback();
-          this.renderScenarioSnapshot();
+          this.state.currentFrame = null;
+          this.renderCurrentView();
           this.setPlaybackStatus("Idle");
-          this.setStatus("Scenario preview reset");
+          this.renderDebriefView();
+          this.renderRunSelectedObjectInfo();
+          this.setStatus("Run scenario view reset");
         });
 
         document.getElementById("export-single-btn").addEventListener("click", () => {
@@ -6571,6 +6643,15 @@
           this.state.exportTab = "eventLog";
           this.refreshExportPreview();
           downloadText(buildSafeFileStem(this.state.singleRun.report.scenarioName) + "_event_log.json", json, "application/json;charset=utf-8");
+        });
+        bindClick("export-report-btn", () => {
+          document.getElementById("export-single-btn")?.click();
+        });
+        bindClick("export-report-monte-carlo-btn", () => {
+          document.getElementById("export-monte-carlo-btn")?.click();
+        });
+        bindClick("export-report-log-btn", () => {
+          document.getElementById("export-log-btn")?.click();
         });
 
         document.querySelectorAll("[data-export-tab]").forEach((button) => {
@@ -6728,23 +6809,27 @@
           }
         });
 
-        document.getElementById("ghost-placeholder-toggle").addEventListener("change", (event) => {
+        document.getElementById("dashboard-ghost-placeholder-toggle").addEventListener("change", (event) => {
           this.state.currentScenario.environment.placeholderGhostTrack.enabled = event.target.checked;
+          this.state.stagedScenario.environment.placeholderGhostTrack.enabled = event.target.checked;
           this.syncPlaceholderCards();
           this.refreshValidationSummary();
           this.refreshWizardSummary();
           this.refreshExportPreview();
           this.renderScenarioSnapshot();
+          this.renderDemoPreview();
           this.setStatus("Ghost placeholder " + (event.target.checked ? "enabled" : "disabled"));
         });
 
-        document.getElementById("clutter-placeholder-toggle").addEventListener("change", (event) => {
+        document.getElementById("dashboard-clutter-placeholder-toggle").addEventListener("change", (event) => {
           this.state.currentScenario.environment.placeholderClutterField.enabled = event.target.checked;
+          this.state.stagedScenario.environment.placeholderClutterField.enabled = event.target.checked;
           this.syncPlaceholderCards();
           this.refreshValidationSummary();
           this.refreshWizardSummary();
           this.refreshExportPreview();
           this.renderScenarioSnapshot();
+          this.renderDemoPreview();
           this.setStatus("Clutter placeholder " + (event.target.checked ? "enabled" : "disabled"));
         });
 
@@ -6754,6 +6839,110 @@
         this.builderRenderer.canvas.addEventListener("click", (event) => {
           this.handleMapClick(event, this.builderRenderer);
         });
+        this.debriefRenderer.canvas.addEventListener("click", (event) => {
+          this.handleMapClick(event, this.debriefRenderer);
+        });
+      }
+
+      getActiveScenario() {
+        return this.state.stagedScenario || this.state.currentScenario;
+      }
+
+      getTutorialLessons() {
+        return [
+          {
+            id: "1",
+            title: "Lesson 1: Kill Web Basics",
+            description: "Load the demo, inspect the active scenario, and watch how Blue sensing, track formation, C2, and effectors connect into a single defensive kill web."
+          },
+          {
+            id: "2",
+            title: "Lesson 2: Sensors & Tracks",
+            description: "Use Template Editor to compare sensor types, then use Run Scenario and View Reports to observe the resulting track quality, detection timing, and drop behavior."
+          },
+          {
+            id: "3",
+            title: "Lesson 3: Defeat Mechanisms",
+            description: "Compare kinetic, interceptor, jammer, spoofer, and cyber outcomes by editing the draft scenario, staging it, and reviewing the report feeds and debrief surfaces."
+          }
+        ];
+      }
+
+      setDashboardTab(tabId) {
+        this.state.dashboardTab = tabId === "tutorial" ? "tutorial" : "demo";
+        this.renderDashboardTabs();
+      }
+
+      renderDashboardTabs() {
+        const activeTab = this.state.dashboardTab || "demo";
+        document.querySelectorAll(".dashboard-tab-btn").forEach((button) => {
+          button.classList.toggle("active", button.dataset.dashboardTab === activeTab);
+        });
+        document.getElementById("dashboard-tab-demo")?.classList.toggle("active", activeTab === "demo");
+        document.getElementById("dashboard-tab-tutorial")?.classList.toggle("active", activeTab === "tutorial");
+        this.renderTutorialLessons();
+      }
+
+      renderTutorialLessons() {
+        const list = document.getElementById("tutorial-lesson-list");
+        const title = document.getElementById("tutorial-title");
+        const description = document.getElementById("demo-scenario-tutorial");
+        const lessons = this.getTutorialLessons();
+        const selectedId = this.state.selectedTutorialLessonId || lessons[0].id;
+        const selectedLesson = lessons.find((lesson) => lesson.id === selectedId) || lessons[0];
+        if (list) {
+          list.innerHTML = lessons.map((lesson) => (
+            "<div class=\"issue-card note tutorial-lesson-card" + (lesson.id === selectedLesson.id ? " active" : "") + "\" data-lesson-id=\"" + escapeHtml(lesson.id) + "\" style=\"cursor: pointer;\">" +
+              "<div class=\"issue-severity\">Lesson " + escapeHtml(lesson.id) + "</div>" +
+              "<h4>" + escapeHtml(lesson.title.replace(/^Lesson \d+:\s*/, "")) + "</h4>" +
+            "</div>"
+          )).join("");
+          list.querySelectorAll(".tutorial-lesson-card").forEach((card) => {
+            card.addEventListener("click", () => {
+              this.state.selectedTutorialLessonId = card.dataset.lessonId;
+              this.renderDashboardTabs();
+            });
+          });
+        }
+        if (title) {
+          title.textContent = selectedLesson.title;
+        }
+        if (description) {
+          description.textContent = selectedLesson.description;
+        }
+      }
+
+      setReportTab(tabId) {
+        this.state.reportTab = tabId === "single-run" ? "single-run" : "monte-carlo";
+        this.renderReportTabs();
+      }
+
+      renderReportTabs() {
+        const activeTab = this.state.reportTab || "monte-carlo";
+        document.querySelectorAll(".report-tab-btn").forEach((button) => {
+          button.classList.toggle("active", button.dataset.reportTab === activeTab);
+        });
+        document.getElementById("report-tab-monte-carlo")?.classList.toggle("active", activeTab === "monte-carlo");
+        document.getElementById("report-tab-single-run")?.classList.toggle("active", activeTab === "single-run");
+      }
+
+      stageCurrentScenario() {
+        const normalized = this.kernel.normalizeScenario(this.kernel.deepClone(this.state.currentScenario));
+        this.state.currentScenario = normalized;
+        this.state.stagedScenario = this.kernel.deepClone(normalized);
+        this.state.stagedScenarioSource = this.state.currentScenarioSource || "draft";
+        this.state.selectedMonteCarloRowIndex = null;
+        this.state.selectedTemplateId = normalized.templates[0]?.id || this.state.selectedTemplateId;
+        this.state.lastImportSummary = {
+          ...(this.state.lastImportSummary || {}),
+          templateCount: normalized.templates.length,
+          instanceCount: normalized.instances.length,
+          dirty: false
+        };
+        this.stopPlayback();
+        this.clearResults({ clearSelection: false });
+        this.refreshScenarioEditors();
+        this.setStatus("Draft scenario staged for Run Scenario");
       }
 
       syncWizardDraftFromScenario(scenario = this.state.currentScenario) {
@@ -6809,7 +6998,7 @@
         });
         this.state.activeWizardThreatGroupId = this.state.wizardThreatGroups[0]?.localId || null;
 
-        document.getElementById("wizard-scenario-name").value = safeScenario.metadata?.name || "Scenario Wizard Draft";
+        document.getElementById("wizard-scenario-name").value = safeScenario.metadata?.name || "Scenario Editor Draft";
         document.getElementById("wizard-scenario-description").value = safeScenario.metadata?.description || "";
         document.getElementById("map-width-input").value = safeScenario.environment?.mapWidthMeters ?? 1080;
         document.getElementById("wizard-ghost-enabled").checked = !!safeScenario.environment?.placeholderGhostTrack?.enabled;
@@ -6821,9 +7010,10 @@
       }
 
       refreshScenarioEditors() {
-        this.renderer.setScenario(this.state.currentScenario);
+        this.renderer.setScenario(this.getActiveScenario());
         this.builderRenderer.setScenario(this.state.currentScenario);
-        this.demoRenderer.setScenario(this.state.currentScenario);
+        this.demoRenderer.setScenario(this.getActiveScenario());
+        this.debriefRenderer.setScenario(this.getActiveScenario());
         this.updateScenarioLabel();
         this.applyScenarioMetadataToDemoTutorial();
         this.syncPlaceholderControls();
@@ -6835,15 +7025,22 @@
         this.renderWizardBlueAssets();
         this.renderWizardThreatGroups();
         this.renderScenarioBuilderTabs();
+        this.renderDashboardTabs();
+        this.renderReportTabs();
         this.refreshWizardSummary();
         this.renderScenarioSnapshot();
+        this.renderActiveScenarioSnapshot();
         this.renderDemoPreview();
+        this.renderDebriefView();
         this.renderSelectedObjectEditor();
+        this.renderRunReminder();
+        this.renderRunSelectedObjectInfo();
         this.refreshExportPreview();
+        this.renderAboutPanel();
       }
 
       setScenarioBuilderTab(tabId) {
-        this.state.scenarioBuilderTab = ["environment", "blue", "red", "generator"].includes(tabId) ? tabId : "environment";
+        this.state.scenarioBuilderTab = ["environment", "draft", "blue-groups", "red-groups", "blue-instances", "red-instances"].includes(tabId) ? tabId : "draft";
         this.renderScenarioBuilderTabs();
       }
 
@@ -6965,27 +7162,27 @@
       }
 
       applyScenarioMetadataToDemoTutorial() {
+        const activeScenario = this.getActiveScenario();
         const notesNode = document.getElementById("demo-scenario-notes");
         const tutorialNode = document.getElementById("demo-scenario-tutorial");
         if (notesNode) {
-          notesNode.textContent = this.state.currentScenario.metadata?.notes || "No scenario notes provided.";
-        }
-        if (tutorialNode) {
-          tutorialNode.textContent = this.state.currentScenario.metadata?.tutorial || "No tutorial guidance provided.";
+          notesNode.textContent = activeScenario.metadata?.notes || "No scenario notes provided.";
         }
       }
 
       async resetToBaselineScenario() {
-        await this.loadDemoScenario();
-        await this.loadWizardGeneratorPattern("blank-scratch");
+        await this.loadDemoScenario(true);
         this.uiManager.showScreen("demo-tutorial");
         this.setStatus("Demo scenario loaded");
       }
 
-      async loadDemoScenario() {
+      async loadDemoScenario(stageBoth = false) {
         this.state.currentScenario = await this.loadScenarioSourceFromFile("demo", () => this.kernel.buildDemoScenario());
         this.state.currentScenarioSource = "demo";
-        this.clearWizardGeneratedCandidate();
+        if (stageBoth) {
+          this.state.stagedScenario = this.kernel.deepClone(this.state.currentScenario);
+          this.state.stagedScenarioSource = "demo";
+        }
         this.state.originalScenarioPayloadText = "";
         this.state.scenarioExportSource = "normalized";
         this.state.lastImportSummary = {
@@ -6996,15 +7193,19 @@
           dirty: false
         };
         this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
+        this.state.selectedMonteCarloRowIndex = null;
         this.clearResults();
         this.syncWizardDraftFromScenario();
         this.refreshScenarioEditors();
       }
 
-      async loadScratchScenario() {
+      async loadScratchScenario(stageBoth = false) {
         this.state.currentScenario = await this.loadScenarioSourceFromFile("scratch", () => this.kernel.buildScratchScenario());
         this.state.currentScenarioSource = "scratch";
-        this.clearWizardGeneratedCandidate();
+        if (stageBoth) {
+          this.state.stagedScenario = this.kernel.deepClone(this.state.currentScenario);
+          this.state.stagedScenarioSource = "scratch";
+        }
         this.state.originalScenarioPayloadText = "";
         this.state.scenarioExportSource = "normalized";
         this.state.lastImportSummary = {
@@ -7015,6 +7216,7 @@
           dirty: false
         };
         this.state.selectedTemplateId = this.state.currentScenario.templates[0]?.id || null;
+        this.state.selectedMonteCarloRowIndex = null;
         this.clearResults();
         this.syncWizardDraftFromScenario();
         this.refreshScenarioEditors();
@@ -7092,14 +7294,10 @@
           this.renderBuilderView();
           return;
         }
-        this.renderScenarioSnapshot();
+        this.renderActiveScenarioSnapshot();
       }
 
       renderBuilderView() {
-        if (this.state.currentFrame && this.state.currentReport) {
-          this.builderRenderer.draw(this.state.currentFrame, this.state.currentReport);
-          return;
-        }
         this.renderScenarioSnapshot();
       }
 
@@ -7107,7 +7305,7 @@
         if (!this.demoRenderer) {
           return;
         }
-        const scenario = this.state.currentScenario;
+        const scenario = this.getActiveScenario();
         const previewFrame = {
           timeSec: 0,
           reason: "demo-preview",
@@ -7135,6 +7333,91 @@
           scenarioName: scenario.metadata?.name || "Scenario Preview",
           targetDestroyed: false
         });
+      }
+
+      renderDebriefView() {
+        if (!this.debriefRenderer) {
+          return;
+        }
+        if (this.state.currentFrame && this.state.currentReport) {
+          this.debriefRenderer.draw(this.state.currentFrame, this.state.currentReport);
+          return;
+        }
+        this.renderScenarioModel(this.getActiveScenario(), { preserveSelection: true, targetRenderers: [this.debriefRenderer], updateState: false });
+      }
+
+      renderRunReminder() {
+        const reminder = document.getElementById("run-reminder");
+        if (!reminder) {
+          return;
+        }
+        reminder.innerHTML = this.isWizardBuildPending()
+          ? "<div class=\"attention-card\"><strong>Run Scenario is using the last staged scenario.</strong> Stage the current draft in Scenario Editor when you want Run Scenario to use the latest edits.</div>"
+          : "";
+      }
+
+      renderRunSelectedObjectInfo() {
+        const container = document.getElementById("run-selected-object-info");
+        if (!container) {
+          return;
+        }
+        const selection = this.state.selectedMapEntity;
+        const frame = this.state.currentFrame;
+        if (!selection || !frame) {
+          container.innerHTML = "<div class=\"empty-state\" style=\"padding: 10px;\">Click an object or track on the map during playback to view its live telemetry.</div>";
+          return;
+        }
+
+        if (selection.type === "object") {
+          const object = (frame.objects || []).find((candidate) => candidate.id === selection.id);
+          if (!object) {
+            container.innerHTML = "<div class=\"empty-state\" style=\"padding: 10px;\">Selected object is not present in the current frame.</div>";
+            return;
+          }
+          const positionText = [object.x, object.y, object.z].map((value) => Number.isFinite(Number(value)) ? this.kernel.round(Number(value), 1) : "-").join(", ");
+          const metrics = [
+            { label: "Name", value: object.name || object.id },
+            { label: "Side", value: object.side || "-" },
+            { label: "Status", value: object.status || (object.destroyed ? "Destroyed" : "Active") },
+            { label: "Position", value: positionText },
+            { label: "Heading", value: Number.isFinite(Number(object.currentHeadingDeg)) ? this.kernel.round(Number(object.currentHeadingDeg), 1) + " deg" : "-" },
+            { label: "Speed", value: Number.isFinite(Number(object.currentSpeedMps)) ? this.kernel.round(Number(object.currentSpeedMps), 2) + " m/s" : "-" },
+            { label: "Control", value: object.controlMode || object.behaviorState || "-" },
+            { label: "Target", value: object.behaviorTargetId || object.trackId || "-" }
+          ];
+          container.innerHTML = metrics.map((metric) => (
+            "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(metric.label) + "</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(String(metric.value)) + "</div></div>"
+          )).join("");
+          return;
+        }
+
+        const track = (frame.tracks || []).find((candidate) => candidate.id === selection.id);
+        if (!track) {
+          container.innerHTML = "<div class=\"empty-state\" style=\"padding: 10px;\">Selected track is not present in the current frame.</div>";
+          return;
+        }
+        const positionText = [track.x, track.y, track.z].map((value) => Number.isFinite(Number(value)) ? this.kernel.round(Number(value), 1) : "-").join(", ");
+        const metrics = [
+          { label: "Track", value: track.id || "-" },
+          { label: "Status", value: track.status || "-" },
+          { label: "Position", value: positionText },
+          { label: "Heading", value: Number.isFinite(Number(track.headingDeg)) ? this.kernel.round(Number(track.headingDeg), 1) + " deg" : "-" },
+          { label: "Speed", value: Number.isFinite(Number(track.currentSpeedMps)) ? this.kernel.round(Number(track.currentSpeedMps), 2) + " m/s" : "-" },
+          { label: "Classification", value: track.classification || "-" },
+          { label: "Intent", value: track.intentStatus || track.intent || "-" },
+          { label: "Target", value: track.projectedAssetId || track.realObjectId || "-" }
+        ];
+        container.innerHTML = metrics.map((metric) => (
+          "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(metric.label) + "</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(String(metric.value)) + "</div></div>"
+        )).join("");
+      }
+
+      renderAboutPanel() {
+        const versionNode = document.getElementById("about-version");
+        if (!versionNode) {
+          return;
+        }
+        versionNode.textContent = "v2.4 | Vite modular shell | standalone helper utilities";
       }
 
       updateMapSelectionChip() {
@@ -7173,6 +7456,7 @@
               this.state.activeWizardBlueAssetId = asset.localId;
             }
             this.state.mapInteraction = null;
+            this.syncBlueGroupToDraft(asset.localId);
             this.renderWizardBlueAssets();
             this.refreshWizardSummary();
             this.renderScenarioSnapshot();
@@ -7191,6 +7475,7 @@
             }
             this.state.activeWizardThreatGroupId = group.localId;
             this.state.mapInteraction = null;
+            this.syncRedGroupToDraft(group.localId);
             this.renderWizardThreatGroups();
             this.refreshWizardSummary();
             this.renderScenarioSnapshot();
@@ -7243,7 +7528,7 @@
           }
         }
 
-        const hit = activeRenderer.hitTest(this.state.currentFrame, event);
+        const hit = activeRenderer.hitTest(activeRenderer.lastFrame || this.state.currentFrame, event);
         this.state.selectedMapEntity = hit ? {
           type: hit.type,
           id: hit.id,
@@ -7255,6 +7540,7 @@
         this.renderCurrentView();
         this.updateMapSelectionChip();
         this.renderSelectedObjectEditor();
+        this.renderRunSelectedObjectInfo();
       }
 
       setBusy(isBusy) {
@@ -7278,9 +7564,11 @@
           "open-analysis-inline-btn",
           "open-roster-inline-btn",
           "wizard-load-preset-btn",
-          "wizard-preview-btn",
-          "wizard-build-btn",
-          "wizard-apply-btn",
+          "wizard-validate-scenario-btn",
+          "wizard-stage-current-scenario-btn",
+          "wizard-export-scenario-btn",
+          "wizard-import-scenario-btn",
+          "wizard-add-blue-group-btn",
           "create-template-btn",
           "save-template-form-btn",
           "duplicate-template-btn",
@@ -7290,14 +7578,21 @@
           "apply-template-json-btn",
           "add-block-terrain-btn",
           "add-noise-terrain-btn",
-          "add-instance-btn",
-          "add-network-btn",
-          "add-power-grid-btn",
+          "add-blue-instance-btn",
+          "add-red-instance-btn",
           "copy-export-preview-btn",
           "export-single-btn",
           "export-monte-carlo-btn",
           "export-log-btn",
-          "export-scenario-file-btn"
+          "export-scenario-file-btn",
+          "export-report-btn",
+          "export-report-monte-carlo-btn",
+          "export-report-log-btn",
+          "debrief-play-btn",
+          "back-btn",
+          "play-btn",
+          "pause-btn",
+          "forward-btn"
         ].forEach((id) => {
           const element = document.getElementById(id);
           if (element) {
@@ -7315,16 +7610,18 @@
       }
 
       updateScenarioLabel() {
-        document.getElementById("scenario-text").textContent = this.state.currentScenario.metadata.name;
+        document.getElementById("scenario-text").textContent = this.getActiveScenario().metadata.name;
       }
 
       applyQueryParams() {
         const params = new URLSearchParams(window.location.search);
         if (params.get("ghostPlaceholder") === "1") {
           this.state.currentScenario.environment.placeholderGhostTrack.enabled = true;
+          this.state.stagedScenario.environment.placeholderGhostTrack.enabled = true;
         }
         if (params.get("clutterPlaceholder") === "1") {
           this.state.currentScenario.environment.placeholderClutterField.enabled = true;
+          this.state.stagedScenario.environment.placeholderClutterField.enabled = true;
         }
       }
 
@@ -7347,20 +7644,34 @@
       }
 
       syncPlaceholderControls() {
-        document.getElementById("ghost-placeholder-toggle").checked = !!this.state.currentScenario.environment.placeholderGhostTrack?.enabled;
-        document.getElementById("clutter-placeholder-toggle").checked = !!this.state.currentScenario.environment.placeholderClutterField?.enabled;
+        const activeScenario = this.getActiveScenario();
+        const ghostToggle = document.getElementById("dashboard-ghost-placeholder-toggle");
+        const clutterToggle = document.getElementById("dashboard-clutter-placeholder-toggle");
+        if (ghostToggle) {
+          ghostToggle.checked = !!activeScenario.environment.placeholderGhostTrack?.enabled;
+        }
+        if (clutterToggle) {
+          clutterToggle.checked = !!activeScenario.environment.placeholderClutterField?.enabled;
+        }
         this.syncPlaceholderCards();
       }
 
       syncPlaceholderCards() {
-        const ghost = this.state.currentScenario.environment.placeholderGhostTrack;
-        const clutter = this.state.currentScenario.environment.placeholderClutterField;
-        document.getElementById("ghost-placeholder-card").textContent = ghost.enabled
-          ? (ghost.label || "Ghost Track Placeholder") + " active at T+" + ghost.spawnTimeSec + "s"
-          : "Ghost placeholder inactive";
-        document.getElementById("clutter-placeholder-card").textContent = clutter.enabled
-          ? (clutter.label || "Clutter Placeholder") + " active around (" + clutter.centerX + ", " + clutter.centerY + ")"
-          : "Clutter placeholder inactive";
+        const activeScenario = this.getActiveScenario();
+        const ghost = activeScenario.environment.placeholderGhostTrack;
+        const clutter = activeScenario.environment.placeholderClutterField;
+        const ghostCard = document.getElementById("ghost-placeholder-card");
+        const clutterCard = document.getElementById("clutter-placeholder-card");
+        if (ghostCard) {
+          ghostCard.textContent = ghost.enabled
+            ? (ghost.label || "Ghost Track Placeholder") + " active at T+" + ghost.spawnTimeSec + "s"
+            : "Ghost placeholder inactive";
+        }
+        if (clutterCard) {
+          clutterCard.textContent = clutter.enabled
+            ? (clutter.label || "Clutter Placeholder") + " active around (" + clutter.centerX + ", " + clutter.centerY + ")"
+            : "Clutter placeholder inactive";
+        }
       }
 
       buildUniqueId(baseId, existingIds) {
@@ -7559,6 +7870,9 @@
       refreshImportSummary() {
         const summary = this.state.lastImportSummary || {};
         const container = document.getElementById("import-summary");
+        if (!container) {
+          return;
+        }
         const cards = [
           { label: "Source", value: summary.source || "Built-in baseline" },
           { label: "Templates", value: this.state.currentScenario.templates.length },
@@ -7841,6 +8155,7 @@
         if (!instance) {
           return;
         }
+        this.detachGroupManagedInstance(instance);
         const rerender = options.rerender !== false;
         const numericFields = new Set(["posX", "posY", "posZ"]);
         if (field === "templateId") {
@@ -7886,6 +8201,32 @@
           name: instance.name,
           side: instance.side
         };
+      }
+
+      isGroupManagedInstance(instance) {
+        return !!instance && (!!instance.builderGroupId || String(instance.id || "").startsWith("BuilderGroup-"));
+      }
+
+      detachGroupManagedInstance(instance) {
+        if (!this.isGroupManagedInstance(instance)) {
+          return;
+        }
+        const existingIds = new Set((this.state.currentScenario.instances || []).map((candidate) => candidate.id).filter((id) => id !== instance.id));
+        instance.id = this.buildUniqueId(
+          String(instance.id || (instance.name || "Instance"))
+            .replace(/^BuilderGroup-[^-]+-[^-]+-/, (instance.side || "Instance") + "-Detached-"),
+          existingIds
+        );
+        delete instance.builderGroupId;
+        delete instance.builderGroupSide;
+        delete instance.builderGroupIndex;
+        instance.origin = "manual-detached";
+        if (this.state.mapInteraction?.instanceId && this.state.mapInteraction.instanceId !== instance.id) {
+          this.state.mapInteraction.instanceId = instance.id;
+        }
+        if (this.state.selectedMapEntity?.type === "object") {
+          this.state.selectedMapEntity = this.buildObjectSelection(instance);
+        }
       }
 
       selectRosterInstance(instanceId, options = {}) {
@@ -8011,7 +8352,8 @@
           effectorSummary.length ? effectorSummary.join(", ") : "No effectors",
           template?.components?.c2 ? "Includes C2" : "No C2",
           "Asset value " + Number(template?.components?.health?.assetValuePts || 0),
-          (template?.components?.capability?.canOperateAutonomously === false ? "C2-dependent" : "Autonomy-capable")
+          (template?.components?.capability?.canOperateAutonomously === false ? "C2-dependent" : "Autonomy-capable"),
+          (this.isGroupManagedInstance(instance) ? "Managed by " + String(instance.builderGroupSide || instance.side) + " group" : "Manually managed")
         ];
         const html =
           "<div class=\"summary-grid\" style=\"margin-bottom:12px;\">" +
@@ -8045,6 +8387,7 @@
         );
 
         document.getElementById("save-selected-object-btn").addEventListener("click", () => {
+          this.detachGroupManagedInstance(instance);
           instance.posX = Number(document.getElementById("selected-object-x").value || instance.posX);
           instance.posY = Number(document.getElementById("selected-object-y").value || instance.posY);
           instance.posZ = Number(document.getElementById("selected-object-z").value || instance.posZ);
@@ -8074,7 +8417,7 @@
           });
         }
         document.getElementById("open-selected-template-btn").addEventListener("click", () => {
-          this.selectTemplate(instance.templateId, "template-builder");
+          this.selectTemplate(instance.templateId, "template-editor");
         });
       }
 
@@ -8103,6 +8446,7 @@
         if (statusText) {
           this.setStatus(statusText);
         }
+        this.renderRunReminder();
       }
 
       buildTemplatePreset(preset) {
@@ -8764,7 +9108,7 @@
         const usage = this.getTemplateUsage(template.id);
         const wizardUsage = this.getWizardTemplateBindingUsage(template.id);
         if (usage.length || wizardUsage.length) {
-          this.setStatus("Cannot delete a template that is still used by instances or Scenario Wizard bindings");
+          this.setStatus("Cannot delete a template that is still used by instances or Scenario Editor group bindings");
           return;
         }
         this.state.currentScenario.templates = this.state.currentScenario.templates.filter((item) => item.id !== template.id);
@@ -8811,11 +9155,15 @@
 
       async loadWizardGeneratorPattern(preset) {
         const values = await this.loadWizardPresetData(preset);
-        this.clearWizardGeneratedCandidate();
         document.getElementById("wizard-preset").value = preset;
         document.getElementById("wizard-scenario-name").value = values.scenarioName;
         document.getElementById("wizard-scenario-description").value = values.description;
         document.getElementById("map-width-input").value = values.mapWidth || 1080;
+        this.state.currentScenario.metadata = {
+          ...(this.state.currentScenario.metadata || {}),
+          notes: values.notes || "",
+          tutorial: values.tutorial || ""
+        };
         this.state.wizardBlueAssets = (values.blueAssets || []).map((asset) => this.createWizardBlueAsset(asset));
         this.state.activeWizardBlueAssetId = this.state.wizardBlueAssets[0]?.localId || null;
         this.renderWizardBlueAssets();
@@ -8824,6 +9172,7 @@
         this.renderWizardThreatGroups();
         document.getElementById("wizard-ghost-enabled").checked = values.ghost;
         document.getElementById("wizard-clutter-enabled").checked = values.clutter;
+        this.buildScenarioFromWizard();
       }
 
       loadWizardPreset(preset) {
@@ -8833,11 +9182,14 @@
       createWizardBlueAsset(overrides = {}) {
         const asset = {
           localId: "blue-asset-" + this.state.nextWizardBlueAssetId,
-          name: "Blue Asset",
+          name: "Blue Group",
           templateRef: "preset:blue-site",
+          count: 1,
           posX: 670,
           posY: 315,
           posZ: 20,
+          spacingX: 0,
+          spacingY: 40,
           isHQ: false
         };
         this.state.nextWizardBlueAssetId += 1;
@@ -8871,20 +9223,28 @@
         const assets = this.state.wizardBlueAssets;
         if (!assets.length) {
           container.innerHTML = "<div class=\"empty-state\">No Blue assets yet. Add one to define template binding and placement.</div>";
-          return;
         }
         const templateOptions = this.getWizardBlueTemplateOptions();
+        const groupSelect = document.getElementById("wizard-template-select-blue-group");
+        if (groupSelect) {
+          groupSelect.innerHTML = templateOptions.map((option) => (
+            "<option value=\"" + escapeHtml(option.value) + "\">" + escapeHtml(option.label) + "</option>"
+          )).join("");
+        }
+        if (!assets.length) {
+          return;
+        }
         container.innerHTML = assets.map((asset, index) => (
           "<div class=\"threat-group-card" + (this.state.activeWizardBlueAssetId === asset.localId ? " active" : "") + "\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">" +
             "<div class=\"threat-group-header\">" +
               "<div>" +
-                "<h4>Blue Asset " + escapeHtml(String(index + 1)) + "</h4>" +
-                "<div class=\"threat-group-subtitle\">" + escapeHtml(asset.name || "Blue Asset") + " | " + escapeHtml(templateOptions.find((option) => option.value === asset.templateRef)?.label || asset.templateRef) + (asset.isHQ ? " | HQ" : "") + "</div>" +
+                "<h4>Blue Group " + escapeHtml(String(index + 1)) + "</h4>" +
+                "<div class=\"threat-group-subtitle\">" + escapeHtml(asset.name || "Blue Group") + " | " + escapeHtml(templateOptions.find((option) => option.value === asset.templateRef)?.label || asset.templateRef) + " | " + escapeHtml(String(asset.count || 1)) + " instance(s)" + (asset.isHQ ? " | HQ lead" : "") + "</div>" +
               "</div>" +
               "<div class=\"toolbar-row\">" +
                 "<button class=\"button-link wizard-select-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Select</button>" +
                 "<button class=\"button-link wizard-pick-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Pick On Map</button>" +
-                "<button class=\"button-link wizard-remove-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Remove Asset</button>" +
+                "<button class=\"button-link wizard-remove-blue-asset-btn\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\">Remove Group</button>" +
               "</div>" +
             "</div>" +
             "<div class=\"form-grid tight\">" +
@@ -8894,9 +9254,12 @@
                   "<option value=\"" + escapeHtml(option.value) + "\"" + (asset.templateRef === option.value ? " selected" : "") + ">" + escapeHtml(option.label) + "</option>"
                 )).join("") +
               "</select></div>" +
+              "<div class=\"field-stack\"><label>Count</label><input data-blue-asset-field=\"count\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" min=\"1\" max=\"8\" value=\"" + escapeHtml(String(asset.count || 1)) + "\"></div>" +
               "<div class=\"field-stack\"><label>X</label><input data-blue-asset-field=\"posX\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.posX)) + "\"></div>" +
               "<div class=\"field-stack\"><label>Y</label><input data-blue-asset-field=\"posY\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.posY)) + "\"></div>" +
               "<div class=\"field-stack\"><label>Z</label><input data-blue-asset-field=\"posZ\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.posZ)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Spacing X</label><input data-blue-asset-field=\"spacingX\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.spacingX || 0)) + "\"></div>" +
+              "<div class=\"field-stack\"><label>Spacing Y</label><input data-blue-asset-field=\"spacingY\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"number\" value=\"" + escapeHtml(String(asset.spacingY || 0)) + "\"></div>" +
               "<div class=\"field-stack inline-check\"><input data-blue-asset-field=\"isHQ\" data-blue-asset-id=\"" + escapeHtml(asset.localId) + "\" type=\"checkbox\"" + (asset.isHQ ? " checked" : "") + "><label>Mark as HQ / defended primary asset</label></div>" +
             "</div>" +
           "</div>"
@@ -8939,9 +9302,14 @@
       }
 
       addWizardBlueAsset(overrides = {}) {
-        const asset = this.createWizardBlueAsset(overrides);
+        const selectedTemplateRef = document.getElementById("wizard-template-select-blue-group")?.value;
+        const asset = this.createWizardBlueAsset({
+          ...(selectedTemplateRef ? { templateRef: selectedTemplateRef } : {}),
+          ...overrides
+        });
         this.state.wizardBlueAssets.push(asset);
         this.state.activeWizardBlueAssetId = asset.localId;
+        this.syncBlueGroupToDraft(asset.localId);
         this.renderWizardBlueAssets();
         this.refreshWizardSummary();
         this.setStatus("Blue asset added");
@@ -8949,11 +9317,13 @@
 
       removeWizardBlueAsset(localId) {
         this.state.wizardBlueAssets = this.state.wizardBlueAssets.filter((asset) => asset.localId !== localId);
+        this.removeGroupManagedDraftInstances(localId, "Blue");
         if (this.state.activeWizardBlueAssetId === localId) {
           this.state.activeWizardBlueAssetId = this.state.wizardBlueAssets[0]?.localId || null;
         }
         this.renderWizardBlueAssets();
         this.refreshWizardSummary();
+        this.updateScenarioState("Blue group removed");
         this.setStatus("Blue asset removed");
       }
 
@@ -8963,17 +9333,21 @@
           return;
         }
         const rerender = options.rerender !== false;
-        const numericFields = new Set(["posX", "posY", "posZ"]);
+        const numericFields = new Set(["count", "posX", "posY", "posZ", "spacingX", "spacingY"]);
         if (field === "isHQ") {
           asset.isHQ = !!value;
         } else if (numericFields.has(field)) {
           asset[field] = Number.isFinite(Number(value)) ? Number(value) : asset[field];
+          if (field === "count") {
+            asset.count = Math.max(1, Math.min(8, Math.floor(asset.count || 1)));
+          }
         } else {
           asset[field] = value;
         }
         if (rerender) {
           this.renderWizardBlueAssets();
         }
+        this.syncBlueGroupToDraft(localId);
         this.refreshWizardSummary();
       }
 
@@ -9056,9 +9430,14 @@
       }
 
       addWizardThreatGroup(overrides = {}) {
-        const group = this.createWizardThreatGroup(overrides);
+        const selectedTemplateRef = document.getElementById("wizard-template-select-red-group")?.value;
+        const group = this.createWizardThreatGroup({
+          ...(selectedTemplateRef ? { templateRef: selectedTemplateRef } : {}),
+          ...overrides
+        });
         this.state.wizardThreatGroups.push(group);
         this.state.activeWizardThreatGroupId = group.localId;
+        this.syncRedGroupToDraft(group.localId);
         this.renderWizardThreatGroups();
         this.refreshWizardSummary();
         this.setStatus("Threat group added");
@@ -9066,11 +9445,13 @@
 
       removeWizardThreatGroup(localId) {
         this.state.wizardThreatGroups = this.state.wizardThreatGroups.filter((group) => group.localId !== localId);
+        this.removeGroupManagedDraftInstances(localId, "Red");
         if (this.state.activeWizardThreatGroupId === localId) {
           this.state.activeWizardThreatGroupId = this.state.wizardThreatGroups[0]?.localId || null;
         }
         this.renderWizardThreatGroups();
         this.refreshWizardSummary();
+        this.updateScenarioState("Threat group removed");
         this.setStatus("Threat group removed");
       }
 
@@ -9079,9 +9460,17 @@
         const groups = this.state.wizardThreatGroups;
         if (!groups.length) {
           container.innerHTML = "<div class=\"empty-state\">No threat groups yet. Add one to define a Red template, count, and route.</div>";
-          return;
         }
         const templateOptions = this.getWizardRedTemplateOptions();
+        const groupSelect = document.getElementById("wizard-template-select-red-group");
+        if (groupSelect) {
+          groupSelect.innerHTML = templateOptions.map((option) => (
+            "<option value=\"" + escapeHtml(option.value) + "\">" + escapeHtml(option.label) + "</option>"
+          )).join("");
+        }
+        if (!groups.length) {
+          return;
+        }
         container.innerHTML = groups.map((group, index) => (
           "<div class=\"threat-group-card" + (this.state.activeWizardThreatGroupId === group.localId ? " active" : "") + "\" data-threat-group-id=\"" + escapeHtml(group.localId) + "\">" +
             "<div class=\"threat-group-header\">" +
@@ -9195,7 +9584,141 @@
         if (rerender) {
           this.renderWizardThreatGroups();
         }
+        this.syncRedGroupToDraft(localId);
         this.refreshWizardSummary();
+      }
+
+      buildGroupTemplateId(side, localId) {
+        return "BuilderGroupTemplate-" + side + "-" + String(localId || "");
+      }
+
+      buildGroupInstancePrefix(side, localId) {
+        return "BuilderGroup-" + side + "-" + String(localId || "") + "-";
+      }
+
+      removeGroupManagedDraftInstances(localId, side) {
+        const prefix = this.buildGroupInstancePrefix(side, localId);
+        this.state.currentScenario.instances = (this.state.currentScenario.instances || []).filter((instance) => !String(instance.id || "").startsWith(prefix));
+        const templateId = this.buildGroupTemplateId(side, localId);
+        this.state.currentScenario.templates = (this.state.currentScenario.templates || []).filter((template) => template.id !== templateId);
+      }
+
+      materializeGroupTemplate(side, localId, templateRef, fallbackPreset, mutator) {
+        const templateId = this.buildGroupTemplateId(side, localId);
+        const template = this.resolveWizardTemplateRef(templateRef, fallbackPreset, { strict: false });
+        const normalized = this.kernel.normalizeScenario({
+          metadata: { name: "Group Template Materialization" },
+          templates: [{ ...(mutator ? mutator(template) : template), id: templateId }],
+          instances: []
+        }).templates[0];
+        const existingIndex = (this.state.currentScenario.templates || []).findIndex((candidate) => candidate.id === templateId);
+        if (existingIndex >= 0) {
+          this.state.currentScenario.templates[existingIndex] = normalized;
+        } else {
+          this.state.currentScenario.templates.push(normalized);
+        }
+        return templateId;
+      }
+
+      syncBlueGroupToDraft(localId) {
+        const asset = this.state.wizardBlueAssets.find((item) => item.localId === localId);
+        if (!asset) {
+          return;
+        }
+        this.removeGroupManagedDraftInstances(localId, "Blue");
+        const templateId = this.materializeGroupTemplate("Blue", localId, asset.templateRef, "blue-site", (template) => {
+          const nextTemplate = this.kernel.deepClone(template);
+          nextTemplate.name = asset.name || nextTemplate.name || "Blue Group";
+          nextTemplate.components = nextTemplate.components || {};
+          nextTemplate.components.health = nextTemplate.components.health || { maxHealth: 100, assetValuePts: 40, isHQ: false };
+          nextTemplate.components.health.isHQ = !!asset.isHQ;
+          return nextTemplate;
+        });
+        const count = Math.max(1, Math.min(8, Math.floor(Number(asset.count || 1))));
+        const centerIndex = (count - 1) / 2;
+        for (let index = 0; index < count; index += 1) {
+          this.state.currentScenario.instances.push({
+            id: this.buildGroupInstancePrefix("Blue", localId) + String(index + 1).padStart(2, "0"),
+            templateId,
+            name: (asset.name || "Blue Group") + " " + (index + 1),
+            side: "Blue",
+            builderGroupId: localId,
+            builderGroupSide: "Blue",
+            builderGroupIndex: index,
+            roles: ["Asset"],
+            networkId: null,
+            connectedPowerGridId: null,
+            posX: Number(asset.posX || 0) + ((index - centerIndex) * Number(asset.spacingX || 0)),
+            posY: Number(asset.posY || 0) + ((index - centerIndex) * Number(asset.spacingY || 0)),
+            posZ: Number(asset.posZ || 0),
+            missionWaypoints: []
+          });
+        }
+        this.updateScenarioState("Updated Blue group in draft");
+      }
+
+      syncRedGroupToDraft(localId) {
+        const group = this.state.wizardThreatGroups.find((item) => item.localId === localId);
+        if (!group) {
+          return;
+        }
+        this.removeGroupManagedDraftInstances(localId, "Red");
+        const templateId = this.materializeGroupTemplate("Red", localId, group.templateRef, "red-uas", (template) => {
+          const nextTemplate = this.kernel.deepClone(template);
+          nextTemplate.name = group.templateName || nextTemplate.name || "Red UAS Group";
+          nextTemplate.components = nextTemplate.components || {};
+          nextTemplate.components.health = nextTemplate.components.health || { maxHealth: 90, assetValuePts: 8, isHQ: false };
+          nextTemplate.components.signature = nextTemplate.components.signature || {};
+          nextTemplate.components.movement = nextTemplate.components.movement || { speedMps: 35, stepSec: 1, waypointToleranceM: 10 };
+          nextTemplate.components.health.maxHealth = Number(group.health || nextTemplate.components.health.maxHealth || 90);
+          nextTemplate.components.signature.radarSignatureDb = Number(group.signature || nextTemplate.components.signature.radarSignatureDb || -14);
+          nextTemplate.components.movement.speedMps = Number(group.speed || nextTemplate.components.movement.speedMps || 35);
+          nextTemplate.missionProfile = group.profile === "isr"
+            ? { type: "Geographic", targetTemplateId: null }
+            : (group.profile === "attack"
+              ? { type: "SpecificAsset", targetTemplateId: this.getPrimaryDraftBlueTemplateId() }
+              : { type: "MaxDamage", targetTemplateId: null });
+          return nextTemplate;
+        });
+        const count = Math.max(1, Math.min(6, Math.floor(Number(group.count || 1))));
+        const centerIndex = (count - 1) / 2;
+        for (let index = 0; index < count; index += 1) {
+          let startYOffset = 0;
+          let endYOffset = 0;
+          if (group.routePattern === "staggered") {
+            startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
+            endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0);
+          } else if (group.routePattern === "fan-in") {
+            startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
+            endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0) * 0.2;
+          }
+          this.state.currentScenario.instances.push({
+            id: this.buildGroupInstancePrefix("Red", localId) + String(index + 1).padStart(2, "0"),
+            templateId,
+            name: (group.instancePrefix || group.templateName || "Threat") + " " + (index + 1),
+            side: "Red",
+            builderGroupId: localId,
+            builderGroupSide: "Red",
+            builderGroupIndex: index,
+            roles: ["UAS"],
+            networkId: null,
+            connectedPowerGridId: null,
+            posX: Number(group.startX || 0),
+            posY: Number(group.startY || 0) + startYOffset,
+            posZ: Number(group.startZ || 0),
+            missionWaypoints: [{
+              x: Number(group.endX || 0),
+              y: Number(group.endY || 0) + endYOffset,
+              z: Number(group.endZ || 0)
+            }]
+          });
+        }
+        this.updateScenarioState("Updated Red group in draft");
+      }
+
+      getPrimaryDraftBlueTemplateId() {
+        const blueInstance = (this.state.currentScenario.instances || []).find((instance) => instance.side === "Blue");
+        return blueInstance?.templateId || null;
       }
 
       getWizardInputNumber(id, fallback = 0) {
@@ -9212,7 +9735,7 @@
             return this.kernel.deepClone(match);
           }
           if (options.strict) {
-            throw new Error("Scenario Wizard references missing template " + templateId);
+            throw new Error("Scenario Editor references missing template " + templateId);
           }
         }
         const preset = normalizedRef.startsWith("preset:")
@@ -9223,12 +9746,7 @@
 
       isWizardBuildPending() {
         try {
-          const generatedCandidate = this.state.wizardGeneratedCandidate;
-          if (!generatedCandidate) {
-            return false;
-          }
-          const wizardScenario = this.buildScenarioFromWizardInputs();
-          return JSON.stringify(wizardScenario) !== JSON.stringify(generatedCandidate);
+          return JSON.stringify(this.kernel.normalizeScenario(this.state.currentScenario)) !== JSON.stringify(this.getActiveScenario());
         } catch (error) {
           return false;
         }
@@ -9238,29 +9756,26 @@
         const wizardContainer = document.getElementById("wizard-reminder");
         const runContainer = document.getElementById("run-reminder");
         const needsBuild = this.isWizardBuildPending();
-        const hasCandidate = !!this.state.wizardGeneratedCandidate;
-        const reminderHtml = !hasCandidate
-          ? "<div class=\"summary-meta\">Live scenario editing is separate from the generator draft. Use <strong>Generate From Wizard</strong> only when you want to stage a replacement scenario.</div>"
-          : (needsBuild
-            ? "<div class=\"attention-card\"><strong>Generator draft changed after the last staged build.</strong> Click <strong>Generate From Wizard</strong> again to refresh the staged scenario, then <strong>Apply Generated Scenario</strong> when you want it to become live.</div>"
-            : "<div class=\"attention-card\"><strong>A generated scenario is staged but not live yet.</strong> Click <strong>Apply Generated Scenario</strong> to replace the active in-memory scenario, or continue editing the live scenario separately.</div>");
+        const reminderHtml = needsBuild
+          ? "<div class=\"attention-card\"><strong>The draft scenario differs from the staged active scenario.</strong> Click <strong>Stage Current Scenario</strong> when you want Run Scenario to use the latest draft edits.</div>"
+          : "<div class=\"summary-meta\">The current draft matches the staged scenario used by Run Scenario.</div>";
         wizardContainer.innerHTML = reminderHtml;
-        runContainer.innerHTML = hasCandidate
-          ? (needsBuild
-            ? "<div class=\"attention-card\"><strong>Reminder:</strong> the generator draft has changed since the last staged build. Running now still uses the current live scenario until you generate and apply the new scenario.</div>"
-            : "<div class=\"attention-card\"><strong>Reminder:</strong> a generated scenario is staged, but running still uses the current live scenario until you click <strong>Apply Generated Scenario</strong>.</div>")
+        runContainer.innerHTML = needsBuild
+          ? "<div class=\"attention-card\"><strong>Reminder:</strong> Run Scenario is using the last staged scenario. Stage the current draft in Scenario Editor to run the latest edits.</div>"
           : "";
       }
 
       buildScenarioFromWizardInputs() {
-        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Wizard Draft";
+        const scenarioName = document.getElementById("wizard-scenario-name").value.trim() || "Scenario Editor Draft";
         const description = document.getElementById("wizard-scenario-description").value.trim();
         const baseEnvironment = this.state.currentScenario.environment || {};
 
         const scenario = {
           metadata: {
             name: scenarioName,
-            description
+            description,
+            notes: this.state.currentScenario.metadata?.notes || "",
+            tutorial: this.state.currentScenario.metadata?.tutorial || ""
           },
           config: {
             maxTimeSec: 55,
@@ -9422,13 +9937,13 @@
       refreshWizardSummary() {
         const container = document.getElementById("wizard-summary");
         try {
-          const scenario = this.buildScenarioFromWizardInputs();
+          const scenario = this.state.currentScenario;
           const validation = this.kernel.validateScenario(scenario);
           const blueCount = scenario.instances.filter((instance) => instance.side === "Blue").length;
           const redCount = scenario.instances.filter((instance) => instance.side === "Red").length;
           const cards = [
             { label: "Templates", value: scenario.templates.length },
-            { label: "Blue Assets", value: this.state.wizardBlueAssets.length || blueCount },
+            { label: "Blue Groups", value: this.state.wizardBlueAssets.length },
             { label: "Threat Groups", value: this.state.wizardThreatGroups.length },
             { label: "Blue / Red", value: blueCount + " / " + redCount },
             { label: "Blockers", value: validation.issues.errors.length },
@@ -9439,7 +9954,7 @@
             "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(card.label) + "</div><div class=\"value\" style=\"margin-top: 8px; font-size: 1.1rem; color: var(--accent-strong);\">" + escapeHtml(String(card.value)) + "</div></div>"
           )).join("");
           if (!this.state.singleRun && document.getElementById("screen-wizard").classList.contains("active")) {
-            this.renderScenarioModel(validation.scenario, { preserveSelection: false });
+            this.renderScenarioModel(validation.scenario, { preserveSelection: false, targetRenderers: [this.builderRenderer], updateState: false });
           }
           this.updateWizardBuildReminder();
         } catch (error) {
@@ -9451,11 +9966,25 @@
       buildScenarioFromWizard() {
         try {
           const scenario = this.buildScenarioFromWizardInputs();
-          this.state.wizardGeneratedCandidate = this.kernel.deepClone(scenario);
-          this.refreshWizardSummary();
-          this.renderScenarioBuilderTabs();
-          this.uiManager.showScreen("scenario-builder");
-          this.setStatus("Generated scenario staged. Apply it when you want to replace the live scenario.");
+          this.state.currentScenario = scenario;
+          this.state.currentScenarioSource = "builder-generated";
+          this.state.selectedMonteCarloRowIndex = null;
+          this.state.originalScenarioPayloadText = "";
+          this.state.scenarioExportSource = "normalized";
+          document.getElementById("scenario-export-source").value = "normalized";
+          this.state.lastImportSummary = {
+            source: "Scenario Editor Pre-Built",
+            templateCount: scenario.templates.length,
+            instanceCount: scenario.instances.length,
+            normalizedChanged: false,
+            dirty: true
+          };
+          this.state.selectedTemplateId = scenario.templates[0]?.id || null;
+          this.stopPlayback();
+          this.clearResults();
+          this.refreshScenarioEditors();
+          this.uiManager.showScreen("scenario-editor");
+          this.setStatus("Draft scenario replaced from builder state");
         } catch (error) {
           this.setStatus("Scenario editor build failed: " + String(error && error.message ? error.message : error));
         }
@@ -9466,33 +9995,7 @@
       }
 
       applyGeneratedScenarioFromWizard() {
-        try {
-          const scenario = this.state.wizardGeneratedCandidate
-            ? this.kernel.deepClone(this.state.wizardGeneratedCandidate)
-            : this.buildScenarioFromWizardInputs();
-          this.state.currentScenario = scenario;
-          this.state.currentScenarioSource = "wizard-generated";
-          this.clearWizardGeneratedCandidate();
-          this.state.originalScenarioPayloadText = "";
-          this.state.scenarioExportSource = "normalized";
-          document.getElementById("scenario-export-source").value = "normalized";
-          this.state.lastImportSummary = {
-            source: "Scenario Wizard (Applied)",
-            templateCount: scenario.templates.length,
-            instanceCount: scenario.instances.length,
-            normalizedChanged: false,
-            dirty: false
-          };
-          this.state.selectedTemplateId = scenario.templates[0]?.id || null;
-          this.stopPlayback();
-          this.clearResults();
-          this.syncWizardDraftFromScenario(scenario);
-          this.refreshScenarioEditors();
-          this.uiManager.showScreen("scenario-builder");
-          this.setStatus("Generated scenario applied to live memory");
-        } catch (error) {
-          this.setStatus("Apply generated scenario failed: " + String(error && error.message ? error.message : error));
-        }
+        this.stageCurrentScenario();
       }
 
       openIssueTarget(screenId, targetId) {
@@ -9520,8 +10023,8 @@
             severity: "error",
             message: importErrorMessage,
             recommendedAction: "Correct the import payload and try again.",
-            targetScreen: "export",
-            targetLabel: "Open export"
+            targetScreen: "view-reports",
+            targetLabel: "Open reports"
           });
         }
 
@@ -9540,33 +10043,37 @@
             )).join("") + "</div>")
           : "<div class=\"validation-ok\">" + escapeHtml(emptyText) + "</div>";
 
-        summary.innerHTML =
-          "<div class=\"validation-box\">" +
-            "<h3 class=\"" + statusClass + "\">" + escapeHtml(statusText) + "</h3>" +
-            "<div style=\"color: var(--muted);\">Blockers: " + errors.length + " | Warnings: " + warnings.length + " | Notes: " + notes.length + "</div>" +
-          "</div>" +
-          "<div class=\"validation-box\">" +
-            "<h4 class=\"validation-error\">Blockers</h4>" +
-            renderIssues(errors, "No blocking errors.") +
-          "</div>" +
-          "<div class=\"validation-box\">" +
-            "<h4 class=\"validation-warning\">Warnings</h4>" +
-            renderIssues(warnings, "No heuristic warnings.") +
-          "</div>" +
-          "<div class=\"validation-box\">" +
-            "<h4 class=\"validation-ok\">Scenario Quality Notes</h4>" +
-            renderIssues(notes, "No additional notes.") +
-          "</div>";
+        if (summary) {
+          summary.innerHTML =
+            "<div class=\"validation-box\">" +
+              "<h3 class=\"" + statusClass + "\">" + escapeHtml(statusText) + "</h3>" +
+              "<div style=\"color: var(--muted);\">Blockers: " + errors.length + " | Warnings: " + warnings.length + " | Notes: " + notes.length + "</div>" +
+            "</div>" +
+            "<div class=\"validation-box\">" +
+              "<h4 class=\"validation-error\">Blockers</h4>" +
+              renderIssues(errors, "No blocking errors.") +
+            "</div>" +
+            "<div class=\"validation-box\">" +
+              "<h4 class=\"validation-warning\">Warnings</h4>" +
+              renderIssues(warnings, "No heuristic warnings.") +
+            "</div>" +
+            "<div class=\"validation-box\">" +
+              "<h4 class=\"validation-ok\">Scenario Quality Notes</h4>" +
+              renderIssues(notes, "No additional notes.") +
+            "</div>";
 
-        summary.querySelectorAll(".validation-jump-btn").forEach((button) => {
-          button.addEventListener("click", () => {
-            this.openIssueTarget(button.dataset.targetScreen || "", button.dataset.targetId || "");
+          summary.querySelectorAll(".validation-jump-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+              this.openIssueTarget(button.dataset.targetScreen || "", button.dataset.targetId || "");
+            });
           });
-        });
+        }
 
         const statusNode = document.getElementById("status-text");
-        statusNode.classList.remove("status-ok", "status-warning", "status-error");
-        statusNode.classList.add(errors.length ? "status-error" : (warnings.length ? "status-warning" : "status-ok"));
+        if (statusNode) {
+          statusNode.classList.remove("status-ok", "status-warning", "status-error");
+          statusNode.classList.add(errors.length ? "status-error" : (warnings.length ? "status-warning" : "status-ok"));
+        }
         return validation;
       }
 
@@ -9578,6 +10085,10 @@
         this.state.monteCarloRows = [];
         this.state.currentFrame = null;
         this.state.currentReport = null;
+        this.state.playbackFrames = [];
+        this.state.playbackIndex = 0;
+        this.state.selectedRunTelemetry = null;
+        this.state.selectedMonteCarloRowIndex = null;
         if (clearSelection) {
           this.state.selectedMapEntity = null;
           this.renderer.setSelection(null);
@@ -9594,12 +10105,23 @@
         this.setPlaybackStatus("Idle");
         this.refreshExportPreview();
         this.updateMapSelectionChip();
+        this.renderRunReminder();
+        this.renderRunSelectedObjectInfo();
       }
 
       renderScenarioModel(scenario, options = {}) {
         const preserveSelection = options.preserveSelection !== false;
-        this.renderer.setScenario(scenario);
-        document.getElementById("map-width-input").value = scenario.environment.mapWidthMeters ?? 1080;
+        const targetRenderers = options.targetRenderers || [this.renderer, this.builderRenderer];
+        const updateState = options.updateState !== false;
+        targetRenderers.forEach((renderer) => {
+          if (renderer) {
+            renderer.setScenario(scenario);
+          }
+        });
+        const mapWidthInput = document.getElementById("map-width-input");
+        if (mapWidthInput) {
+          mapWidthInput.value = scenario.environment.mapWidthMeters ?? 1080;
+        }
         const frame = {
           timeSec: 0,
           reason: "scenario-preview",
@@ -9620,18 +10142,28 @@
           })),
           tracks: []
         };
-        this.state.currentFrame = frame;
-        this.state.currentReport = { scenarioName: scenario.metadata.name, targetDestroyed: false };
-        this.renderer.setSelection(preserveSelection ? this.state.selectedMapEntity : null);
-        this.builderRenderer.setSelection(preserveSelection ? this.state.selectedMapEntity : null);
-        this.renderer.draw(frame, this.state.currentReport);
-        this.builderRenderer.draw(frame, this.state.currentReport);
+        const report = { scenarioName: scenario.metadata.name, targetDestroyed: false };
+        if (updateState) {
+          this.state.currentFrame = frame;
+          this.state.currentReport = report;
+        }
+        targetRenderers.forEach((renderer) => {
+          if (!renderer) {
+            return;
+          }
+          renderer.setSelection(preserveSelection ? this.state.selectedMapEntity : null);
+          renderer.draw(frame, report);
+        });
       }
 
       renderScenarioSnapshot() {
         this.syncPlaceholderCards();
-        this.renderScenarioModel(this.state.currentScenario, { preserveSelection: true });
+        this.renderScenarioModel(this.state.currentScenario, { preserveSelection: true, targetRenderers: [this.builderRenderer], updateState: false });
         this.renderDemoPreview();
+      }
+
+      renderActiveScenarioSnapshot() {
+        this.renderScenarioModel(this.getActiveScenario(), { preserveSelection: true, targetRenderers: [this.renderer], updateState: true });
       }
 
       stopPlayback() {
@@ -9641,30 +10173,89 @@
         }
       }
 
-      playFrames(frames, report) {
+      updatePlaybackFrame(index, options = {}) {
+        const frames = this.state.playbackFrames || [];
+        const report = this.state.currentReport;
+        if (!frames.length || !report) {
+          return;
+        }
+        const clampedIndex = this.kernel.clamp(Number(index) || 0, 0, frames.length - 1);
+        this.state.playbackIndex = clampedIndex;
+        this.state.currentFrame = frames[clampedIndex];
+        const targetRenderers = options.targetRenderers || [this.renderer, this.debriefRenderer];
+        targetRenderers.forEach((renderer) => {
+          if (!renderer) {
+            return;
+          }
+          renderer.setSelection(this.state.selectedMapEntity);
+          renderer.draw(this.state.currentFrame, report);
+        });
+        this.renderRunSelectedObjectInfo();
+      }
+
+      playFrames(frames, report, options = {}) {
         this.stopPlayback();
         if (!frames || !frames.length) {
           return;
         }
         this.state.currentReport = report;
-        let index = 0;
+        this.state.playbackFrames = frames.slice();
+        this.state.playbackIndex = this.kernel.clamp(Number(options.startIndex) || 0, 0, this.state.playbackFrames.length - 1);
+        const targetRenderers = options.targetRenderers || [this.renderer, this.debriefRenderer];
         this.setPlaybackStatus("Playing");
-        this.state.currentFrame = frames[0];
-        this.renderer.setSelection(this.state.selectedMapEntity);
-        this.renderer.draw(frames[0], report);
+        this.updatePlaybackFrame(this.state.playbackIndex, { targetRenderers });
         this.state.playbackTimer = window.setInterval(() => {
-          this.state.currentFrame = frames[index];
-          this.renderer.setSelection(this.state.selectedMapEntity);
-          this.renderer.draw(frames[index], report);
-          index += 1;
-          if (index >= frames.length) {
+          const nextIndex = this.state.playbackIndex + 1;
+          if (nextIndex >= this.state.playbackFrames.length) {
             this.stopPlayback();
             this.setPlaybackStatus("Complete");
+            this.updatePlaybackFrame(this.state.playbackFrames.length - 1, { targetRenderers });
+            return;
           }
+          this.updatePlaybackFrame(nextIndex, { targetRenderers });
         }, 260);
       }
 
-      async importScenarioFile(event) {
+      pausePlayback() {
+        if (!this.state.playbackFrames.length) {
+          return;
+        }
+        this.stopPlayback();
+        this.setPlaybackStatus("Paused");
+      }
+
+      resumePlayback() {
+        if (!this.state.playbackFrames.length || !this.state.currentReport) {
+          return;
+        }
+        this.playFrames(this.state.playbackFrames, this.state.currentReport, {
+          startIndex: this.state.playbackIndex,
+          targetRenderers: [this.renderer, this.debriefRenderer]
+        });
+      }
+
+      stepPlayback(delta) {
+        if (!this.state.playbackFrames.length) {
+          return;
+        }
+        this.pausePlayback();
+        this.updatePlaybackFrame(this.state.playbackIndex + delta, { targetRenderers: [this.renderer, this.debriefRenderer] });
+      }
+
+      replayDebrief() {
+        if (!this.state.singleRun?.report?.frames?.length) {
+          const subtitle = document.getElementById("debrief-iteration-subtitle");
+          if (subtitle) {
+            subtitle.textContent = "No detailed single-run playback is available yet. Run a single scenario to populate the debrief.";
+          }
+          return;
+        }
+        this.setReportTab("single-run");
+        this.uiManager.showScreen("view-reports");
+        this.playFrames(this.state.singleRun.report.frames, this.state.singleRun.report, { targetRenderers: [this.debriefRenderer] });
+      }
+
+      async importScenarioFile(event, target = "both") {
         const file = event.target.files && event.target.files[0];
         if (!file) {
           return;
@@ -9686,7 +10277,10 @@
           }
           const normalizedChanged = JSON.stringify(parsed) !== JSON.stringify(normalized);
           this.state.currentScenario = normalized;
-          this.clearWizardGeneratedCandidate();
+          if (target !== "draft") {
+            this.state.stagedScenario = this.kernel.deepClone(normalized);
+            this.state.stagedScenarioSource = "import";
+          }
           this.state.originalScenarioPayloadText = text;
           this.state.scenarioExportSource = "normalized";
           document.getElementById("scenario-export-source").value = "normalized";
@@ -9698,13 +10292,15 @@
             dirty: false
           };
           this.state.selectedTemplateId = normalized.templates[0]?.id || null;
+          this.state.currentScenarioSource = target === "draft" ? "draft-import" : "import";
+          this.state.selectedMonteCarloRowIndex = null;
           this.stopPlayback();
           this.clearResults();
           this.syncWizardDraftFromScenario(normalized);
           this.refreshScenarioEditors();
           this.setStatus(validation.valid
-            ? ("Loaded scenario " + normalized.metadata.name)
-            : ("Loaded scenario with validation issues: " + normalized.metadata.name));
+            ? ("Loaded " + (target === "draft" ? "draft " : "") + "scenario " + normalized.metadata.name)
+            : ("Loaded " + (target === "draft" ? "draft " : "") + "scenario with validation issues: " + normalized.metadata.name));
         } catch (error) {
           this.setStatus("Scenario load failed");
           const message = String(error && error.message ? error.message : error);
@@ -9723,10 +10319,11 @@
         downloadText(buildSafeFileStem(this.state.currentScenario.metadata.name) + suffix + ".json", payload, "application/json;charset=utf-8");
       }
 
-      async runSingleScenario() {
-        const validation = this.refreshValidationSummary();
+      async runSingleScenario(options = {}) {
+        const activeScenario = this.getActiveScenario();
+        const validation = this.kernel.validateScenario(activeScenario);
         if (!validation.valid) {
-          this.setStatus("Fix validation errors before running");
+          this.setStatus("Fix active scenario validation errors before running");
           return;
         }
         this.setBusy(true);
@@ -9737,10 +10334,11 @@
         const result = this.simulationManager.run({
           seed: Math.floor((Date.now() % 2147483647)),
           captureFrames: true,
-          scenario: this.state.currentScenario
+          scenario: activeScenario
         });
 
         this.state.singleRun = result;
+        this.state.selectedMonteCarloRowIndex = null;
         document.getElementById("queue-text").textContent = String(result.report.eventCount);
         document.getElementById("seed-text").textContent = String(result.report.seed);
         this.updateRunMetrics(result.report);
@@ -9749,17 +10347,19 @@
         this.renderEventTimeline(result.report);
         this.renderFailureDrivers();
         this.refreshLiveAnalysisSummary();
-        this.playFrames(result.report.frames, result.report);
+        this.setReportTab("single-run");
+        this.playFrames(result.report.frames, result.report, { targetRenderers: options.targetRenderers || [this.renderer, this.debriefRenderer] });
         this.refreshExportPreview();
-        this.uiManager.showScreen("scenario-run");
+        this.uiManager.showScreen(options.targetScreen || "run-scenario");
         this.setStatus("Single scenario complete");
         this.setBusy(false);
       }
 
       async runMonteCarlo() {
-        const validation = this.refreshValidationSummary();
+        const activeScenario = this.getActiveScenario();
+        const validation = this.kernel.validateScenario(activeScenario);
         if (!validation.valid) {
-          this.setStatus("Fix validation errors before Monte Carlo");
+          this.setStatus("Fix active scenario validation errors before Monte Carlo");
           return;
         }
         const iterations = this.kernel.clamp(Number(document.getElementById("monte-carlo-count").value) || 1, 1, 250);
@@ -9770,11 +10370,12 @@
         document.getElementById("seed-text").textContent = String(baseSeed);
 
         try {
-          this.state.monteCarloRows = await this.runMonteCarloOffThread(iterations, baseSeed);
+          this.state.monteCarloRows = await this.runMonteCarloOffThread(iterations, baseSeed, activeScenario);
           this.updateMonteCarloReport(this.state.monteCarloRows);
           this.renderFailureDrivers();
           this.refreshExportPreview();
-          this.uiManager.showScreen("monte-carlo-run");
+          this.uiManager.showScreen("view-reports");
+          this.setReportTab("monte-carlo");
           this.setStatus("Monte Carlo complete");
         } catch (error) {
           this.setStatus("Monte Carlo failed");
@@ -9784,11 +10385,11 @@
         }
       }
 
-      runMonteCarloOffThread(iterations, baseSeed) {
+      runMonteCarloOffThread(iterations, baseSeed, activeScenario) {
         if (typeof Worker === "undefined") {
           return Promise.resolve(this.monteCarloManager.run(iterations, {
             baseSeed,
-            scenario: this.state.currentScenario,
+            scenario: activeScenario,
             onProgress: (completed, total) => {
               this.setStatus("Monte Carlo " + completed + " / " + total);
             }
@@ -9824,7 +10425,7 @@
             type: "runMonteCarlo",
             iterations,
             baseSeed,
-            scenario: this.state.currentScenario
+            scenario: activeScenario
           });
         });
       }
@@ -9980,10 +10581,24 @@
       updateSingleRunReport(report) {
         const summaryContainer = document.getElementById("single-run-summary");
         const detailsContainer = document.getElementById("single-run-details");
+        const titleNode = document.getElementById("debrief-iteration-title");
+        const subtitleNode = document.getElementById("debrief-iteration-subtitle");
         if (!report) {
           summaryContainer.innerHTML = "";
           detailsContainer.innerHTML = "";
+          if (titleNode) {
+            titleNode.textContent = "Viewing Iteration: Latest Run";
+          }
+          if (subtitleNode) {
+            subtitleNode.textContent = "Run a single scenario to populate the detailed debrief.";
+          }
           return;
+        }
+        if (titleNode) {
+          titleNode.textContent = "Viewing Iteration: Seed " + report.seed;
+        }
+        if (subtitleNode) {
+          subtitleNode.textContent = "Single-run debrief for " + (report.scenarioName || "the active scenario") + ".";
         }
 
         const summary = [
@@ -10036,11 +10651,15 @@
         if (!rows.length) {
           tableBody.innerHTML = "";
           summaryContainer.innerHTML = "";
+          const subtitleNode = document.getElementById("debrief-iteration-subtitle");
+          if (subtitleNode && !this.state.singleRun) {
+            subtitleNode.textContent = "Run Monte Carlo or a single scenario to populate the debrief.";
+          }
           return;
         }
 
-        tableBody.innerHTML = rows.slice(0, 20).map((row) => (
-          "<tr>" +
+        tableBody.innerHTML = rows.slice(0, 20).map((row, index) => (
+          "<tr class=\"monte-carlo-row\" data-row-index=\"" + escapeHtml(String(index)) + "\">" +
             "<td>" + escapeHtml(String(row.Iteration_ID)) + "</td>" +
             "<td>" + escapeHtml(String(row.Detected)) + "</td>" +
             "<td>" + escapeHtml(String(row.Identified)) + "</td>" +
@@ -10078,6 +10697,22 @@
         summaryContainer.innerHTML = summary.map((metric) => (
           "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
         )).join("");
+        tableBody.querySelectorAll(".monte-carlo-row").forEach((rowNode) => {
+          rowNode.addEventListener("click", () => {
+            this.state.selectedMonteCarloRowIndex = Number(rowNode.dataset.rowIndex || 0);
+            this.setReportTab("single-run");
+            const selectedRow = rows[this.state.selectedMonteCarloRowIndex];
+            const titleNode = document.getElementById("debrief-iteration-title");
+            const subtitleNode = document.getElementById("debrief-iteration-subtitle");
+            if (titleNode) {
+              titleNode.textContent = "Viewing Iteration: Monte Carlo Row " + selectedRow.Iteration_ID;
+            }
+            if (subtitleNode) {
+              subtitleNode.textContent = "Aggregate Monte Carlo rows do not currently store frame-by-frame playback. Use Run Scenario for full debrief playback.";
+            }
+            this.renderDebriefView();
+          });
+        });
       }
 
       refreshExportPreview() {

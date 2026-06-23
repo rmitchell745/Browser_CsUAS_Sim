@@ -1,45 +1,52 @@
-<section class="screen" id="screen-export" style="display:none;">
-      <div class="stack">
-        <div class="panel">
-          <div class="sidebar-header">
-            <div>
-              <h2>Raw Data / Export</h2>
-              <p class="panel-caption">Export the normalized scenario, report payloads, logs, and Monte Carlo outputs.</p>
-            </div>
-            <button class="sidebar-close" data-close-sidebar="export">Close</button>
-          </div>
-          <div class="controls">
-            <button id="export-single-btn">Export Single Run CSV</button>
-            <button id="export-monte-carlo-btn">Export Monte Carlo CSV</button>
-            <button id="export-log-btn">Export Event Log JSON</button>
-            <button id="export-scenario-file-btn">Export Scenario JSON</button>
-          </div>
-          <div class="json-toolbar">
-            <div class="tab-strip">
-              <button class="tab-button active" data-export-tab="scenario" id="tab-scenario-btn">Scenario JSON</button>
-              <button class="tab-button" data-export-tab="report" id="tab-report-btn">Single Run Report</button>
-              <button class="tab-button" data-export-tab="eventLog" id="tab-eventlog-btn">Event Log</button>
-              <button class="tab-button" data-export-tab="monteCarlo" id="tab-montecarlo-btn">Monte Carlo CSV</button>
-            </div>
-            <div class="toolbar-row">
-              <div class="field">
-                <label for="scenario-export-source">Scenario Source</label>
-                <select id="scenario-export-source">
-                  <option value="normalized">Normalized runnable scenario</option>
-                  <option value="original">Original imported payload</option>
-                </select>
-              </div>
-              <label class="toggle-chip">
-                <input type="checkbox" id="export-pretty-toggle" checked>
-                <span>Pretty-print JSON</span>
-              </label>
-              <button id="copy-export-preview-btn">Copy Preview</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel">
-          <h2>Export Preview</h2>
-          <textarea id="export-preview" spellcheck="false" readonly></textarea>
+<section class="screen" id="screen-export">
+  <div class="stack">
+    <div class="panel">
+      <div class="sidebar-header">
+        <div>
+          <h2>About</h2>
+          <p class="panel-caption">Version context, workflow notes, and companion utility links for the simulator workspace.</p>
         </div>
       </div>
-    </section>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="label">Application</div>
+          <div class="summary-meta" style="margin-top: 8px; color: var(--text);">C-sUAS Tactical Simulator</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Version</div>
+          <div class="summary-meta" id="about-version" style="margin-top: 8px; color: var(--accent-strong);">v2.4+</div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Primary Workflow</div>
+          <div class="summary-meta" style="margin-top: 8px; color: var(--text);">Edit draft scenario, stage it, run it, then review reports.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen-grid">
+      <div class="panel">
+        <h3>Recommended Workflow</h3>
+        <ul class="report-list">
+          <li><span>1. Quick Start</span><strong>Load a built-in demo or blank scenario from Demo &amp; Tutorial.</strong></li>
+          <li><span>2. Edit Draft</span><strong>Use Template Editor and Scenario Editor to change the draft scenario in memory.</strong></li>
+          <li><span>3. Stage Draft</span><strong>Use Stage Current Scenario to promote the draft into the active scenario used by Run.</strong></li>
+          <li><span>4. Execute</span><strong>Run single scenarios or Monte Carlo batches from Run Scenario.</strong></li>
+          <li><span>5. Debrief</span><strong>Use View Reports for summaries, timelines, and export-ready outputs.</strong></li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <h3>Companion Utilities</h3>
+        <p class="panel-caption">Standalone helpers stay separate from the simulator shell so they can evolve without destabilizing the main UI.</p>
+        <div class="controls" style="margin-top: 12px;">
+          <button id="about-open-environment-extractor-btn">Open Environment Extractor</button>
+          <button id="about-open-template-manager-btn">Open Template Manager</button>
+        </div>
+        <div class="placeholder-list" style="margin-top: 12px;">
+          <div class="placeholder-card">Environment Extractor packages map imagery, terrain, and scenario-ready JSON.</div>
+          <div class="placeholder-card">Template Manager supports standalone template review and bulk authoring workflows.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

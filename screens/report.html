@@ -1,34 +1,54 @@
 <section class="screen" id="screen-report">
-      <div class="stack">
-        <div class="panel">
-          <div class="sidebar-header">
-            <div>
-              <h2>Monte Carlo Run</h2>
-              <p class="panel-caption">Single-run debrief, Monte Carlo aggregate review, failure drivers, and export-ready analysis surfaces.</p>
+  <div class="stack">
+    <div class="panel">
+      <div class="sidebar-header" style="margin-bottom: 0; align-items: flex-start;">
+        <div>
+          <h2>View Reports</h2>
+          <p class="panel-caption">Evaluate aggregate Monte Carlo results, replay the latest run, and export report data.</p>
+        </div>
+        <div class="controls">
+          <button type="button" id="export-report-btn">Export Single Run CSV</button>
+          <button type="button" id="export-report-monte-carlo-btn">Export Monte Carlo CSV</button>
+          <button type="button" id="export-report-log-btn">Export Event Log JSON</button>
+        </div>
+      </div>
+
+      <div class="toolbar-row" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <button class="button-link report-tab-btn active" data-report-tab="monte-carlo" type="button">Monte Carlo Aggregate</button>
+        <button class="button-link report-tab-btn" data-report-tab="single-run" type="button">Single Run Debrief</button>
+      </div>
+    </div>
+
+    <div id="report-tab-monte-carlo" class="builder-tab-panel active">
+      <div class="panel">
+        <h3>Aggregate Metrics</h3>
+        <div class="metrics-grid" id="monte-carlo-summary"></div>
+      </div>
+
+      <div class="panel">
+        <h3>Top Failure Drivers</h3>
+        <div class="analysis-grid" id="failure-drivers-list"></div>
+      </div>
+
+      <div class="panel">
+        <div class="sidebar-header">
+          <h3 style="margin: 0;">Iteration Results</h3>
+          <div class="toolbar-row">
+            <div class="field">
+              <label for="scenario-export-source">Scenario Source</label>
+              <select id="scenario-export-source">
+                <option value="normalized">Normalized draft scenario</option>
+                <option value="original">Original imported payload</option>
+              </select>
             </div>
-          </div>
-          <div class="metrics-grid" id="single-run-summary"></div>
-        </div>
-        <div class="screen-grid">
-          <div class="panel">
-            <h3>Report Details</h3>
-            <ul class="report-list" id="single-run-details"></ul>
-          </div>
-          <div class="panel">
-            <h3>Monte Carlo Aggregate</h3>
-            <div class="metrics-grid" id="monte-carlo-summary"></div>
+            <label class="toggle-chip">
+              <input type="checkbox" id="export-pretty-toggle" checked>
+              <span>Pretty-print JSON</span>
+            </label>
+            <button id="copy-export-preview-btn">Copy Preview</button>
           </div>
         </div>
-        <div class="panel">
-          <h3>Event Timeline</h3>
-          <div class="timeline-list" id="event-timeline-list"></div>
-        </div>
-        <div class="panel">
-          <h3>Top Failure Drivers</h3>
-          <div class="analysis-grid" id="failure-drivers-list"></div>
-        </div>
-        <div class="panel">
-          <h3>Monte Carlo Results</h3>
+        <div style="max-height: 400px; overflow: auto; padding-right: 6px;">
           <table>
             <thead>
               <tr>
@@ -48,4 +68,62 @@
           </table>
         </div>
       </div>
-    </section>
+    </div>
+
+    <div id="report-tab-single-run" class="builder-tab-panel">
+      <div class="panel" style="background: rgba(80, 216, 255, 0.05); border-color: var(--neon-blue);">
+        <div class="sidebar-header" style="margin: 0;">
+          <div>
+            <h3 style="margin: 0; color: var(--neon-blue);" id="debrief-iteration-title">Viewing Iteration: Latest Run</h3>
+            <p class="panel-caption" id="debrief-iteration-subtitle">The latest available single-run output is shown here.</p>
+          </div>
+          <div class="toolbar-row">
+            <button id="debrief-play-btn">Replay Iteration</button>
+            <button id="export-single-btn">Export Single Run CSV</button>
+            <button id="export-log-btn">Export Iteration Log</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel map-panel" style="min-height: auto;">
+        <h3 style="margin-top: 0;">Iteration Playback</h3>
+        <div class="canvas-wrap">
+          <canvas id="debrief-canvas" width="1080" height="630"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Run Summary</h3>
+        <div class="metrics-grid" id="single-run-summary"></div>
+      </div>
+
+      <div class="screen-grid">
+        <div class="panel">
+          <h3>Report Details</h3>
+          <ul class="report-list" id="single-run-details"></ul>
+        </div>
+        <div class="panel">
+          <h3>Event Timeline</h3>
+          <div class="timeline-list" id="event-timeline-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Export Preview</h3>
+      <div class="json-toolbar">
+        <div class="tab-strip">
+          <button class="tab-button active" data-export-tab="report" id="tab-report-btn">Single Run Report</button>
+          <button class="tab-button" data-export-tab="eventLog" id="tab-eventlog-btn">Event Log</button>
+          <button class="tab-button" data-export-tab="monteCarlo" id="tab-montecarlo-btn">Monte Carlo CSV</button>
+          <button class="tab-button" data-export-tab="scenario" id="tab-scenario-btn">Draft Scenario JSON</button>
+        </div>
+      </div>
+      <textarea id="export-preview" spellcheck="false" readonly></textarea>
+      <div class="controls" style="margin-top: 12px;">
+        <button id="export-monte-carlo-btn">Export Monte Carlo CSV</button>
+        <button id="export-scenario-file-btn">Export Draft Scenario JSON</button>
+      </div>
+    </div>
+  </div>
+</section>
