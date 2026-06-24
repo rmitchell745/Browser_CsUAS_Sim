@@ -2,7 +2,7 @@
 
 This repository currently contains a browser-only component-system Counter-small UAS discrete event simulation prototype with a three-tier authoring workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
 
-Current review version: `v2.5`
+Current review version: `v2.6.2`
 
 The repo also includes a standalone offline environment/scenario extraction utility at `external_util/Environment_Extractor.html`.
 
@@ -13,6 +13,7 @@ The repo also includes a standalone offline environment/scenario extraction util
 - Local scenario JSON import/export for the current template + instance format
 - `Demo & Tutorial` landing module with read-only scenario preview and fast demo/scratch loading
 - `Scenario Builder` live editor for terrain/environment, instance placement, and optional generator-draft review
+- Per-instance heading editing in the Scenario Builder for placed Blue/Red objects
 - `Template Builder` split-pane editor with helper actions, subcomponent editing, advanced JSON, and explicit power/network fields
 - `Monte Carlo Run` analysis screen with event timeline, aggregate summaries, and failure-driver surfaces
 - Sample baseline scenario with a Blue FOB defense package versus a Red swarm attack
@@ -36,6 +37,7 @@ The repo also includes a standalone offline environment/scenario extraction util
 - Vite single-file bridge with a native module-worker Monte Carlo path layered over the legacy shell
 - Export preview tabs for scenario JSON, single-run report JSON, event log JSON, and Monte Carlo CSV
 - Click-to-select and click-to-move geographic editing for placed scenario objects after build/import
+- Imported scenario JSON now replaces both the editor draft and the staged active run scenario when loaded through the primary scenario import flow
 - Commented JSONC reference examples under `Docs/sample_data/` for template, instance, terrain, and system-object authoring
 
 ## Usage

@@ -10,7 +10,7 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Stabilize and document the v2.4 refactor state: keep `index.html` as the ready-to-test build, keep `src/` aligned enough for modular review/Vite cutover, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
+Stabilize and document the v2.6.2 UI/state refactor: keep `index.html` as the ready-to-test build, keep `src/` aligned enough for modular review/Vite cutover, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
 
 - keep the standalone extractor under `external_util/` unified and schema-aligned with the main simulator
 - keep the extracted `src/` review tree synchronized with the June 15 physics/cognitive/environment changes
@@ -54,12 +54,13 @@ The current working prototype now includes:
 - [ ] Finish Phase 1 modularization cutover by moving more runtime authority from legacy `index.html` extraction into `src/`, starting with shared kernel/report/bootstrap logic instead of more bridge-only overrides.
 - [ ] Re-run the focused playtest package against the bundled Vite path and close any bundle-only drift before treating `src/` as the primary implementation tree.
 - [ ] Decide the retirement boundary for the legacy bridge: when `src/` reaches parity, switch the authoritative ready-to-test artifact from direct `index.html` to the bundled single-file output.
+- [ ] Add true sensor slew/traverse-rate modeling and host-relative sensor mount orientation so limited-FOV sensors do not instant-snap under cueing or rely only on instance heading plus FPV slaving.
 - [ ] Rework the standalone extractor terrain pass to detect terrain objects from **local relief thresholding** rather than global average-height comparison, so radar-relevant spikes/anomalies are captured without extracting broad smooth hills.
 - [ ] Add extractor controls and logs for local-relief tuning, including neighborhood size / sampling window and relief threshold reporting in the generation summary.
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
 - [ ] Smoke-test the unified standalone extractor in a browser, including flat-terrain CORS fallback and both download outputs.
 - [ ] Decide whether any extractor logic should migrate into shared module utilities after Phase 1 modularization, without making the utility itself depend on the app build.
-- [ ] Finish the v2.4 extracted-tree sync so `src/` mirrors the June 15 kernel behavior closely enough for modular review.
+- [ ] Finish the extracted-tree sync so `src/` mirrors the current v2.6.x kernel/UI behavior closely enough for modular review.
 - [ ] Keep `index.html` as the runnable shell until the module build passes full playtest review, even though the Vite path now uses a native module-worker Monte Carlo implementation.
 - [ ] Continue the main-program Phase 1 modularization follow-on: remove remaining `index.html`/`src` behavior drift beyond the new native module-worker cutover.
 - [ ] Verify Red fallback hierarchy in-browser so `Networked` stays primary, `Loiter` is allowed when untasked, and fallback only appears after jam or C2 destruction.
@@ -67,7 +68,7 @@ The current working prototype now includes:
 - [ ] Verify dynamic environment behavior in-browser so temporary anomalies/clutter create explainable false detections and noise penalties without overwhelming baseline runs.
 - [ ] Verify same-side-only telemetry spoof effects in-browser so enemy sensors still see physical truth while same-side C2/ballistic fire can be misled.
 - [ ] Tune endurance limits in authored scenarios once more movers start using finite `maxEnduranceSec`.
-- [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range.
+- [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range, and keep it distinct from sensor traverse behavior.
 - [ ] Finish the UI terminology cleanup across the shell, drawers, hero copy, and scenario naming.
 - [ ] Convert the roster screen into an instance manager in the Scenario Wizard and verify single-instance map placement.
 - [ ] Replace the baseline scenario with the FOB defense swarm-attack layout and verify terrain/placement load cleanly.
@@ -214,7 +215,7 @@ Do not implement until after the first vertical slice works.
 - [ ] Terrain authoring is first-pass polygon capture only; there is still no rerouting, pathfinding, or richer terrain library workflow.
 - [ ] EW/cyber now covers first-pass jamming, navigation spoofing, and telemetry injection, but richer band modeling, operator workflows, and doctrine-aware cyber effects remain deferred.
 - [ ] The projectile model still lacks explicit lead-prediction / intercept-point solving, and target UAS do not yet perform evasive velocity changes that can force true misses or near-misses.
-- [ ] Effectors still do not have a true orientation/FOV model; `slewRateSec` is only a delay today, not turret traverse or aim-cone behavior.
+- [ ] Sensors and effectors still do not have a true traverse-rate/orientation model; sensor cueing can snap instantly, FPV sensors are host-slaved, and effector `slewRateSec` is still only a delay rather than turret traverse or aim-cone behavior.
 - [ ] The new focused playtests for multispectrum / spoofing / cyber have been authored, but they still need a full interactive expected-results pass.
 - [x] A deterministic playtest sweep with seed `12345` now passes the key checks for `playtest_01` through `playtest_11`.
 

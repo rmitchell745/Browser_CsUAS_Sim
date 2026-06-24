@@ -132,7 +132,8 @@
       }
 
       function normalizeHeadingDeg(heading) {
-        const normalized = Number(heading || 0) % 360;
+        const numericHeading = Number(heading ?? 0);
+        const normalized = (Number.isFinite(numericHeading) ? numericHeading : 0) % 360;
         return normalized < 0 ? normalized + 360 : normalized;
       }
 
@@ -474,6 +475,7 @@
           posX: Number(instance.posX ?? 0),
           posY: Number(instance.posY ?? 0),
           posZ: Number(instance.posZ ?? 0),
+          headingDeg: normalizeHeadingDeg(instance.headingDeg ?? instance.heading_deg ?? 0),
           missionWaypoints: ensureArray(instance.missionWaypoints).map((waypoint) => ({
             x: Number(waypoint.x ?? 0),
             y: Number(waypoint.y ?? 0),
@@ -5406,13 +5408,18 @@
 
             if (object.components.movement) {
               const firstWaypoint = object.runtime.mission.waypoints[0] || null;
+              const seededHeadingDeg = normalizeHeadingDeg(instance.headingDeg ?? 0);
               object.runtime.currentSpeedMps = 0;
               object.runtime.currentHeadingDeg = firstWaypoint
                 ? round(angleDeg(object.runtime.position, firstWaypoint), 2)
-                : 0;
+                : seededHeadingDeg;
             } else {
               object.runtime.currentSpeedMps = null;
-              object.runtime.currentHeadingDeg = null;
+              object.runtime.currentHeadingDeg = normalizeHeadingDeg(instance.headingDeg ?? 0);
+            }
+
+            if (Number.isFinite(object.runtime.currentHeadingDeg)) {
+              syncFpvSensorHeading(object, object.runtime.currentHeadingDeg);
             }
 
             (object.components.sensors || []).forEach((sensor) => {
@@ -5569,6 +5576,8 @@
         round,
         deepClone,
         ensureArray,
+        angleDeg,
+        normalizeHeadingDeg,
         normalizeScenario,
         validateScenario,
         buildBaselineScenario,
@@ -7417,7 +7426,7 @@
         if (!versionNode) {
           return;
         }
-        versionNode.textContent = "v2.4 | Vite modular shell | standalone helper utilities";
+        versionNode.textContent = "v2.6.2 | Vite modular shell | standalone helper utilities";
       }
 
       updateMapSelectionChip() {
@@ -8059,6 +8068,7 @@
                     "<div class=\"field-stack\"><label>X</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"posX\" type=\"number\" value=\"" + escapeHtml(String(row.instance.posX)) + "\"></div>" +
                     "<div class=\"field-stack\"><label>Y</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"posY\" type=\"number\" value=\"" + escapeHtml(String(row.instance.posY)) + "\"></div>" +
                     "<div class=\"field-stack\"><label>Z</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"posZ\" type=\"number\" value=\"" + escapeHtml(String(row.instance.posZ)) + "\"></div>" +
+                    "<div class=\"field-stack\"><label>Heading</label><input class=\"roster-instance-field\" data-instance-id=\"" + escapeHtml(row.instance.id) + "\" data-instance-field=\"headingDeg\" type=\"number\" value=\"" + escapeHtml(String(row.instance.headingDeg ?? 0)) + "\"></div>" +
                   "</div>" +
                   "<div class=\"summary-meta\" style=\"margin-top:8px;\">" + escapeHtml(row.template ? row.template.name : "Missing template") + "</div>" +
                 "</div>"
@@ -8142,6 +8152,7 @@
           posX: side === "Blue" ? 600 : 100,
           posY: side === "Blue" ? 320 : 220,
           posZ: side === "Blue" ? 20 : 120,
+          headingDeg: 0,
           missionWaypoints: []
         };
         this.state.currentScenario.instances.push(instance);
@@ -8157,7 +8168,7 @@
         }
         this.detachGroupManagedInstance(instance);
         const rerender = options.rerender !== false;
-        const numericFields = new Set(["posX", "posY", "posZ"]);
+        const numericFields = new Set(["posX", "posY", "posZ", "headingDeg"]);
         if (field === "templateId") {
           instance.templateId = value;
         } else if (field === "side") {
@@ -8165,7 +8176,9 @@
         } else if (field === "name") {
           instance.name = value || instance.name;
         } else if (numericFields.has(field)) {
-          instance[field] = Number.isFinite(Number(value)) ? Number(value) : instance[field];
+          instance[field] = field === "headingDeg"
+            ? this.kernel.normalizeHeadingDeg(value)
+            : (Number.isFinite(Number(value)) ? Number(value) : instance[field]);
         }
         if (this.state.selectedMapEntity?.id === instanceId) {
           this.state.selectedMapEntity = this.buildObjectSelection(instance);
@@ -8365,6 +8378,7 @@
             "<div class=\"field-stack\"><label>X</label><input id=\"selected-object-x\" type=\"number\" value=\"" + escapeHtml(String(instance.posX)) + "\"></div>" +
             "<div class=\"field-stack\"><label>Y</label><input id=\"selected-object-y\" type=\"number\" value=\"" + escapeHtml(String(instance.posY)) + "\"></div>" +
             "<div class=\"field-stack\"><label>Z</label><input id=\"selected-object-z\" type=\"number\" value=\"" + escapeHtml(String(instance.posZ)) + "\"></div>" +
+            "<div class=\"field-stack\"><label>Heading</label><input id=\"selected-object-heading\" type=\"number\" value=\"" + escapeHtml(String(instance.headingDeg ?? 0)) + "\"></div>" +
             "<div class=\"field-stack\"><label>Hidden C2 / Power</label><div class=\"summary-meta\" style=\"padding-top:10px; color: var(--text);\">" + escapeHtml(instance.side + " implicit network + power grid") + "</div></div>" +
           "</div>" +
           (supportsRouteEditing
@@ -8391,6 +8405,7 @@
           instance.posX = Number(document.getElementById("selected-object-x").value || instance.posX);
           instance.posY = Number(document.getElementById("selected-object-y").value || instance.posY);
           instance.posZ = Number(document.getElementById("selected-object-z").value || instance.posZ);
+          instance.headingDeg = this.kernel.normalizeHeadingDeg(document.getElementById("selected-object-heading").value || instance.headingDeg || 0);
           if (supportsRouteEditing) {
             instance.missionWaypoints = [{
               x: Number(document.getElementById("selected-object-waypoint-x").value || firstWaypoint.x),
@@ -9651,6 +9666,7 @@
             posX: Number(asset.posX || 0) + ((index - centerIndex) * Number(asset.spacingX || 0)),
             posY: Number(asset.posY || 0) + ((index - centerIndex) * Number(asset.spacingY || 0)),
             posZ: Number(asset.posZ || 0),
+            headingDeg: 0,
             missionWaypoints: []
           });
         }
@@ -9692,6 +9708,14 @@
             startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
             endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0) * 0.2;
           }
+          const startPosition = {
+            x: Number(group.startX || 0),
+            y: Number(group.startY || 0) + startYOffset
+          };
+          const endPosition = {
+            x: Number(group.endX || 0),
+            y: Number(group.endY || 0) + endYOffset
+          };
           this.state.currentScenario.instances.push({
             id: this.buildGroupInstancePrefix("Red", localId) + String(index + 1).padStart(2, "0"),
             templateId,
@@ -9703,12 +9727,13 @@
             roles: ["UAS"],
             networkId: null,
             connectedPowerGridId: null,
-            posX: Number(group.startX || 0),
-            posY: Number(group.startY || 0) + startYOffset,
+            posX: startPosition.x,
+            posY: startPosition.y,
             posZ: Number(group.startZ || 0),
+            headingDeg: this.kernel.normalizeHeadingDeg(this.kernel.angleDeg(startPosition, endPosition)),
             missionWaypoints: [{
-              x: Number(group.endX || 0),
-              y: Number(group.endY || 0) + endYOffset,
+              x: endPosition.x,
+              y: endPosition.y,
               z: Number(group.endZ || 0)
             }]
           });
@@ -9840,6 +9865,7 @@
             posX: Number(asset.posX || 670),
             posY: Number(asset.posY || 315),
             posZ: Number(asset.posZ || 20),
+            headingDeg: 0,
             missionWaypoints: []
           });
         });
@@ -9880,6 +9906,10 @@
               startYOffset = (index - centerIndex) * Number(group.startSpacingY || 0);
               endYOffset = (index - centerIndex) * Number(group.endSpacingY || 0) * 0.2;
             }
+            const startX = Number(group.startX || 90);
+            const startY = Number(group.startY || 315) + startYOffset;
+            const endX = Number(group.endX || 980);
+            const endY = Number(group.endY || 315) + endYOffset;
             const instanceId = this.buildUniqueId("Red-G" + String(groupIndex + 1) + "-" + String(index + 1).padStart(2, "0"), instanceIds);
             instanceIds.add(instanceId);
             scenario.instances.push({
@@ -9890,13 +9920,14 @@
               roles: this.kernel.ensureArray(redTemplate.defaultRoles || []).length ? this.kernel.ensureArray(redTemplate.defaultRoles || []) : ["UAS"],
               networkId: null,
               connectedPowerGridId: null,
-              posX: Number(group.startX || 90),
-              posY: Number(group.startY || 315) + startYOffset,
+              posX: startX,
+              posY: startY,
               posZ: Number(group.startZ || 120),
+              headingDeg: this.kernel.normalizeHeadingDeg(this.kernel.angleDeg({ x: startX, y: startY }, { x: endX, y: endY })),
               missionWaypoints: [
                 {
-                  x: Number(group.endX || 980),
-                  y: Number(group.endY || 315) + endYOffset,
+                  x: endX,
+                  y: endY,
                   z: Number(group.endZ || 120)
                 }
               ]
@@ -10135,7 +10166,7 @@
             z: instance.posZ,
             sensors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.sensors) || []),
             effectors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.effectors) || []),
-            currentHeadingDeg: null,
+            currentHeadingDeg: this.kernel.normalizeHeadingDeg(instance.headingDeg ?? 0),
             behaviorState: "Preview",
             destroyed: false,
             status: "Active"

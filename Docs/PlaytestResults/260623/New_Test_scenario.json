@@ -1,0 +1,927 @@
+{
+  "metadata": {
+    "name": "New Test Scenario",
+    "description": "Base test scenario using acoustic and EO IR sensors for detection an dcueing, with interceptors and ballistic effectors.",
+    "notes": "",
+    "tutorial": ""
+  },
+  "config": {
+    "maxTimeSec": 55,
+    "trackStaleAfterSec": 4,
+    "attackRunRangeM": 240,
+    "projectedPathToleranceM": 50
+  },
+  "environment": {
+    "baseNoiseDb": 1.8,
+    "mapWidthMeters": 1080,
+    "backgroundImageBase64": "",
+    "placeholderGhostTrack": {
+      "enabled": false,
+      "spawnTimeSec": 7,
+      "posX": 505,
+      "posY": 182,
+      "posZ": 110,
+      "label": "Ghost Track Placeholder"
+    },
+    "placeholderClutterField": {
+      "enabled": false,
+      "centerX": 410,
+      "centerY": 430,
+      "radiusM": 100,
+      "label": "Clutter Placeholder",
+      "note": "Visual placeholder for future clutter field behavior."
+    },
+    "anomalySpawnChance": 0.35,
+    "clutterSpawnChance": 0.28
+  },
+  "networks": [],
+  "powerGrids": [],
+  "rosters": [],
+  "terrainObjects": [
+    {
+      "id": "Terrain",
+      "label": "Hill 1",
+      "interferenceType": "Block",
+      "clutterPenaltyDb": 0,
+      "heightZ": 80,
+      "areaPolygon": [
+        {
+          "x": 433.1,
+          "y": 244.7
+        },
+        {
+          "x": 329.7,
+          "y": 354.5
+        },
+        {
+          "x": 366.3,
+          "y": 453.6
+        },
+        {
+          "x": 551.5,
+          "y": 337.3
+        }
+      ]
+    },
+    {
+      "id": "Terrain-2",
+      "label": "Noise Terrain",
+      "interferenceType": "Noise",
+      "clutterPenaltyDb": 6,
+      "heightZ": 60,
+      "areaPolygon": [
+        {
+          "x": 495.5,
+          "y": 531.1
+        },
+        {
+          "x": 1277.2,
+          "y": 748.6
+        },
+        {
+          "x": 1453.7,
+          "y": 438.5
+        },
+        {
+          "x": 997.2,
+          "y": 251.1
+        }
+      ]
+    }
+  ],
+  "templates": [
+    {
+      "id": "Template-Blue-Site",
+      "name": "Blue HQ",
+      "category": "Defense",
+      "defaultRoles": [
+        "Asset",
+        "C2"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 120,
+          "assetValuePts": 100,
+          "isHQ": true
+        },
+        "resistance": {
+          "kineticResistance": 0.15,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -2,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": true,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [
+          {
+            "id": "Sensor-1",
+            "name": "EO / RF Sensor",
+            "type": "EO_IR",
+            "maxRangeM": 420,
+            "horizontalFovDeg": 140,
+            "verticalFovDeg": 90,
+            "headingDeg": 180,
+            "transmitPowerDb": 53,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.2,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.84
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.35,
+              "accuracyBase": 0.76
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-1",
+            "name": "Interceptor Launcher",
+            "type": "Kinetic",
+            "maxRangeM": 230,
+            "basePk": 0.74,
+            "basePe": 0,
+            "damagePoints": 150,
+            "ammoCapacity": 3,
+            "slewRateSec": 0.2,
+            "cooldownSec": 2,
+            "projectileSpeedMps": 900,
+            "terminalRadiusM": 12,
+            "maxFlightTimeSec": 8,
+            "effectDurationSec": 6,
+            "jamStrengthDb": 8,
+            "deliveryModel": "Ballistic",
+            "guidanceType": "Command",
+            "affectedDomains": []
+          }
+        ],
+        "c2": {
+          "trackCapacity": 8,
+          "processingLatencySec": 0.3
+        }
+      }
+    },
+    {
+      "id": "Template-Blue-Effector",
+      "name": "Blue PD GUN",
+      "category": "Effector",
+      "defaultRoles": [
+        "Effector",
+        "Asset",
+        "C2"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 18,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.12,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -4,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": false,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [
+          {
+            "id": "EO IR",
+            "name": "PD Gun - EO",
+            "type": "EO_IR",
+            "maxRangeM": 1200,
+            "horizontalFovDeg": 120,
+            "verticalFovDeg": 180,
+            "headingDeg": 0,
+            "transmitPowerDb": 53,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.2,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 0.5,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.9
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.35,
+              "accuracyBase": 0.85
+            }
+          }
+        ],
+        "effectors": [
+          {
+            "id": "Effector-1",
+            "name": "Kinetic Interceptor",
+            "type": "Kinetic",
+            "maxRangeM": 800,
+            "basePk": 0.55,
+            "basePe": 0,
+            "damagePoints": 50,
+            "ammoCapacity": 1000,
+            "slewRateSec": 0.2,
+            "cooldownSec": 1,
+            "projectileSpeedMps": 900,
+            "terminalRadiusM": 1,
+            "maxFlightTimeSec": 10,
+            "effectDurationSec": 6,
+            "jamStrengthDb": 8,
+            "deliveryModel": "Ballistic",
+            "guidanceType": "Command",
+            "affectedDomains": []
+          }
+        ],
+        "c2": {
+          "trackCapacity": 6,
+          "processingLatencySec": 0.3
+        }
+      }
+    },
+    {
+      "id": "Template-Blue-Sensor",
+      "name": "Blue RF Radar",
+      "category": "Sensor",
+      "defaultRoles": [
+        "Sensor",
+        "Asset"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 80,
+          "assetValuePts": 12,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.1,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -6,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": false,
+          "usesRF": true,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [
+          {
+            "id": "Sensor-1",
+            "name": "Wide-Area Radar",
+            "type": "Radar",
+            "maxRangeM": 1000,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 53,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.2,
+            "detectionThresholdDb": 17,
+            "scanIntervalSec": 1,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.82
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.35,
+              "accuracyBase": 0.74
+            }
+          }
+        ],
+        "effectors": [],
+        "c2": null
+      }
+    },
+    {
+      "id": "Template-Blue-Sensor-2",
+      "name": "Blue Acoustic",
+      "category": "Sensor",
+      "defaultRoles": [
+        "Sensor",
+        "Asset"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 80,
+          "assetValuePts": 12,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.1,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -6,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": true,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 2
+        },
+        "movement": null,
+        "sensors": [
+          {
+            "id": "Sensor-1",
+            "name": "Acoustic",
+            "type": "Acoustic",
+            "maxRangeM": 400,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 180,
+            "headingDeg": 0,
+            "transmitPowerDb": 0,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.2,
+            "detectionThresholdDb": 25,
+            "scanIntervalSec": 2,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.74
+            },
+            "identification": {
+              "canIdentify": false,
+              "latencySec": 0.35,
+              "accuracyBase": 0
+	      }
+            },
+	    {
+	    "id": "Sensor-2",
+            "name": "Short-Confirm-EO",
+            "type": "EO_IR",
+            "maxRangeM": 300,
+            "horizontalFovDeg": 360,
+            "verticalFovDeg": 120,
+            "headingDeg": 0,
+            "transmitPowerDb": 0,
+            "noiseFloorDb": -94,
+            "noiseSigmaDb": 1.2,
+            "detectionThresholdDb": 25,
+            "scanIntervalSec": 2,
+            "classification": {
+              "canClassify": true,
+              "latencySec": 0.25,
+              "accuracyBase": 0.74
+            },
+            "identification": {
+              "canIdentify": true,
+              "latencySec": 0.35,
+              "accuracyBase": 0.54
+            }
+
+          }
+        ],
+        "effectors": [],
+        "c2": null
+      }
+    },
+    {
+      "id": "Template-Blue-Effector-2",
+      "name": "Blue Bumble Bee",
+      "category": "Effector",
+      "defaultRoles": [
+        "Effector",
+        "Asset"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 18,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.12,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -4,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": false,
+          "requiresPower": true,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 5
+        },
+        "movement": null,
+        "sensors": [],
+        "effectors": [
+          {
+            "id": "Effector-1",
+            "name": "Kinetic Interceptor",
+            "type": "Interceptor",
+            "maxRangeM": 3000,
+            "basePk": 0.72,
+            "basePe": 0,
+            "damagePoints": 140,
+            "ammoCapacity": 8,
+            "slewRateSec": 0.2,
+            "cooldownSec": 5,
+            "projectileSpeedMps": 50,
+            "terminalRadiusM": 5,
+            "maxFlightTimeSec": 600,
+            "effectDurationSec": 6,
+            "jamStrengthDb": 8,
+            "deliveryModel": "Guided",
+            "guidanceType": "Command",
+            "affectedDomains": []
+          }
+        ],
+        "c2": {
+          "trackCapacity": 6,
+          "processingLatencySec": 0.3
+        }
+      }
+    },
+    {
+      "id": "Template-Red-UAS",
+      "name": "Red UAS 5",
+      "category": "UAS",
+      "defaultRoles": [
+        "UAS"
+      ],
+      "missionProfile": {
+        "type": "Geographic",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 8,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.18,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -14,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 25
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": true,
+          "usesRF": true,
+          "requiresPower": false,
+          "requiresC2": true,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 0
+        },
+        "movement": {
+          "speedMps": 32,
+          "stepSec": 1,
+          "waypointToleranceM": 10,
+          "maxAccel": 9999,
+          "turnRate_dps": 360,
+          "maxEnduranceSec": null
+        },
+        "sensors": [],
+        "effectors": [],
+        "c2": null
+      }
+    },
+    {
+      "id": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS",
+      "category": "UAS",
+      "defaultRoles": [
+        "UAS"
+      ],
+      "missionProfile": {
+        "type": "MaxDamage",
+        "targetTemplateId": null
+      },
+      "components": {
+        "health": {
+          "maxHealth": 90,
+          "assetValuePts": 8,
+          "isHQ": false
+        },
+        "resistance": {
+          "kineticResistance": 0.18,
+          "ewResistance": 0.1,
+          "networkResistance": 0.1
+        },
+        "signature": {
+          "radarSignatureDb": -14,
+          "acousticSignatureDb": 60,
+          "rfEmissionDb": 20
+        },
+        "vulnerability": {
+          "commsResilience": 0.5,
+          "navResilience": 0.5,
+          "cyberResilience": 0.5
+        },
+        "payload": {
+          "impactDamagePoints": 0,
+          "selfDestructOnImpact": true
+        },
+        "capability": {
+          "usesGPS": true,
+          "usesNetwork": false,
+          "usesRF": false,
+          "requiresPower": false,
+          "requiresC2": false,
+          "canOperateAutonomously": true,
+          "lostLinkBehavior": "ContinueDeadReckoning"
+        },
+        "powerConsumer": {
+          "powerConsumedKw": 0
+        },
+        "movement": {
+          "speedMps": 35,
+          "stepSec": 1,
+          "waypointToleranceM": 10,
+          "maxAccel": 9999,
+          "turnRate_dps": 360,
+          "maxEnduranceSec": null
+        },
+        "sensors": [],
+        "effectors": [],
+        "c2": null
+      }
+    }
+  ],
+  "instances": [
+    {
+      "id": "Blue-Instance",
+      "templateId": "Template-Blue-Site",
+      "name": "Blue-HQ-Blue",
+      "side": "Blue",
+      "roles": [
+        "Asset",
+        "C2"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 1113.2,
+      "posY": 519.7,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Instance-2",
+      "templateId": "Template-Blue-Effector",
+      "name": "Blue-PD-GUN-Blue",
+      "side": "Blue",
+      "roles": [
+        "Effector",
+        "Asset",
+        "C2"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 1233.8,
+      "posY": 631.7,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Instance-3",
+      "templateId": "Template-Blue-Effector-2",
+      "name": "Blue-Bumble-Bee-Blue",
+      "side": "Blue",
+      "roles": [
+        "Effector",
+        "Asset"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 1001.2,
+      "posY": 558.9,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Instance-4",
+      "templateId": "Template-Blue-Sensor-2",
+      "name": "Blue-Acoustic-Blue",
+      "side": "Blue",
+      "roles": [
+        "Sensor",
+        "Asset"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 633,
+      "posY": 16.2,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Instance-5",
+      "templateId": "Template-Blue-Sensor-2",
+      "name": "Blue-Acoustic-Blue-2",
+      "side": "Blue",
+      "roles": [
+        "Sensor",
+        "Asset"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 314.3,
+      "posY": 322,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Instance-6",
+      "templateId": "Template-Blue-Sensor-2",
+      "name": "Blue-Acoustic-Blue-3",
+      "side": "Blue",
+      "roles": [
+        "Sensor",
+        "Asset"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 366,
+      "posY": 845.3,
+      "posZ": 20,
+      "missionWaypoints": []
+    },
+    {
+      "id": "Blue-Instance-7",
+      "templateId": "Template-Blue-Sensor",
+      "name": "Blue RF Radar",
+      "side": "Blue",
+      "roles": ["Sensor", "Asset"],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": 950,   
+      "posY": 350,   
+      "posZ": 21,
+      "missionWaypoints": []
+    },
+    {
+      "id": "BuilderGroup-Red-threat-group-10-01",
+      "templateId": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS 1",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": -114.2,
+      "posY": 563.4,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 1468.5,
+          "y": 268.4,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "BuilderGroup-Red-threat-group-10-02",
+      "templateId": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS 2",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": -114.2,
+      "posY": 563.4,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 1468.5,
+          "y": 268.4,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "BuilderGroup-Red-threat-group-10-03",
+      "templateId": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS 3",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": -114.2,
+      "posY": 563.4,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 1468.5,
+          "y": 268.4,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "BuilderGroup-Red-threat-group-10-04",
+      "templateId": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS 4",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": -114.2,
+      "posY": 563.4,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 1468.5,
+          "y": 268.4,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "BuilderGroup-Red-threat-group-10-05",
+      "templateId": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS 5",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": -114.2,
+      "posY": 563.4,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 1468.5,
+          "y": 268.4,
+          "z": 120
+        }
+      ]
+    },
+    {
+      "id": "BuilderGroup-Red-threat-group-10-06",
+      "templateId": "BuilderGroupTemplate-Red-threat-group-10",
+      "name": "Red UAS 6",
+      "side": "Red",
+      "roles": [
+        "UAS"
+      ],
+      "networkId": null,
+      "connectedPowerGridId": null,
+      "posX": -114.2,
+      "posY": 563.4,
+      "posZ": 120,
+      "missionWaypoints": [
+        {
+          "x": 1468.5,
+          "y": 268.4,
+          "z": 120
+        }
+      ]
+    }
+  ]
+}
