@@ -97,4 +97,4 @@ Use `Docs/Playtest/PLAYTEST_PLAN.md` as the execution checklist.
 - No external libraries, backend, build step, or network calls
 - Scenario validation is still lightweight and assumes the current template + instance schema
 - The dynamic environment model is first-pass only; richer doctrine-aware weather, clutter classes, and persistent anomaly workflows remain deferred
-- EW/cyber is still first-pass: jamming, meaconing, and telemetry injection are modeled, but richer band logic, operator workflows, and full cyber doctrine remain deferred
+- EW/cyber is still first-pass: jamming, meaconing, and telemetry injection are modeled, but richer band logic, operator workflows, and full cyber doctrine remain deferred 
