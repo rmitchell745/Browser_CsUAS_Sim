@@ -1814,6 +1814,7 @@
         return {
           nextCycleId: 0,
           currentCycleId: null,
+          inFlightCycleId: null,
           cycles: {},
           classification: {
             ...createAssessmentStageState(),
@@ -1852,9 +1853,28 @@
 
       function startAssessmentCycle(track, timeSec, context = {}) {
         const assessmentState = getTrackAssessmentState(track);
+        const inFlightCycle = Number.isFinite(assessmentState.inFlightCycleId)
+          ? (assessmentState.cycles[assessmentState.inFlightCycleId] || null)
+          : null;
+        const cycleStillPending = inFlightCycle && ["classification", "identification", "intent"].some((stageName) => {
+          return (inFlightCycle[stageName]?.action || "pending") === "pending";
+        });
+        if (cycleStillPending) {
+          inFlightCycle.timeSec = round(timeSec, 2);
+          inFlightCycle.observerId = context.observerId || inFlightCycle.observerId || null;
+          inFlightCycle.sensorId = context.sensorId || inFlightCycle.sensorId || null;
+          inFlightCycle.sourceSensorCount = Math.max(
+            Number(inFlightCycle.sourceSensorCount || 0),
+            Number(context.sourceSensorCount || 0)
+          );
+          inFlightCycle.newSensorContribution = !!(inFlightCycle.newSensorContribution || context.newSensorContribution);
+          assessmentState.currentCycleId = inFlightCycle.id;
+          return { cycle: inFlightCycle, reused: true };
+        }
         const cycleId = assessmentState.nextCycleId + 1;
         assessmentState.nextCycleId = cycleId;
         assessmentState.currentCycleId = cycleId;
+        assessmentState.inFlightCycleId = cycleId;
         assessmentState.cycles[cycleId] = {
           id: cycleId,
           timeSec: round(timeSec, 2),
@@ -1866,7 +1886,7 @@
           identification: { action: "pending", reason: "pending" },
           intent: { action: "pending", reason: "pending" }
         };
-        return assessmentState.cycles[cycleId];
+        return { cycle: assessmentState.cycles[cycleId], reused: false };
       }
 
       function getAssessmentCycle(track, cycleId = null) {
@@ -1889,6 +1909,17 @@
             break;
           }
           delete assessmentState.cycles[oldestId];
+        }
+      }
+
+      function completeAssessmentCycle(track, cycleId = null) {
+        const assessmentState = getTrackAssessmentState(track);
+        const resolvedCycleId = cycleId == null ? assessmentState.currentCycleId : cycleId;
+        if (assessmentState.inFlightCycleId === resolvedCycleId) {
+          assessmentState.inFlightCycleId = null;
+        }
+        if (assessmentState.currentCycleId === resolvedCycleId) {
+          assessmentState.currentCycleId = null;
         }
       }
 
@@ -3288,7 +3319,11 @@
           }
           clearExpiredRuntimeEffects(world, host, event.time, services);
 
-          (host.components.sensors || []).forEach((sensor) => {
+          const sensorsToProcess = event.payload.sensorId
+            ? [getSensor(world, event.payload.objectId, event.payload.sensorId)].filter(Boolean)
+            : (host.components.sensors || []);
+
+          sensorsToProcess.forEach((sensor) => {
             const sensorState = getSensorRuntimeState(host, sensor.id);
             const cuedTrack = sensorState?.cuedTrackId ? getTrack(world, sensorState.cuedTrackId) : null;
             const focusedTargetId = cuedTrack?.realObjectId || null;
@@ -3502,7 +3537,7 @@
               services.events.scheduleDelay(event.time, sensor.scanIntervalSec, {
                 type: "sensor.scan",
                 priority: EVENT_PRIORITIES.sensor,
-                payload: { objectId: host.id }
+                payload: { objectId: host.id, sensorId: sensor.id }
               });
             }
           });
@@ -3560,6 +3595,7 @@
           }
 
           const trackCollection = observer.side === "Red" ? world.redTracks : world.blueTracks;
+          let isNewTrack = false;
           let track = Object.values(trackCollection).find((candidate) =>
             event.payload.isAnomaly
               ? candidate.trackType === "Anomaly" && candidate.anomalyId === event.payload.anomalyId && candidate.status === "Active"
@@ -3603,6 +3639,7 @@
               }
             };
             trackCollection[trackId] = track;
+            isNewTrack = true;
             world.metrics.tracksCreated += 1;
             services.logger.record(
               world,
@@ -3643,6 +3680,7 @@
               }
             };
             trackCollection[trackId] = track;
+            isNewTrack = true;
             world.metrics.tracksCreated += 1;
             services.logger.record(
               world,
@@ -3691,31 +3729,36 @@
             position: observedPosition
           });
 
-          const cycle = startAssessmentCycle(track, event.time, {
+          const cycleState = startAssessmentCycle(track, event.time, {
             observerId: observer.id,
             sensorId: sensor.id,
             sourceSensorCount: track.sourceSensorIds.length,
             newSensorContribution
           });
+          const cycle = cycleState.cycle;
 
-          this.scheduleTrackAging(track, event.time, services.events);
+          if (isNewTrack) {
+            this.scheduleTrackAging(track, event.time, services.events);
+          }
           services.captureFrame(world, event.time, "track");
 
           if (event.payload.isAnomaly) {
             return;
           }
 
-          services.events.scheduleDelay(event.time, sensor.classification.latencySec, {
-            type: "classification.process",
-            priority: EVENT_PRIORITIES.track,
-            payload: {
-              trackId: track.id,
-              observerId: observer.id,
-              sensorId: sensor.id,
-              baseConfidence: event.payload.confidence,
-              cycleId: cycle.id
-            }
-          }, { enforceMinimumDelay: sensor.classification.latencySec <= 0 });
+          if (!cycleState.reused) {
+            services.events.scheduleDelay(event.time, sensor.classification.latencySec, {
+              type: "classification.process",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                trackId: track.id,
+                observerId: observer.id,
+                sensorId: sensor.id,
+                baseConfidence: event.payload.confidence,
+                cycleId: cycle.id
+              }
+            }, { enforceMinimumDelay: sensor.classification.latencySec <= 0 });
+          }
         }
 
         age(event, world, services) {
@@ -3724,7 +3767,18 @@
             return;
           }
 
-          if (round(event.time - track.lastUpdateTimeSec, 2) < track.staleAfterSec) {
+          const ageSec = round(event.time - track.lastUpdateTimeSec, 2);
+          if (ageSec < track.staleAfterSec) {
+            const remainingDelaySec = Math.max(MIN_STATE_DELAY_SEC, round(track.staleAfterSec - ageSec, 3));
+            track.agingToken += 1;
+            services.events.scheduleDelay(event.time, remainingDelaySec, {
+              type: "track.age",
+              priority: EVENT_PRIORITIES.track,
+              payload: {
+                trackId: track.id,
+                agingToken: track.agingToken
+              }
+            }, { enforceMinimumDelay: true });
             return;
           }
 
@@ -4227,7 +4281,7 @@
               services.events.scheduleDelay(timeSec, cueDurationSec, {
                 type: "sensor.scan",
                 priority: EVENT_PRIORITIES.sensor,
-                payload: { objectId: sensorHost.id }
+                payload: { objectId: sensorHost.id, sensorId: sensor.id }
               }, { enforceMinimumDelay: cueDurationSec <= 0 });
               services.events.scheduleDelay(timeSec, cueDurationSec, {
                 type: "sensor.releaseCue",
@@ -4448,6 +4502,7 @@
           const snapshotTrack = event.payload.trackId ? getTrack(world, event.payload.trackId) : null;
           if (snapshotTrack && snapshotTrack.status === "Active") {
             recordAssessmentSnapshot(world, snapshotTrack, event.time, event.payload.cycleId);
+            completeAssessmentCycle(snapshotTrack, event.payload.cycleId);
           }
         }
       }
@@ -5265,14 +5320,14 @@
                 payload: { objectId }
               });
             }
-            if ((object.components.sensors || []).length > 0) {
+            (object.components.sensors || []).forEach((sensor) => {
               runtime.eventManager.schedule({
                 time: 0,
                 type: "sensor.scan",
                 priority: EVENT_PRIORITIES.sensor,
-                payload: { objectId }
+                payload: { objectId, sensorId: sensor.id }
               });
-            }
+            });
           });
 
           services.captureFrame(runtime, 0, "initial");
