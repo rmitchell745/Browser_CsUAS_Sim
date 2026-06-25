@@ -1,16 +1,18 @@
-import { existsSync, renameSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, unlinkSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
-import htmlInclude from "vite-plugin-html-include";
 import { viteSingleFile } from "vite-plugin-singlefile";
 
-function rewriteIncludeSrc() {
+function inlineScreenIncludes() {
   return {
-    name: "rewrite-include-src",
+    name: "inline-screen-includes",
     transformIndexHtml: {
       order: "pre",
       handler(html) {
-        return html.replace(/<include\b([^>]*?)\ssrc=(["'])/g, "<include$1 file=$2");
+        return html.replace(/<include\b[^>]*\b(?:src|file)=(["'])([^"']+)\1[^>]*>\s*<\/include>/g, (_match, _quote, includePath) => {
+          const resolvedPath = resolve(__dirname, includePath);
+          return readFileSync(resolvedPath, "utf8");
+        });
       }
     }
   };
@@ -35,7 +37,7 @@ function renameBuiltIndex() {
 }
 
 export default defineConfig({
-  plugins: [rewriteIncludeSrc(), htmlInclude(), viteSingleFile(), renameBuiltIndex()],
+  plugins: [inlineScreenIncludes(), viteSingleFile(), renameBuiltIndex()],
   build: {
     assetsInlineLimit: 100000000,
     cssCodeSplit: false,
