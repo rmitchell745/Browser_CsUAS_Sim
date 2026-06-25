@@ -1,21 +1,33 @@
 # C-sUAS Tactical Simulator
 
-This repository currently contains a browser-only component-system Counter-small UAS discrete event simulation prototype with a three-tier authoring workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
+This repository currently contains a browser-based component-system Counter-small UAS discrete event simulation prototype with a modular Vite shell, staged scenario editing workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
 
-Current review version: `v2.6.2`
+Current review version: `v2.6.3`
 
 The repo also includes a standalone offline environment/scenario extraction utility at `external_util/Environment_Extractor.html`.
 
 ## Current prototype
 
-- Single-file `index.html`
-- 6-module top-navigation shell for demo/tutorial, template building, environment workflow handoff, scenario building, single-run ops, and Monte Carlo review
+- Editable modular source shell based on:
+  - `index_base.html`
+  - `screens/*.html`
+  - `style.css`
+  - `main.js`
+- Deployable built artifact at `dist/index.html`
+- GitHub Pages deployment via GitHub Actions from the `dist/` artifact
+- Dual-navigation tactical shell:
+  - top nav: `Demo & Tutorial`, `Template Editor`, `Scenario Editor`, `Run Scenario`, `View Reports`
+  - helper nav: `Environment Extractor`, `About`
+- Scenario draft vs staged-active workflow:
+  - `Scenario Editor` modifies the draft scenario
+  - `Stage Current Scenario` replaces the active in-memory scenario used by `Run Scenario`
 - Local scenario JSON import/export for the current template + instance format
-- `Demo & Tutorial` landing module with read-only scenario preview and fast demo/scratch loading
-- `Scenario Builder` live editor for terrain/environment, instance placement, and optional generator-draft review
-- Per-instance heading editing in the Scenario Builder for placed Blue/Red objects
-- `Template Builder` split-pane editor with helper actions, subcomponent editing, advanced JSON, and explicit power/network fields
-- `Monte Carlo Run` analysis screen with event timeline, aggregate summaries, and failure-driver surfaces
+- `Demo & Tutorial` landing module with quick-start content, demo preview, and JSON-backed demo/scratch loading
+- `Scenario Editor` live editor for terrain/environment, group/instance placement, and draft scenario management
+- Per-instance heading editing in the Scenario Editor for placed Blue/Red objects
+- `Template Editor` split-pane editor with helper actions, subcomponent editing, advanced JSON, and explicit power/network fields
+- `Run Scenario` operations screen with simulation map, playback controls, and event feeds
+- `View Reports` analysis screen with aggregate summaries, debrief views, export surfaces, and failure-driver surfaces
 - Sample baseline scenario with a Blue FOB defense package versus a Red swarm attack
 - Discrete event queue with movement, sensing, tracking, classification, identification, intent, C2, firing, effect, and damage resolution
 - Spawned child interceptor runtime objects for launcher effects
@@ -34,28 +46,30 @@ The repo also includes a standalone offline environment/scenario extraction util
 - Scenario validation grouped into blockers, warnings, and scenario-quality notes with editor jump-links
 - Track aging and stale track drop behavior
 - Event log, single-run report, worker-backed Monte Carlo aggregation, and flat CSV export with dynamic ammo columns and weighted survival metrics
-- Vite single-file bridge with a native module-worker Monte Carlo path layered over the legacy shell
+- Vite single-file build with a native module-worker Monte Carlo path layered over the current shell
 - Export preview tabs for scenario JSON, single-run report JSON, event log JSON, and Monte Carlo CSV
 - Click-to-select and click-to-move geographic editing for placed scenario objects after build/import
 - Imported scenario JSON now replaces both the editor draft and the staged active run scenario when loaded through the primary scenario import flow
 - Commented JSONC reference examples under `Docs/sample_data/` for template, instance, terrain, and system-object authoring
+- Runtime freeze fixes for dense multisensor scenarios:
+  - `sensor.scan` scheduling is per sensor, not self-multiplying per host
+  - assessment cycles coalesce while a cycle is already in flight
+  - track-age events no longer grow unbounded on repeated track refresh
 
 ## Usage
 
-1. Open `index.html` directly in a browser.
-2. Use `Load Scenario JSON` to import a local scenario file, or keep the built-in baseline scenario.
-3. Use `Scenario Builder` when you want to edit the live scenario directly without hand-editing JSON.
-4. Use `Generate From Wizard` only when you want the generator draft to replace the live scenario.
-5. Use `Template Builder` for major capability edits, helper-oriented template work, and selected-template JSON edits.
-6. Use the `Instance Manager` inside the Scenario Builder for per-instance placement and review plus hidden per-side infrastructure status.
-7. Review the validation panel before running to catch blockers, warnings, and quality notes.
-8. Use `Run Single Scenario` to execute the current scenario and animate the resulting frames on the canvas.
-9. Use `Run Monte Carlo` to execute repeated seeded runs in an inline Web Worker and populate the aggregate report table.
-10. Use `Run (Monte Carlo)` to inspect event sequencing, single-run details, aggregate summaries, and failure-driver surfaces.
-11. Use the export surfaces inside the analysis modules to download the current scenario JSON, single-run outputs, Monte Carlo CSV, or event log JSON.
-12. Inspect the single-run report JSON when needed to review `assessmentSnapshots` for stateful refresh/skip behavior.
-13. Use the Vite path when reviewing the modularization effort; it now runs Monte Carlo through a native module worker, while `index.html` remains the direct ready-to-test reference build.
-14. Use `Docs/sample_data/` when authoring template or scenario JSON by hand or when prompting external tools/LLMs to generate compatible objects.
+1. Use `npm run dev` for local editing, or `npm run build` then `npm run preview` to review the deployable build.
+2. Treat `index_base.html`, `screens/`, `style.css`, and `main.js` as the editable app source.
+3. Treat `dist/index.html` as the deployable GitHub Pages artifact generated by the build.
+4. Use `Load Scenario JSON` in `Scenario Editor` to import a local scenario file into the draft scenario.
+5. Edit terrain, environment, groups, and instances in `Scenario Editor`; these edits modify the draft scenario only.
+6. Click `Stage Current Scenario` when you want `Run Scenario` to use the updated draft.
+7. Use `Template Editor` for capability edits, helper-oriented template work, and selected-template JSON edits.
+8. Review the validation panel before staging/running to catch blockers, warnings, and quality notes.
+9. Use `Run Scenario` to execute the currently staged scenario and animate the resulting frames on the canvas.
+10. Use `View Reports` to inspect single-run debriefs, aggregate summaries, Monte Carlo results, and export surfaces.
+11. Use `Docs/sample_data/` when authoring template or scenario JSON by hand or when prompting external tools/LLMs to generate compatible objects.
+12. Use `external_util/Environment_Extractor.html` when generating scenario-ready terrain/background packages outside the main app.
 
 ## Playtest package
 
@@ -94,7 +108,7 @@ Use `Docs/Playtest/PLAYTEST_PLAN.md` as the execution checklist.
 - Network and power are modeled as hidden single infrastructure objects per side, not user-editable topology yet
 - There is still no dedicated doctrine or spectrum workflow UI beyond the expanded Template Editor common form and raw JSON editor
 - Template Editor helper sections are placeholders, not full derived-field calculators yet
-- No external libraries, backend, build step, or network calls
+- The app now has a build step and dev tooling, but it is still browser-only with no backend service
 - Scenario validation is still lightweight and assumes the current template + instance schema
 - The dynamic environment model is first-pass only; richer doctrine-aware weather, clutter classes, and persistent anomaly workflows remain deferred
-- EW/cyber is still first-pass: jamming, meaconing, and telemetry injection are modeled, but richer band logic, operator workflows, and full cyber doctrine remain deferred 
+- EW/cyber is still first-pass: jamming, meaconing, and telemetry injection are modeled, but richer band logic, operator workflows, and full cyber doctrine remain deferred

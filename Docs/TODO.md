@@ -10,14 +10,13 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Stabilize and document the v2.6.2 UI/state refactor: keep `index.html` as the ready-to-test build, keep `src/` aligned enough for modular review/Vite cutover, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
+Stabilize and document the v2.6.3 modular UI/state/build flow: keep `index_base.html` + `screens/` + `main.js` as the editable source, keep `dist/index.html` as the deployable GitHub Pages artifact, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
 
 - keep the standalone extractor under `external_util/` unified and schema-aligned with the main simulator
-- keep the extracted `src/` review tree synchronized with the June 15 physics/cognitive/environment changes
-- preserve the Vite bridge path while avoiding divergence between `src/` review slices and the runnable monolith
-- use the Vite build as the first real Phase 1 modularization path, starting with a native module-worker Monte Carlo cutover
+- keep the extracted `src/` review tree synchronized enough for modular review without letting it drift from the live Vite-backed shell
+- preserve the Vite build and GitHub Actions deployment path while avoiding divergence between transitional review slices and the runnable app
 - close remaining behavior gaps in playtests under the new ballistic / spoof / endurance / environment rules
-- keep documentation explicit about what is authoritative in `index.html` versus what is transitional in `src/`
+- keep documentation explicit about what is authoritative in `index_base.html` / `screens` / `main.js` versus what is transitional in `src/`
 - use Phase 1 modularization as the next main-program roadmap tranche before adding new spatial or physics-heavy feature sets
 
 ---
@@ -55,8 +54,6 @@ The current working prototype now includes:
 - [ ] Re-run the focused playtest package against the bundled Vite path and close any bundle-only drift before treating `src/` as the primary implementation tree.
 - [ ] Decide the retirement boundary for the legacy bridge: when `src/` reaches parity, switch the authoritative ready-to-test artifact from direct `index.html` to the bundled single-file output.
 - [ ] Add true sensor slew/traverse-rate modeling and host-relative sensor mount orientation so limited-FOV sensors do not instant-snap under cueing or rely only on instance heading plus FPV slaving.
-- [ ] Rework the standalone extractor terrain pass to detect terrain objects from **local relief thresholding** rather than global average-height comparison, so radar-relevant spikes/anomalies are captured without extracting broad smooth hills.
-- [ ] Add extractor controls and logs for local-relief tuning, including neighborhood size / sampling window and relief threshold reporting in the generation summary.
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
 - [ ] Smoke-test the unified standalone extractor in a browser, including flat-terrain CORS fallback and both download outputs.
 - [ ] Decide whether any extractor logic should migrate into shared module utilities after Phase 1 modularization, without making the utility itself depend on the app build.
@@ -70,8 +67,6 @@ The current working prototype now includes:
 - [ ] Tune endurance limits in authored scenarios once more movers start using finite `maxEnduranceSec`.
 - [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range, and keep it distinct from sensor traverse behavior.
 - [ ] Finish the UI terminology cleanup across the shell, drawers, hero copy, and scenario naming.
-- [ ] Convert the roster screen into an instance manager in the Scenario Wizard and verify single-instance map placement.
-- [ ] Replace the baseline scenario with the FOB defense swarm-attack layout and verify terrain/placement load cleanly.
 - [ ] Review the new stateful assessment thresholds in live playtest and tighten any remaining over-refresh or under-refresh cases.
 - [ ] Verify the expanded template common form in-browser for signatures, vulnerabilities, payload fields, and lost-link behavior persistence.
 - [ ] Tune the first-pass Blue sensor-cueing loop so ISR tasking closes assessment gaps without repeatedly cueing the same track.
@@ -80,6 +75,7 @@ The current working prototype now includes:
 - [ ] Reconcile the failing playtests against the current kernel: decide per scenario whether to tune physics/doctrine in `index.html` or update the playtest geometry/expectations in `Docs/Playtest/PLAYTEST_PLAN.md` for `playtest_01`, `05`, `06`, `07`, `08`, `09`, `10`, `12`, `13`, `14`, and `15`.
 - [ ] Keep `playtest_07` on the radar-based noise path, not passive RF, so it stays aligned with the intended terrain-noise regression.
 - [ ] Recheck `playtest_13` lost-link RTB under the current kinematics if it remains slow or non-terminating in the browser pass.
+- [ ] Verify the GitHub Pages deployment after the Actions cutover and make sure the deployed site is serving the latest `dist/index.html` build, not a stale branch artifact.
 - [ ] Reconcile repo layout with expected `docs/` paths or update the document references consistently.
 
 ---
@@ -173,6 +169,15 @@ The current working prototype now includes:
 - [x] Implemented the June 15 v2.4 physics/cognitive/environment pass in the runnable kernel: dynamic anomalies/clutter, same-side telemetry spoofing, endurance depletion, ballistic spoof penalties, and command-guided interceptor cleanup.
 - [x] Unified the standalone environment extractor into one authoritative offline HTML utility with scenario JSON as the default output and environment-package export as an optional secondary output.
 - [x] Replaced the Vite-path Blob-string Monte Carlo worker with a native module worker that rehydrates the legacy kernel through shared bridge extraction logic.
+- [x] Reworked the standalone extractor terrain pass to use local-relief thresholding instead of global average-height comparison.
+- [x] Added extractor controls and logging for relief-threshold / local-window tuning.
+- [x] Converted the old roster workflow into direct instance-management flows in the scenario editor.
+- [x] Replaced the baseline scenario with the FOB defense swarm-attack layout.
+- [x] Fixed scenario import so imported JSON updates both the editor draft and the staged active run scenario through the primary import path.
+- [x] Added per-instance heading editing and runtime heading seeding for imported and hand-built scenarios.
+- [x] Fixed the leaked Run screen visibility bug caused by `workspace-screen` display overrides.
+- [x] Stabilized dense built runs by preventing duplicate sensor-scan multiplication, coalescing in-flight assessment cycles, and stopping runaway track-age queue growth.
+- [x] Updated the GitHub Actions Pages workflow to deploy the built `dist/` artifact from `master`.
 
 ---
 

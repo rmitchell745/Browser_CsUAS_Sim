@@ -7481,7 +7481,7 @@
         if (!versionNode) {
           return;
         }
-        versionNode.textContent = "v2.6.2 | Vite modular shell | standalone helper utilities";
+        versionNode.textContent = "v2.6.3 | Vite modular shell | standalone helper utilities";
       }
 
       updateMapSelectionChip() {
