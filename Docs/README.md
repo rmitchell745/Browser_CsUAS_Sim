@@ -2,7 +2,7 @@
 
 This repository currently contains a browser-based component-system Counter-small UAS discrete event simulation prototype with a modular Vite shell, staged scenario editing workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
 
-Current review version: `v2.6.3`
+Current review version: `v2.6.4`
 
 The repo also includes a standalone offline environment/scenario extraction utility at `external_util/Environment_Extractor.html`.
 
@@ -55,6 +55,11 @@ The repo also includes a standalone offline environment/scenario extraction util
   - `sensor.scan` scheduling is per sensor, not self-multiplying per host
   - assessment cycles coalesce while a cycle is already in flight
   - track-age events no longer grow unbounded on repeated track refresh
+- Additional performance controls for sensor-heavy runs:
+  - per-sensor same-tick scan deduplication
+  - cue/busy scan lock so routine sweeps do not continue during sensor slew/cue windows
+  - throttled frame capture with guaranteed major-event snapshots
+  - faster playback timing at 5 FPS
 
 ## Usage
 

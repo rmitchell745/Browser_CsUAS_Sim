@@ -10,7 +10,7 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Stabilize and document the v2.6.3 modular UI/state/build flow: keep `index_base.html` + `screens/` + `main.js` as the editable source, keep `dist/index.html` as the deployable GitHub Pages artifact, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
+Stabilize and document the v2.6.4 modular UI/state/build flow: keep `index_base.html` + `screens/` + `main.js` as the editable source, keep `dist/index.html` as the deployable GitHub Pages artifact, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
 
 - keep the standalone extractor under `external_util/` unified and schema-aligned with the main simulator
 - keep the extracted `src/` review tree synchronized enough for modular review without letting it drift from the live Vite-backed shell
@@ -25,26 +25,17 @@ Stabilize and document the v2.6.3 modular UI/state/build flow: keep `index_base.
 
 The current working prototype now includes:
 
-- Single `index.html` application
-- Simplified `UIManager` screen state flow
-- 2D canvas map with one Blue site and one Red UAS
-- Hardcoded template + instance scenario baseline
-- Discrete event queue
-- Red UAS waypoint movement
-- Detection candidate generation
-- Track creation and updates
-- Separate classification, identification, and intent stages
-- Vector-projection intent assessment
-- Weighted TEWA-based C2 engagement decision
-- Ghost-track placeholder and clutter overlay placeholders
-- Locked-target effector firing with autonomous cooldown fire loop
-- Damage resolution using Effective_Pk-style modifiers
-- Single-run report
-- Monte Carlo execution in an inline Web Worker with fallback
-- Results table
-- Dynamic CSV export with weighted survival metrics
-- Event log panel
-- Scenario validation dashboard
+- Editable Vite source shell using `index_base.html`, `screens/`, `style.css`, and `main.js`
+- Deployable single-file build at `dist/index.html` with GitHub Pages Actions deployment
+- Top-nav tactical workstation UI for demo/tutorial, template editing, scenario editing, running, and report review
+- Draft-vs-staged scenario workflow with local scenario JSON import/export
+- 2D map rendering, terrain overlays, click placement, waypoint editing, and per-instance heading editing
+- Template + instance component-based object model with hidden per-side network/power runtime infrastructure
+- Discrete event queue with movement, sensing, tracking, classification, identification, intent, C2, firing, effect, impact, and damage resolution
+- Spawned child interceptor objects, OWA terminal impact, and first-pass EW / spoof / cyber effects
+- Dynamic anomaly/clutter environment scheduling
+- Single-run playback, event feeds, debrief surfaces, Monte Carlo aggregation, and CSV/JSON export
+- Scenario validation, JSON reference samples, and standalone environment extraction tooling
 
 ---
 
@@ -64,6 +55,8 @@ The current working prototype now includes:
 - [ ] Verify interceptor guidance split in-browser so command-guided launchers stay locked and autonomous launchers release cleanly.
 - [ ] Verify dynamic environment behavior in-browser so temporary anomalies/clutter create explainable false detections and noise penalties without overwhelming baseline runs.
 - [ ] Verify same-side-only telemetry spoof effects in-browser so enemy sensors still see physical truth while same-side C2/ballistic fire can be misled.
+- [ ] Verify the new sensor dedup/cue locks in-browser so cued sensors do not keep routine scanning and same-tick scan duplication stays suppressed.
+- [ ] Verify the throttled frame-capture/playback path in-browser so major events remain visible while heavy scenarios no longer flood playback frames.
 - [ ] Tune endurance limits in authored scenarios once more movers start using finite `maxEnduranceSec`.
 - [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range, and keep it distinct from sensor traverse behavior.
 - [ ] Finish the UI terminology cleanup across the shell, drawers, hero copy, and scenario naming.
@@ -178,6 +171,7 @@ The current working prototype now includes:
 - [x] Fixed the leaked Run screen visibility bug caused by `workspace-screen` display overrides.
 - [x] Stabilized dense built runs by preventing duplicate sensor-scan multiplication, coalescing in-flight assessment cycles, and stopping runaway track-age queue growth.
 - [x] Updated the GitHub Actions Pages workflow to deploy the built `dist/` artifact from `master`.
+- [x] Added per-sensor scan dedup and busy/cued routine-scan locks plus throttled frame capture and faster playback timing.
 
 ---
 
@@ -243,10 +237,10 @@ Do not implement until after the first vertical slice works.
 - Threat-drop behavior now uses option 2: hysteresis. A hostile loses `Attack Run` / elevated TEWA status only after 2 consecutive updates showing low speed or increasing XY separation from the projected defended asset.
 - The simulation now retains compact periodic assessment snapshots in the report payload so debugging and playtest analysis remain explainable even when the event log is quieter.
 - Red and Blue use the same object structure and runtime processing rules.
-- UI now uses a tactical workstation shell with drawer-based `Scenario Wizard`, `Template Editor`, `Instance Manager`, `Debrief`, and `Raw Data / Export` panels while core simulation logic still lives in simulation and system classes.
+- UI now uses a modular Vite-backed tactical workstation shell with top-level Demo/Tutorial, Template Editor, Scenario Editor, Run Scenario, and View Reports modules plus helper-tool panels.
 - Single-run playback reuses recorded snapshots after simulation completion so rendering does not drive outcomes.
 - Zero-delay follow-on state changes in the engagement chain enforce a minimum mechanical delay of `0.1` seconds.
-- Monte Carlo execution now runs in an inline Blob Web Worker and uses a main-thread fallback only when workers are unavailable.
+- The Vite-backed build now runs Monte Carlo in a native module worker; the legacy extracted review tree still contains earlier bridge-era worker patterns for comparison.
 - C2 now ranks hostile tracks with a weighted TEWA heuristic and commits only Idle effectors.
 - Effectors now stay locked through cooldown and can continue firing locally without waiting for a fresh sensor cycle.
 - Scenario JSON import/export uses normalization around the current template + instance schema.
@@ -266,8 +260,8 @@ Do not implement until after the first vertical slice works.
 
 Use this after each major prototype update.
 
-- [x] Inline JavaScript extracted from `index.html` passes `node --check`.
-- [x] `index.html` opens in browser.
+- [x] `main.js` passes `node --check`.
+- [x] Vite-served or built app opens in browser.
 - [x] No JavaScript syntax errors in browser console.
 - [ ] Canvas renders.
 - [ ] Blue object renders.

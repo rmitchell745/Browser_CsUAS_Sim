@@ -3325,6 +3325,24 @@
 
           sensorsToProcess.forEach((sensor) => {
             const sensorState = getSensorRuntimeState(host, sensor.id);
+            const roundedTimeSec = round(event.time, 3);
+            const forcedCueScanTimeSec = sensorState
+              ? round((sensorState.lastCueTimeSec || 0) + 0.001, 3)
+              : null;
+
+            // Prevent the same sensor from processing duplicate scan events in the same tick.
+            if (sensorState && sensorState.lastScanTimeSec === roundedTimeSec) {
+              return;
+            }
+
+            // Routine scans are blocked while the sensor is busy/cued. Only the forced post-cue scan is allowed through.
+            if (sensorState && sensorState.busyUntilSec > roundedTimeSec && roundedTimeSec !== forcedCueScanTimeSec) {
+              return;
+            }
+
+            if (sensorState) {
+              sensorState.lastScanTimeSec = roundedTimeSec;
+            }
             const cuedTrack = sensorState?.cuedTrackId ? getTrack(world, sensorState.cuedTrackId) : null;
             const focusedTargetId = cuedTrack?.realObjectId || null;
             const candidateTargetIds = focusedTargetId ? [focusedTargetId] : world.objectIds.slice();
@@ -4257,8 +4275,9 @@
               );
               sensorState.missionState = "Cued";
               sensorState.cuedTrackId = track.id;
-              sensorState.busyUntilSec = round(timeSec + cueDurationSec, 2);
-              sensorState.lastCueTimeSec = round(timeSec, 2);
+              sensorState.busyUntilSec = round(timeSec + cueDurationSec, 3);
+              // Anchor the forced cue scan to cue completion so the post-slew scan has a stable dedup-safe timestamp.
+              sensorState.lastCueTimeSec = round(timeSec + cueDurationSec, 3);
               if (track.position) {
                 sensor.headingDeg = round(angleDeg(sensorHost.runtime.position, track.position), 2);
               }
@@ -4278,7 +4297,7 @@
                 }
               );
 
-              services.events.scheduleDelay(timeSec, cueDurationSec, {
+              services.events.scheduleDelay(timeSec, cueDurationSec + 0.001, {
                 type: "sensor.scan",
                 priority: EVENT_PRIORITIES.sensor,
                 payload: { objectId: sensorHost.id, sensorId: sensor.id }
@@ -5295,6 +5314,19 @@
           const scenario = normalizeScenario(options.scenario || buildBaselineScenario());
           const rng = new SeededRNG(seed);
           const runtime = this.createRuntimeWorld(scenario, rng, options.captureFrames !== false);
+          let lastFrameTimeSec = -Infinity;
+          const forceCaptureReasons = new Set([
+            "initial",
+            "final",
+            "damage",
+            "owa-impact",
+            "owa-impact-resolve",
+            "interceptor-launch",
+            "interceptor-terminal",
+            "interceptor-abort",
+            "effector-lock",
+            "track-drop"
+          ]);
 
           const services = {
             rng,
@@ -5304,7 +5336,13 @@
               if (!world.captureFrames) {
                 return;
               }
-              world.frames.push(snapshotWorld(world, timeSec, reason));
+              const roundedTimeSec = round(timeSec, 3);
+              const isMajorEvent = forceCaptureReasons.has(reason);
+              const isTimeSlice = roundedTimeSec >= lastFrameTimeSec + 0.5;
+              if (isMajorEvent || isTimeSlice) {
+                world.frames.push(snapshotWorld(world, roundedTimeSec, reason));
+                lastFrameTimeSec = roundedTimeSec;
+              }
             }
           };
 
@@ -5482,7 +5520,8 @@
                 missionState: "Scanning",
                 cuedTrackId: null,
                 busyUntilSec: 0,
-                lastCueTimeSec: null
+                lastCueTimeSec: null,
+                lastScanTimeSec: -1
               };
             });
 
@@ -7481,7 +7520,7 @@
         if (!versionNode) {
           return;
         }
-        versionNode.textContent = "v2.6.3 | Vite modular shell | standalone helper utilities";
+        versionNode.textContent = "v2.6.4 | Vite modular shell | standalone helper utilities";
       }
 
       updateMapSelectionChip() {
@@ -10299,7 +10338,7 @@
             return;
           }
           this.updatePlaybackFrame(nextIndex, { targetRenderers });
-        }, 260);
+        }, 200);
       }
 
       pausePlayback() {
