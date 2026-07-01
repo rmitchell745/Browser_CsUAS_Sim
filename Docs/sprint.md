@@ -4,7 +4,7 @@
 
 ## Sprint Theme
 
-Stabilize the core author-build-run-review loop in the Vite shell so scenarios can be created, staged, run, and reviewed reliably before deeper physics and modularization work continues.
+Stabilize the core author-build-run-review loop in the Vite shell while landing and verifying the first interaction-model slice: sensor slew, route editing, engagement playback visuals, and report-side analysis.
 
 ## Primary Objective
 
@@ -14,6 +14,8 @@ By the end of this sprint, the team should be able to:
 - stage it into the active run scenario
 - run it from `Run Scenario` without browser stalls
 - review it in `View Reports`
+- edit multi-waypoint routes directly in the UI
+- see active engagements on playback without relying only on text logs
 - verify the same flow in the built GitHub Pages artifact
 
 ## Sprint Goals
@@ -38,15 +40,24 @@ By the end of this sprint, the team should be able to:
   - authored scenario geometry/tuning
   - expected-result drift
 
-### 3. Orientation / Slew Modeling Preparation
+### 3. Orientation / Slew Delivery And Verification
 
-- define the first implementation slice for:
-  - sensor traverse / slew behavior
+- verify the landed first-pass sensor traverse / slew behavior in browser
+- confirm authored `slewRateDps` values are usable for narrow-FOV sensors
+- define the follow-on slice for:
   - host-relative sensor mounting
   - effector heading / engagement arc constraints
-- if time allows, implement the first narrow slice for sensors before effectors
 
-### 4. Build And Deployment Confidence
+### 4. Playback And Analysis Clarity
+
+- verify the new playback overlays for:
+  - ballistic tracers
+  - directed-energy beams
+  - EW sector pulses
+- confirm the new `AnalysisEngine` is producing the expected report summaries
+- move any duplicated report-derived logic behind the new analysis layer where safe
+
+### 5. Build And Deployment Confidence
 
 - verify the GitHub Pages Actions deployment serves the current `dist/index.html`
 - verify no bundle-only drift exists between editable source and deployed artifact
@@ -57,7 +68,10 @@ By the end of this sprint, the team should be able to:
 - scenario editor state and run-path fixes
 - browser-based verification of the current UI shell
 - focused playtest reruns and result notes
-- first-pass sensor/effector orientation planning or implementation
+- first-pass sensor slew verification and follow-on orientation planning
+- multi-waypoint editing verification
+- playback visual verification
+- report-analysis integration
 - docs updates needed to keep README, TODO, and report expectations current
 
 ## Out Of Scope
@@ -91,9 +105,9 @@ By the end of this sprint, the team should be able to:
 
 ### P2
 
-- design and scope true sensor slew/traverse behavior
-- design and scope true effector heading / FOV / slew behavior
-- decide whether the first implementation slice lands this sprint or becomes the next sprint's lead task
+- tune authored sensor slew values and define host-relative mount behavior
+- design and scope true effector heading / FOV / slew enforcement
+- decide whether deeper effector arc constraints land this sprint or become the next sprint's lead task
 
 ## Planned Work Sequence
 
@@ -126,8 +140,8 @@ By the end of this sprint, the team should be able to:
 ### Thursday
 
 - tackle the top confirmed behavior gap from Wednesday
-- define the orientation/slew implementation boundary
-- if feasible, implement the first sensor-side orientation slice
+- tune the first-pass slew / playback / route-edit behavior based on the browser pass
+- define the next orientation and effector-arc implementation boundary
 
 ### Friday
 
@@ -144,6 +158,7 @@ By the end of this sprint, the team should be able to:
 - `Stage Current Scenario` replaces the active run scenario
 - `Run Scenario` uses the staged scenario, not stale demo state
 - report views reflect the most recent completed run
+- route edits survive draft save, stage, run, and export
 
 ### Performance And Stability
 
@@ -151,6 +166,13 @@ By the end of this sprint, the team should be able to:
 - per-sensor same-tick scan dedup is verified in browser traces
 - cued sensors do not continue routine scans during their busy window
 - throttled playback still shows major events and completes cleanly
+- narrow-FOV sensors visibly slew instead of instant-snapping in the authored verification scenario
+
+### Interaction And Debrief Clarity
+
+- waypoint editing supports add / insert / delete / move on map without route corruption
+- playback shows engagement state through tracers, beams, or sector pulses
+- report summaries remain consistent after the `AnalysisEngine` cutover
 
 ### Playtests
 
@@ -189,6 +211,12 @@ By the end of this sprint, the team should be able to:
 - run dense sensor scenario with frame capture disabled where relevant
 - inspect event-feed and frame-count behavior
 
+### Interaction Flow
+
+- author a multi-waypoint Red route in `Scenario Editor`
+- author a narrow-FOV sensor with non-default `slewRateDps`
+- confirm playback visuals appear during ballistic, DEW, and EW engagements
+
 ### Focused Playtests
 
 - `playtest_03_tewa_priority`
@@ -202,7 +230,7 @@ By the end of this sprint, the team should be able to:
 ## Risks
 
 - browser-only issues may still differ between local preview and GitHub Pages
-- orientation/slew work can expand quickly if sensor and effector behavior are tackled together
+- sensor slew may be stable while effector arc constraints still lag behind, creating mixed orientation behavior during testing
 - `src/` review-tree drift can distract from live-shell stabilization if allowed to become a parallel refactor target this week
 
 ## Definition Of Done
@@ -210,7 +238,9 @@ By the end of this sprint, the team should be able to:
 This sprint is done when:
 
 - the current UI supports reliable scenario authoring, staging, running, and review
+- the new route editor and engagement visuals are usable in the browser, not just present in code
 - the recent performance controls are confirmed in browser behavior
+- first-pass sensor slew is verified and the remaining host-mount / effector-arc follow-up is clearly defined
 - the focused playtest subset has been rerun and triaged
 - GitHub Pages serves the current verified build
 - the next sprint can start from confirmed orientation/slew requirements instead of unresolved shell-state instability

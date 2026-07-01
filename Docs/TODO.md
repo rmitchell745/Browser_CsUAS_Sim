@@ -10,7 +10,7 @@ Codex must review this file at the start of every work session and update it bef
 
 # Current Build Goal
 
-Stabilize and document the v2.6.4 modular UI/state/build flow: keep `index_base.html` + `screens/` + `main.js` as the editable source, keep `dist/index.html` as the deployable GitHub Pages artifact, and close the remaining physics / doctrine / UI gaps without regressing current playtests.
+Stabilize and document the v2.6.5 modular UI/state/build flow: keep `index_base.html` + `screens/` + `main.js` as the editable source, keep `dist/index.html` as the deployable GitHub Pages artifact, and verify the new slew, route-editing, playback-visual, and analysis layers without regressing current playtests.
 
 - keep the standalone extractor under `external_util/` unified and schema-aligned with the main simulator
 - keep the extracted `src/` review tree synchronized enough for modular review without letting it drift from the live Vite-backed shell
@@ -29,12 +29,13 @@ The current working prototype now includes:
 - Deployable single-file build at `dist/index.html` with GitHub Pages Actions deployment
 - Top-nav tactical workstation UI for demo/tutorial, template editing, scenario editing, running, and report review
 - Draft-vs-staged scenario workflow with local scenario JSON import/export
-- 2D map rendering, terrain overlays, click placement, waypoint editing, and per-instance heading editing
+- 2D map rendering, terrain overlays, click placement, multi-waypoint editing, and per-instance heading editing
 - Template + instance component-based object model with hidden per-side network/power runtime infrastructure
 - Discrete event queue with movement, sensing, tracking, classification, identification, intent, C2, firing, effect, impact, and damage resolution
 - Spawned child interceptor objects, OWA terminal impact, and first-pass EW / spoof / cyber effects
 - Dynamic anomaly/clutter environment scheduling
-- Single-run playback, event feeds, debrief surfaces, Monte Carlo aggregation, and CSV/JSON export
+- First-pass sensor slew/orientation runtime plus first-pass engagement playback effects for ballistic, DEW, and EW-like fire
+- Single-run playback, event feeds, debrief surfaces, Monte Carlo aggregation, CSV/JSON export, and report-side analysis helpers
 - Scenario validation, JSON reference samples, and standalone environment extraction tooling
 
 ---
@@ -44,7 +45,8 @@ The current working prototype now includes:
 - [ ] Finish Phase 1 modularization cutover by moving more runtime authority from legacy `index.html` extraction into `src/`, starting with shared kernel/report/bootstrap logic instead of more bridge-only overrides.
 - [ ] Re-run the focused playtest package against the bundled Vite path and close any bundle-only drift before treating `src/` as the primary implementation tree.
 - [ ] Decide the retirement boundary for the legacy bridge: when `src/` reaches parity, switch the authoritative ready-to-test artifact from direct `index.html` to the bundled single-file output.
-- [ ] Add true sensor slew/traverse-rate modeling and host-relative sensor mount orientation so limited-FOV sensors do not instant-snap under cueing or rely only on instance heading plus FPV slaving.
+- [ ] Complete browser verification of the first-pass sensor slew/traverse model and tune authored `slewRateDps` defaults against real narrow-FOV scenarios.
+- [ ] Add host-relative sensor mount orientation so authored sensor boresight can remain distinct from raw instance heading and FPV slaving.
 - [ ] Complete a full browser verification pass on a machine where Chromium headless or an interactive browser can run reliably.
 - [ ] Smoke-test the unified standalone extractor in a browser, including flat-terrain CORS fallback and both download outputs.
 - [ ] Decide whether any extractor logic should migrate into shared module utilities after Phase 1 modularization, without making the utility itself depend on the app build.
@@ -57,6 +59,9 @@ The current working prototype now includes:
 - [ ] Verify same-side-only telemetry spoof effects in-browser so enemy sensors still see physical truth while same-side C2/ballistic fire can be misled.
 - [ ] Verify the new sensor dedup/cue locks in-browser so cued sensors do not keep routine scanning and same-tick scan duplication stays suppressed.
 - [ ] Verify the throttled frame-capture/playback path in-browser so major events remain visible while heavy scenarios no longer flood playback frames.
+- [ ] Verify the new multi-waypoint editor in-browser so draft routes round-trip through import, staging, export, and run playback without index drift.
+- [ ] Verify the new engagement playback overlays in-browser so ballistic tracers, DEW beams, and EW sector pulses align with effect timing and do not overdraw child interceptors.
+- [ ] Expand the new `AnalysisEngine` usage in `View Reports` so more summary/debrief surfaces stop duplicating report-derived calculations inline.
 - [ ] Tune endurance limits in authored scenarios once more movers start using finite `maxEnduranceSec`.
 - [ ] Add true effector heading, FOV, and slew modeling so weapon orientation can constrain engagement arcs instead of using only cooldown and range, and keep it distinct from sensor traverse behavior.
 - [ ] Finish the UI terminology cleanup across the shell, drawers, hero copy, and scenario naming.
@@ -172,6 +177,10 @@ The current working prototype now includes:
 - [x] Stabilized dense built runs by preventing duplicate sensor-scan multiplication, coalescing in-flight assessment cycles, and stopping runaway track-age queue growth.
 - [x] Updated the GitHub Actions Pages workflow to deploy the built `dist/` artifact from `master`.
 - [x] Added per-sensor scan dedup and busy/cued routine-scan locks plus throttled frame capture and faster playback timing.
+- [x] Added first-pass per-sensor slew/orientation runtime with authored `slewRateDps` support and cue-driven heading changes.
+- [x] Added full multi-waypoint editing in `Scenario Editor`, including map placement, insert/delete/select, and route visualization.
+- [x] Added first-pass playback engagement visuals for ballistic tracers, directed-energy beams, and EW-style sector pulses.
+- [x] Added a report-side `AnalysisEngine` helper class to centralize derived run, track, engagement, effect, and failure summaries.
 
 ---
 
@@ -214,7 +223,8 @@ Do not implement until after the first vertical slice works.
 - [ ] Terrain authoring is first-pass polygon capture only; there is still no rerouting, pathfinding, or richer terrain library workflow.
 - [ ] EW/cyber now covers first-pass jamming, navigation spoofing, and telemetry injection, but richer band modeling, operator workflows, and doctrine-aware cyber effects remain deferred.
 - [ ] The projectile model still lacks explicit lead-prediction / intercept-point solving, and target UAS do not yet perform evasive velocity changes that can force true misses or near-misses.
-- [ ] Sensors and effectors still do not have a true traverse-rate/orientation model; sensor cueing can snap instantly, FPV sensors are host-slaved, and effector `slewRateSec` is still only a delay rather than turret traverse or aim-cone behavior.
+- [ ] Sensor traverse now has a first-pass runtime model, but host-relative mounts, richer search patterns, and deeper browser tuning remain incomplete.
+- [ ] Effectors still do not have a true engagement-arc/traverse model; authored heading/FOV/slew fields now exist, but firing logic still needs hard orientation constraints rather than delay-only behavior.
 - [ ] The new focused playtests for multispectrum / spoofing / cyber have been authored, but they still need a full interactive expected-results pass.
 - [x] A deterministic playtest sweep with seed `12345` now passes the key checks for `playtest_01` through `playtest_11`.
 

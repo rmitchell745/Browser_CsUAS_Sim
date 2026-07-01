@@ -2,7 +2,7 @@
 
 This repository currently contains a browser-based component-system Counter-small UAS discrete event simulation prototype with a modular Vite shell, staged scenario editing workflow, tactical workstation UI, and a first-pass multispectrum / EW-cyber modeling slice.
 
-Current review version: `v2.6.4`
+Current review version: `v2.6.5`
 
 The repo also includes a standalone offline environment/scenario extraction utility at `external_util/Environment_Extractor.html`.
 
@@ -24,7 +24,7 @@ The repo also includes a standalone offline environment/scenario extraction util
 - Local scenario JSON import/export for the current template + instance format
 - `Demo & Tutorial` landing module with quick-start content, demo preview, and JSON-backed demo/scratch loading
 - `Scenario Editor` live editor for terrain/environment, group/instance placement, and draft scenario management
-- Per-instance heading editing in the Scenario Editor for placed Blue/Red objects
+- Per-instance heading editing plus full multi-waypoint route editing in the Scenario Editor for placed Blue/Red objects
 - `Template Editor` split-pane editor with helper actions, subcomponent editing, advanced JSON, and explicit power/network fields
 - `Run Scenario` operations screen with simulation map, playback controls, and event feeds
 - `View Reports` analysis screen with aggregate summaries, debrief views, export surfaces, and failure-driver surfaces
@@ -60,6 +60,11 @@ The repo also includes a standalone offline environment/scenario extraction util
   - cue/busy scan lock so routine sweeps do not continue during sensor slew/cue windows
   - throttled frame capture with guaranteed major-event snapshots
   - faster playback timing at 5 FPS
+- First-pass interaction-model additions:
+  - authored sensor `slewRateDps` and runtime sensor heading state
+  - authored effector heading/FOV/slew fields for future arc-constrained firing work
+  - playback overlays for ballistic tracers, directed-energy beams, and EW sector pulses
+  - `AnalysisEngine` report helper for centralized derived run/debrief summaries
 
 ## Usage
 

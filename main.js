@@ -251,6 +251,7 @@
           noiseSigmaDb: Number(sensor.noiseSigmaDb ?? 1.2),
           detectionThresholdDb: Number(sensor.detectionThresholdDb ?? sensor.thresholdDb ?? 17),
           scanIntervalSec: Number(sensor.scanIntervalSec ?? sensor.sweepRate_sec ?? 1),
+          slewRateDps: Number(sensor.slewRateDps ?? sensor.slewRate_dps ?? sensor.traverseRate_dps ?? 9999),
           classification: {
             canClassify: classification.canClassify !== false,
             latencySec: Number(classification.latencySec ?? classification.classificationLatency_sec ?? 0.2),
@@ -319,6 +320,10 @@
           maxFlightTimeSec: Number(effector.maxFlightTimeSec ?? effector.maxFlightTime_sec ?? 8),
           effectDurationSec: Number(effector.effectDurationSec ?? effector.effectDuration_sec ?? 6),
           jamStrengthDb: Number(effector.jamStrengthDb ?? effector.jammingPowerDb ?? 8),
+          headingDeg: Number(effector.headingDeg ?? effector.heading_deg ?? 0),
+          horizontalFovDeg: Number(effector.horizontalFovDeg ?? effector.fov_azimuth_deg ?? 360),
+          verticalFovDeg: Number(effector.verticalFovDeg ?? effector.fov_elevation_deg ?? 180),
+          slewRateDps: Number(effector.slewRateDps ?? effector.slewRate_dps ?? effector.traverseRate_dps ?? 9999),
           deliveryModel: normalizeDeliveryModel(effector.deliveryModel, normalizeEffectorType(effector.type)),
           guidanceType: ["Autonomous", "Command"].includes(effector.guidanceType) ? effector.guidanceType : "Command",
           affectedDomains: ensureArray(effector.affectedDomains).length
@@ -1365,6 +1370,48 @@
         return String(effector?.type || "").toUpperCase() === "DIRECTEDENERGY";
       }
 
+      function getObjectHeadingDeg(object) {
+        return normalizeHeadingDeg(object?.runtime?.currentHeadingDeg ?? 0);
+      }
+
+      function getSensorHomeHeadingDeg(object, sensor) {
+        if (String(sensor?.type || "").toUpperCase() === "FPV") {
+          return getObjectHeadingDeg(object);
+        }
+        return normalizeHeadingDeg(getObjectHeadingDeg(object) + Number(sensor?.headingDeg ?? 0));
+      }
+
+      function getSensorCurrentHeadingDeg(object, sensor) {
+        const sensorState = getSensorRuntimeState(object, sensor?.id);
+        if (String(sensor?.type || "").toUpperCase() === "FPV") {
+          return getObjectHeadingDeg(object);
+        }
+        if (Number.isFinite(Number(sensorState?.currentHeadingDeg))) {
+          return normalizeHeadingDeg(sensorState.currentHeadingDeg);
+        }
+        return getSensorHomeHeadingDeg(object, sensor);
+      }
+
+      function slewHeadingToward(currentHeadingDeg, desiredHeadingDeg, slewRateDps, deltaSec) {
+        const normalizedCurrent = normalizeHeadingDeg(currentHeadingDeg);
+        const normalizedDesired = normalizeHeadingDeg(desiredHeadingDeg);
+        const safeDeltaSec = Math.max(0, Number(deltaSec || 0));
+        const safeSlewRate = Math.max(0, Number(slewRateDps || 0));
+        if (safeSlewRate <= 0 || safeDeltaSec <= 0) {
+          return normalizedCurrent;
+        }
+        const maxStepDeg = safeSlewRate * safeDeltaSec;
+        const deltaDeg = smallestAngleDifference(normalizedDesired, normalizedCurrent);
+        if (Math.abs(deltaDeg) <= maxStepDeg) {
+          return normalizedDesired;
+        }
+        return normalizeHeadingDeg(normalizedCurrent + clamp(deltaDeg, -maxStepDeg, maxStepDeg));
+      }
+
+      function getEffectorFacingDeg(object, effector) {
+        return normalizeHeadingDeg(getObjectHeadingDeg(object) + Number(effector?.headingDeg ?? 0));
+      }
+
       function getObjectEmissionState(object) {
         if (!object) {
           return { radioSilent: true, navigationCompromised: false, telemetryCompromised: false };
@@ -1395,7 +1442,11 @@
       function syncFpvSensorHeading(object, headingDeg) {
         (object?.components?.sensors || []).forEach((sensor) => {
           if (String(sensor.type || "").toUpperCase() === "FPV") {
-            sensor.headingDeg = round(headingDeg, 2);
+            const sensorState = getSensorRuntimeState(object, sensor.id);
+            if (sensorState) {
+              sensorState.currentHeadingDeg = round(normalizeHeadingDeg(headingDeg), 2);
+              sensorState.desiredHeadingDeg = round(normalizeHeadingDeg(headingDeg), 2);
+            }
           }
         });
       }
@@ -1413,6 +1464,27 @@
         effectorState.lockedTrackId = null;
         effectorState.lockedTargetId = null;
         effectorState.inFlightChildId = null;
+      }
+
+      function recordPlaybackEffect(world, effect) {
+        if (!world?.playbackEffects || !effect) {
+          return;
+        }
+        world.playbackEffects.push({
+          kind: effect.kind || "effect",
+          startTimeSec: round(Number(effect.startTimeSec || 0), 3),
+          endTimeSec: round(Number(effect.endTimeSec || effect.startTimeSec || 0), 3),
+          sourceObjectId: effect.sourceObjectId || null,
+          sourceEffectorId: effect.sourceEffectorId || null,
+          targetObjectId: effect.targetObjectId || null,
+          from: effect.from ? deepClone(effect.from) : null,
+          to: effect.to ? deepClone(effect.to) : null,
+          colorKey: effect.colorKey || "neutral",
+          rangeM: Number(effect.rangeM || 0),
+          headingDeg: Number(effect.headingDeg || 0),
+          horizontalFovDeg: Number(effect.horizontalFovDeg || 360),
+          verticalFovDeg: Number(effect.verticalFovDeg || 180)
+        });
       }
 
       function markObjectDestroyed(world, object, operationalStatus = "Destroyed") {
@@ -2285,9 +2357,20 @@
               x: object.runtime.position.x,
               y: object.runtime.position.y,
               z: object.runtime.position.z,
-              sensors: deepClone(object.components.sensors || []),
-              effectors: deepClone(object.components.effectors || []),
+              sensors: (object.components.sensors || []).map((sensor) => ({
+                ...deepClone(sensor),
+                headingDeg: round(getSensorCurrentHeadingDeg(object, sensor), 2),
+                missionState: getSensorRuntimeState(object, sensor.id)?.missionState || "Scanning"
+              })),
+              effectors: (object.components.effectors || []).map((effector) => ({
+                ...deepClone(effector),
+                headingDeg: round(getEffectorFacingDeg(object, effector), 2),
+                missionState: getEffectorRuntimeState(object, effector.id)?.missionState || "Idle",
+                lockedTrackId: getEffectorRuntimeState(object, effector.id)?.lockedTrackId || null,
+                ammoRemaining: object.runtime.ammo?.[effector.id] ?? effector.ammoCapacity
+              })),
               currentHeadingDeg: object.runtime.currentHeadingDeg ?? null,
+              currentSpeedMps: object.runtime.currentSpeedMps ?? null,
               behaviorState: object.runtime.behaviorState || "Active",
               controlMode: object.runtime.controlMode || null,
               destroyed: object.runtime.destroyed,
@@ -2298,9 +2381,11 @@
             id: track.id,
             x: track.position ? track.position.x : null,
             y: track.position ? track.position.y : null,
+            z: track.position ? track.position.z : null,
             headingDeg: track.currentHeadingUnitXY
               ? round((Math.atan2(track.currentHeadingUnitXY.y, track.currentHeadingUnitXY.x) * (180 / Math.PI) + 360) % 360, 2)
               : null,
+            currentSpeedMps: track.currentSpeedMps ?? null,
             classification: track.classificationStatus,
             identification: track.identificationStatus,
             intent: track.intentStatus,
@@ -2381,6 +2466,7 @@
             networkJamEvents: world.metrics.networkJamEvents,
             fallbackTransitions: world.metrics.fallbackTransitions,
             ammoExpended: deepClone(world.metrics.ammoExpended),
+            playbackEffects: deepClone(world.playbackEffects || []),
             finalTargetStatus: destroyedRedObjects.length > 0
               ? "Destroyed"
               : (redObjects[0]?.runtime.operationalStatus || "Unknown"),
@@ -3329,6 +3415,8 @@
             const forcedCueScanTimeSec = sensorState
               ? round((sensorState.lastCueTimeSec || 0) + 0.001, 3)
               : null;
+            const isForcedCueScan = forcedCueScanTimeSec !== null && roundedTimeSec === forcedCueScanTimeSec;
+            const previousScanTimeSec = Number(sensorState?.lastScanTimeSec ?? -1);
 
             // Prevent the same sensor from processing duplicate scan events in the same tick.
             if (sensorState && sensorState.lastScanTimeSec === roundedTimeSec) {
@@ -3343,8 +3431,32 @@
             if (sensorState) {
               sensorState.lastScanTimeSec = roundedTimeSec;
             }
+            const hostPosition = host.runtime.position;
             const cuedTrack = sensorState?.cuedTrackId ? getTrack(world, sensorState.cuedTrackId) : null;
-            const focusedTargetId = cuedTrack?.realObjectId || null;
+            const forcedCueTrack = !cuedTrack && isForcedCueScan && sensorState?.lastCuedTrackId
+              ? getTrack(world, sensorState.lastCuedTrackId)
+              : null;
+            const focusedTrack = cuedTrack || forcedCueTrack;
+            const focusedTargetId = focusedTrack?.realObjectId || null;
+            const desiredHeadingDeg = focusedTrack?.position
+              ? angleDeg(hostPosition, focusedTrack.position)
+              : getSensorHomeHeadingDeg(host, sensor);
+            if (sensorState) {
+              sensorState.desiredHeadingDeg = round(normalizeHeadingDeg(desiredHeadingDeg), 2);
+              if (String(sensor.type || "").toUpperCase() !== "FPV") {
+                const currentHeadingDeg = Number.isFinite(Number(sensorState.currentHeadingDeg))
+                  ? Number(sensorState.currentHeadingDeg)
+                  : getSensorHomeHeadingDeg(host, sensor);
+                const scanDeltaSec = previousScanTimeSec >= 0
+                  ? Math.max(0.001, roundedTimeSec - previousScanTimeSec)
+                  : Math.max(0.001, Number(sensor.scanIntervalSec || 1));
+                sensorState.currentHeadingDeg = round(
+                  slewHeadingToward(currentHeadingDeg, desiredHeadingDeg, sensor.slewRateDps, scanDeltaSec),
+                  2
+                );
+              }
+            }
+            const effectiveSensorHeadingDeg = getSensorCurrentHeadingDeg(host, sensor);
             const candidateTargetIds = focusedTargetId ? [focusedTargetId] : world.objectIds.slice();
 
             candidateTargetIds.forEach((targetId) => {
@@ -3354,7 +3466,6 @@
               }
               clearExpiredRuntimeEffects(world, target, event.time, services);
 
-              const hostPosition = host.runtime.position;
               const targetPosition = getTrackObservedPosition(world, host.side, target);
               const rangeM = distance3D(hostPosition, targetPosition);
               const horizontalRangeM = distance2D(hostPosition, targetPosition);
@@ -3373,7 +3484,7 @@
               }
 
               const bearingDeg = angleDeg(hostPosition, targetPosition);
-              const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
+              const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, effectiveSensorHeadingDeg));
               const elevationDeg = Math.abs(
                 Math.atan2(targetPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI)
               );
@@ -3489,7 +3600,7 @@
                 }
 
                 const bearingDeg = angleDeg(hostPosition, anomalyPosition);
-                const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, sensor.headingDeg));
+                const relativeBearingDeg = Math.abs(smallestAngleDifference(bearingDeg, effectiveSensorHeadingDeg));
                 const elevationDeg = Math.abs(
                   Math.atan2(anomalyPosition.z - hostPosition.z, Math.max(1, horizontalRangeM)) * (180 / Math.PI)
                 );
@@ -3558,6 +3669,9 @@
                 payload: { objectId: host.id, sensorId: sensor.id }
               });
             }
+            if (sensorState && isForcedCueScan) {
+              sensorState.lastCuedTrackId = null;
+            }
           });
         }
 
@@ -3567,12 +3681,16 @@
             return;
           }
           const sensorState = getSensorRuntimeState(host, event.payload.sensorId);
+          const sensor = getSensor(world, host.id, event.payload.sensorId);
           if (!sensorState || sensorState.cuedTrackId !== event.payload.trackId) {
             return;
           }
           sensorState.missionState = "Scanning";
           sensorState.cuedTrackId = null;
           sensorState.busyUntilSec = 0;
+          sensorState.desiredHeadingDeg = sensor
+            ? round(getSensorHomeHeadingDeg(host, sensor), 2)
+            : sensorState.desiredHeadingDeg;
           services.logger.record(
             world,
             event.time,
@@ -4273,14 +4391,24 @@
                   + Number(sensor.identification?.latencySec || 0)
                   + 0.1
               );
+              const currentSensorHeadingDeg = Number.isFinite(Number(sensorState.currentHeadingDeg))
+                ? Number(sensorState.currentHeadingDeg)
+                : getSensorHomeHeadingDeg(sensorHost, sensor);
+              const desiredHeadingDeg = track.position
+                ? angleDeg(sensorHost.runtime.position, track.position)
+                : getSensorHomeHeadingDeg(sensorHost, sensor);
+              const slewRateDps = Math.max(0, Number(sensor.slewRateDps || 0));
+              const slewDurationSec = slewRateDps > 0
+                ? Math.abs(smallestAngleDifference(desiredHeadingDeg, currentSensorHeadingDeg)) / slewRateDps
+                : 0;
+              const busyDurationSec = Math.max(cueDurationSec, slewDurationSec);
               sensorState.missionState = "Cued";
               sensorState.cuedTrackId = track.id;
-              sensorState.busyUntilSec = round(timeSec + cueDurationSec, 3);
+              sensorState.lastCuedTrackId = track.id;
+              sensorState.desiredHeadingDeg = round(normalizeHeadingDeg(desiredHeadingDeg), 2);
+              sensorState.busyUntilSec = round(timeSec + busyDurationSec, 3);
               // Anchor the forced cue scan to cue completion so the post-slew scan has a stable dedup-safe timestamp.
-              sensorState.lastCueTimeSec = round(timeSec + cueDurationSec, 3);
-              if (track.position) {
-                sensor.headingDeg = round(angleDeg(sensorHost.runtime.position, track.position), 2);
-              }
+              sensorState.lastCueTimeSec = round(timeSec + busyDurationSec, 3);
 
               services.logger.record(
                 world,
@@ -4293,16 +4421,17 @@
                   sensorId: sensor.id,
                   trackId: track.id,
                   targetId: track.realObjectId || null,
-                  reason: "assessment-gap"
+                  reason: "assessment-gap",
+                  slewDurationSec: round(slewDurationSec, 3)
                 }
               );
 
-              services.events.scheduleDelay(timeSec, cueDurationSec + 0.001, {
+              services.events.scheduleDelay(timeSec, busyDurationSec + 0.001, {
                 type: "sensor.scan",
                 priority: EVENT_PRIORITIES.sensor,
                 payload: { objectId: sensorHost.id, sensorId: sensor.id }
-              }, { enforceMinimumDelay: cueDurationSec <= 0 });
-              services.events.scheduleDelay(timeSec, cueDurationSec, {
+              }, { enforceMinimumDelay: busyDurationSec <= 0 });
+              services.events.scheduleDelay(timeSec, busyDurationSec, {
                 type: "sensor.releaseCue",
                 priority: EVENT_PRIORITIES.sensor,
                 payload: {
@@ -4311,7 +4440,7 @@
                   trackId: track.id,
                   reason: "cue-window-complete"
                 }
-              }, { enforceMinimumDelay: cueDurationSec <= 0 });
+              }, { enforceMinimumDelay: busyDurationSec <= 0 });
               return true;
             }
           }
@@ -4801,6 +4930,7 @@
             : 0;
           const environmentFactor = clamp(1 - (Math.abs(world.environment.baseNoiseDb) * 0.0025), 0.82, 1);
           const effectMode = this.getEffectMode(effector);
+          const effectorFacingDeg = getEffectorFacingDeg(shooter, effector);
           if (["jammer", "spoofer", "cyber"].includes(effectMode)) {
             const effectivePe = this.computeNonKineticProbability(world, effector, target, rangeM);
             services.logger.record(
@@ -4833,6 +4963,21 @@
                 effectMode
               }
             });
+            recordPlaybackEffect(world, {
+              kind: "sector-pulse",
+              startTimeSec: event.time,
+              endTimeSec: event.time + Math.max(0.75, Number(effector.effectDurationSec || 6)),
+              sourceObjectId: shooter.id,
+              sourceEffectorId: effector.id,
+              targetObjectId: target.id,
+              from: deepClone(shooter.runtime.position),
+              colorKey: effectMode === "jammer" ? "jammer" : (effectMode === "cyber" ? "cyber" : "spoofer"),
+              rangeM: Number(effector.maxRangeM || 0),
+              headingDeg: effectorFacingDeg,
+              horizontalFovDeg: Number(effector.horizontalFovDeg || 360),
+              verticalFovDeg: Number(effector.verticalFovDeg || 180)
+            });
+            services.captureFrame(world, event.time, "effect-visual");
           } else if (effectMode === "directed-energy") {
             const targetModifier = clamp(1 - Number(target.components.resistance.kineticResistance || 0), 0.2, 1);
             const targetSpeedMps = Number.isFinite(target.runtime.currentSpeedMps)
@@ -4878,6 +5023,18 @@
                 effectMode
               }
             });
+            recordPlaybackEffect(world, {
+              kind: "beam",
+              startTimeSec: event.time,
+              endTimeSec: event.time + 0.5,
+              sourceObjectId: shooter.id,
+              sourceEffectorId: effector.id,
+              targetObjectId: target.id,
+              from: deepClone(shooter.runtime.position),
+              to: deepClone(target.runtime.position),
+              colorKey: "laser"
+            });
+            services.captureFrame(world, event.time, "effect-visual");
           } else if (effectMode === "ballistic") {
             const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
             const projectileSpeedMps = Math.max(1, Number(effector.projectileSpeedMps || 900));
@@ -4938,6 +5095,18 @@
                 effectMode: "ballistic"
               }
             });
+            recordPlaybackEffect(world, {
+              kind: "ballistic-tracer",
+              startTimeSec: event.time,
+              endTimeSec: event.time + Math.max(0.15, timeToImpactSec),
+              sourceObjectId: shooter.id,
+              sourceEffectorId: effector.id,
+              targetObjectId: target.id,
+              from: deepClone(shooter.runtime.position),
+              to: deepClone(projectedTargetPosition),
+              colorKey: "ballistic"
+            });
+            services.captureFrame(world, event.time, "effect-visual");
           } else {
             const targetModifier = clamp(1 - target.components.resistance.kineticResistance, 0.35, 1);
             // Guided child interceptors already prove kinematic closure by reaching terminal range,
@@ -5325,7 +5494,8 @@
             "interceptor-terminal",
             "interceptor-abort",
             "effector-lock",
-            "track-drop"
+            "track-drop",
+            "effect-visual"
           ]);
 
           const services = {
@@ -5516,14 +5686,22 @@
             }
 
             (object.components.sensors || []).forEach((sensor) => {
+              const seededSensorHeadingDeg = getSensorHomeHeadingDeg(object, sensor);
               object.runtime.sensorStates[sensor.id] = {
                 missionState: "Scanning",
                 cuedTrackId: null,
                 busyUntilSec: 0,
                 lastCueTimeSec: null,
-                lastScanTimeSec: -1
+                lastScanTimeSec: -1,
+                currentHeadingDeg: seededSensorHeadingDeg,
+                desiredHeadingDeg: seededSensorHeadingDeg,
+                lastCuedTrackId: null
               };
             });
+
+            if (Number.isFinite(object.runtime.currentHeadingDeg)) {
+              syncFpvSensorHeading(object, object.runtime.currentHeadingDeg);
+            }
 
             (object.components.effectors || []).forEach((effector) => {
               object.runtime.ammo[effector.id] = effector.ammoCapacity;
@@ -5616,6 +5794,7 @@
             logs: [],
             assessmentSnapshots: [],
             frames: [],
+            playbackEffects: [],
             config: deepClone(scenario.config),
             environment: {
               ...deepClone(scenario.environment),
@@ -5794,6 +5973,11 @@
         this.context = canvas.getContext("2d");
         this.width = canvas.width;
         this.height = canvas.height;
+        this.mode = canvas.id === "builder-canvas"
+          ? "builder"
+          : (canvas.id === "demo-canvas"
+            ? "demo"
+            : (canvas.id === "debrief-canvas" ? "debrief" : "run"));
         this.scenario = null;
         this.viewport = {
           zoom: 1,
@@ -5805,6 +5989,7 @@
         this.lastPointer = null;
         this.onViewportChange = null;
         this.selectedEntity = null;
+        this.routeSelection = null;
         this.lastFrame = null;
         this.lastReport = null;
         this.bindInteractions();
@@ -5861,6 +6046,10 @@
         };
         image.src = src;
         this.backgroundImage = image;
+      }
+
+      setRouteSelection(selection) {
+        this.routeSelection = selection || null;
       }
 
       resetViewport() {
@@ -5949,6 +6138,10 @@
           return;
         }
 
+        if (frame.reason === "scenario-preview" || frame.reason === "demo-preview") {
+          this.drawScenarioRoutes(ctx);
+        }
+
         frame.objects.forEach((object) => {
           if (object.side === "Blue") {
             this.drawBlueObject(ctx, object);
@@ -5968,6 +6161,7 @@
           this.drawClutterPlaceholder(ctx, placeholder);
         });
 
+        this.drawPlaybackEffects(ctx, frame, report);
         this.drawSelection(ctx, frame);
 
         this.drawOverlay(ctx, frame, report);
@@ -6160,7 +6354,11 @@
           }
         });
         (object.effectors || []).forEach((effector) => {
-          this.drawRangeRing(ctx, worldPosition, effector.maxRangeM, "rgba(125, 255, 177, 0.24)");
+          if ((effector.horizontalFovDeg || 360) >= 359) {
+            this.drawRangeRing(ctx, worldPosition, effector.maxRangeM, "rgba(125, 255, 177, 0.24)");
+          } else {
+            this.drawSector(ctx, worldPosition, effector.maxRangeM, effector.headingDeg || 0, effector.horizontalFovDeg || 360, "rgba(125, 255, 177, 0.24)");
+          }
         });
 
         ctx.fillStyle = "#59b7cf";
@@ -6280,6 +6478,158 @@
         ctx.restore();
       }
 
+      drawScenarioRoutes(ctx) {
+        if (!this.scenario?.instances?.length) {
+          return;
+        }
+        this.scenario.instances.forEach((instance) => {
+          const route = Array.isArray(instance.missionWaypoints) ? instance.missionWaypoints : [];
+          if (!route.length) {
+            return;
+          }
+          const routePoints = [
+            { x: Number(instance.posX || 0), y: Number(instance.posY || 0) },
+            ...route.map((waypoint) => ({ x: Number(waypoint.x || 0), y: Number(waypoint.y || 0) }))
+          ];
+          const isSelectedRoute = this.routeSelection?.instanceId === instance.id;
+          ctx.save();
+          ctx.strokeStyle = instance.side === "Blue"
+            ? "rgba(89, 183, 207, 0.64)"
+            : "rgba(255, 204, 113, 0.72)";
+          ctx.lineWidth = isSelectedRoute ? 2.4 : 1.5;
+          ctx.setLineDash(instance.side === "Blue" ? [6, 4] : [10, 6]);
+          ctx.beginPath();
+          routePoints.forEach((point, index) => {
+            const canvasPoint = this.worldToCanvas(point);
+            if (index === 0) {
+              ctx.moveTo(canvasPoint.x, canvasPoint.y);
+            } else {
+              ctx.lineTo(canvasPoint.x, canvasPoint.y);
+            }
+          });
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          route.forEach((waypoint, waypointIndex) => {
+            const canvasPoint = this.worldToCanvas(waypoint);
+            const isSelectedWaypoint = isSelectedRoute && this.routeSelection?.waypointIndex === waypointIndex;
+            ctx.fillStyle = isSelectedWaypoint
+              ? "rgba(255, 255, 255, 0.95)"
+              : (instance.side === "Blue" ? "rgba(89, 183, 207, 0.95)" : "rgba(255, 204, 113, 0.95)");
+            ctx.strokeStyle = isSelectedWaypoint
+              ? (instance.side === "Blue" ? "#59b7cf" : "#ffcc71")
+              : "rgba(12, 16, 20, 0.9)";
+            ctx.lineWidth = isSelectedWaypoint ? 2.4 : 1.4;
+            ctx.beginPath();
+            ctx.arc(canvasPoint.x, canvasPoint.y, isSelectedWaypoint ? 8 : 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = "#101820";
+            ctx.font = "bold 11px Trebuchet MS";
+            ctx.fillText(String(waypointIndex + 1), canvasPoint.x - 3, canvasPoint.y + 4);
+          });
+          ctx.restore();
+        });
+      }
+
+      drawPlaybackEffects(ctx, frame, report) {
+        const activeEffects = (report?.playbackEffects || []).filter((effect) => (
+          Number(effect.startTimeSec || 0) <= frame.timeSec
+          && Number(effect.endTimeSec || 0) >= frame.timeSec
+        ));
+        if (!activeEffects.length) {
+          return;
+        }
+        activeEffects.forEach((effect) => {
+          if (effect.kind === "ballistic-tracer") {
+            this.drawBallisticTracer(ctx, effect, frame.timeSec);
+            return;
+          }
+          if (effect.kind === "beam") {
+            this.drawBeamEffect(ctx, effect);
+            return;
+          }
+          if (effect.kind === "sector-pulse") {
+            this.drawSectorPulseEffect(ctx, effect, frame.timeSec);
+          }
+        });
+      }
+
+      drawBallisticTracer(ctx, effect, timeSec) {
+        if (!effect.from || !effect.to) {
+          return;
+        }
+        const from = this.worldToCanvas(effect.from);
+        const to = this.worldToCanvas(effect.to);
+        const durationSec = Math.max(0.05, Number(effect.endTimeSec || 0) - Number(effect.startTimeSec || 0));
+        const progress = SIMULATION_KERNEL.clamp((timeSec - Number(effect.startTimeSec || 0)) / durationSec, 0, 1);
+        const current = {
+          x: from.x + ((to.x - from.x) * progress),
+          y: from.y + ((to.y - from.y) * progress)
+        };
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 184, 77, 0.95)";
+        ctx.lineWidth = 2.2;
+        ctx.setLineDash([10, 8]);
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(current.x, current.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = "#ffd9a1";
+        ctx.beginPath();
+        ctx.arc(current.x, current.y, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawBeamEffect(ctx, effect) {
+        if (!effect.from || !effect.to) {
+          return;
+        }
+        const from = this.worldToCanvas(effect.from);
+        const to = this.worldToCanvas(effect.to);
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 92, 92, 0.95)";
+        ctx.lineWidth = 3.2;
+        ctx.shadowColor = "rgba(255, 92, 92, 0.45)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawSectorPulseEffect(ctx, effect, timeSec) {
+        if (!effect.from) {
+          return;
+        }
+        const pulse = 0.2 + (0.12 * (1 + Math.sin((timeSec - Number(effect.startTimeSec || 0)) * 10)));
+        const colorStyles = {
+          ew: { stroke: "rgba(80, 216, 255, 0.75)", fill: "rgba(80, 216, 255, " + pulse.toFixed(3) + ")" },
+          cyber: { stroke: "rgba(255, 93, 184, 0.78)", fill: "rgba(255, 93, 184, " + pulse.toFixed(3) + ")" },
+          spoofer: { stroke: "rgba(202, 167, 255, 0.8)", fill: "rgba(202, 167, 255, " + pulse.toFixed(3) + ")" },
+          jammer: { stroke: "rgba(80, 216, 255, 0.75)", fill: "rgba(80, 216, 255, " + pulse.toFixed(3) + ")" }
+        };
+        const palette = colorStyles[effect.colorKey] || { stroke: "rgba(255, 255, 255, 0.7)", fill: "rgba(255, 255, 255, 0.16)" };
+        const center = this.worldToCanvas(effect.from);
+        const radius = Math.max(2, Number(effect.rangeM || 0) * this.getPixelsPerMeter());
+        const start = (Number(effect.headingDeg || 0) - (Number(effect.horizontalFovDeg || 360) / 2)) * (Math.PI / 180);
+        const end = (Number(effect.headingDeg || 0) + (Number(effect.horizontalFovDeg || 360) / 2)) * (Math.PI / 180);
+        ctx.save();
+        ctx.strokeStyle = palette.stroke;
+        ctx.fillStyle = palette.fill;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(center.x, center.y);
+        ctx.arc(center.x, center.y, radius, start, end);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+
       drawOverlay(ctx, frame, report) {
         ctx.save();
         ctx.fillStyle = "rgba(12, 16, 20, 0.6)";
@@ -6295,6 +6645,80 @@
         ctx.fillText("Tracks: " + frame.tracks.length, this.width - 262, 98);
         ctx.fillText("Destroyed: " + (report && report.targetDestroyed ? "Yes" : "No"), this.width - 262, 118);
         ctx.restore();
+      }
+    }
+
+    class AnalysisEngine {
+      constructor(report, scenario = null) {
+        this.report = report || null;
+        this.scenario = scenario || null;
+      }
+
+      getRunSummary() {
+        if (!this.report) {
+          return [];
+        }
+        return [
+          { label: "Detection", value: this.report.detected ? "Successful" : "Missed" },
+          { label: "Ghost Tracks", value: this.report.ghostTracksGenerated ?? 0 },
+          { label: "Identification", value: this.report.identified ? this.report.finalIdentificationStatus : "None" },
+          { label: "Intent", value: this.report.intentAssessed ? this.report.finalIntentStatus : "None" },
+          { label: "HQ Survived", value: this.report.hqSurvived ? "Yes" : "No" },
+          { label: "Outcome", value: this.report.targetDestroyed ? "Threat destroyed" : "Threat survived" }
+        ];
+      }
+
+      getTrackSummary() {
+        if (!this.report) {
+          return [];
+        }
+        return [
+          { label: "Assessment Snapshots", value: this.report.assessmentSnapshotCount || 0 },
+          { label: "First Detection", value: this.report.firstDetectionTimeSec ?? "-" },
+          { label: "Track Status", value: this.report.finalTrackStatus || "-" },
+          { label: "Intent", value: this.report.finalIntentStatus || "-" },
+          { label: "Tracks Dropped", value: this.report.tracksDropped ?? 0 }
+        ];
+      }
+
+      getEngagementSummary() {
+        if (!this.report) {
+          return [];
+        }
+        const playbackEffects = Array.isArray(this.report.playbackEffects) ? this.report.playbackEffects : [];
+        return [
+          { label: "Shots Fired", value: this.report.shotsFired ?? 0 },
+          { label: "Launches", value: this.report.interceptorLaunches ?? 0 },
+          { label: "Resolutions", value: this.report.interceptorResolutions ?? 0 },
+          { label: "Aborts", value: this.report.interceptorAborts ?? 0 },
+          { label: "Playback Effects", value: playbackEffects.length }
+        ];
+      }
+
+      getEffectSummary() {
+        if (!this.report) {
+          return [];
+        }
+        return [
+          { label: "EW Events", value: this.report.ewEvents ?? 0 },
+          { label: "Spoof Events", value: this.report.spoofEvents ?? 0 },
+          { label: "Cyber Events", value: this.report.cyberEvents ?? 0 },
+          { label: "Network Jam Events", value: this.report.networkJamEvents ?? 0 },
+          { label: "Fallback Transitions", value: this.report.fallbackTransitions ?? 0 }
+        ];
+      }
+
+      getFailureSignals() {
+        if (!this.report) {
+          return [];
+        }
+        return [
+          { label: "Detection", ok: this.report.detected, detail: this.report.detected ? "Threat detected" : "No detection candidate generated" },
+          { label: "Identification", ok: this.report.identified, detail: this.report.identified ? this.report.finalIdentificationStatus : "No hostile ID achieved" },
+          { label: "Engagement", ok: this.report.engaged, detail: this.report.engaged ? "Effector fired" : "No shot fired" },
+          { label: "Outcome", ok: this.report.targetDestroyed, detail: this.report.targetDestroyed ? "Threat destroyed" : "Threat survived run window" },
+          { label: "HQ", ok: this.report.hqSurvived, detail: this.report.hqSurvived ? "HQ survived" : "HQ was lost" }
+        ];
       }
     }
 
@@ -6399,6 +6823,7 @@
           activeWizardThreatGroupId: null,
           mapInteraction: null,
           selectedMapEntity: null,
+          selectedRouteWaypointIndex: null,
           selectedTutorialLessonId: "1",
           selectedRunTelemetry: null,
           selectedMonteCarloRowIndex: null,
@@ -6861,6 +7286,7 @@
           "template-sensor-heading-input",
           "template-sensor-hfov-input",
           "template-sensor-vfov-input",
+          "template-sensor-slew-dps-input",
           "template-sensor-scan-input",
           "template-sensor-threshold-input",
           "template-sensor-transmit-input",
@@ -6886,6 +7312,10 @@
           "template-effector-name-input",
           "template-effector-type-input",
           "template-effector-guidance-input",
+          "template-effector-heading-input",
+          "template-effector-hfov-input",
+          "template-effector-vfov-input",
+          "template-effector-traverse-input",
           "template-effector-range-input",
           "template-effector-basepk-input",
           "template-effector-basepe-input",
@@ -6949,6 +7379,10 @@
 
       getActiveScenario() {
         return this.state.stagedScenario || this.state.currentScenario;
+      }
+
+      createAnalysisEngine(report = this.state.singleRun?.report || null, scenario = this.getActiveScenario()) {
+        return new AnalysisEngine(report, scenario);
       }
 
       getTutorialLessons() {
@@ -7422,9 +7856,19 @@
               x: instance.posX,
               y: instance.posY,
               z: instance.posZ,
-              sensors: this.kernel.deepClone(template?.components?.sensors || []),
-              effectors: this.kernel.deepClone(template?.components?.effectors || []),
-              currentHeadingDeg: null,
+              sensors: this.kernel.deepClone(template?.components?.sensors || []).map((sensor) => ({
+                ...sensor,
+                headingDeg: this.kernel.normalizeHeadingDeg(Number(instance.headingDeg ?? 0) + Number(sensor.headingDeg ?? 0)),
+                missionState: "Scanning"
+              })),
+              effectors: this.kernel.deepClone(template?.components?.effectors || []).map((effector) => ({
+                ...effector,
+                headingDeg: this.kernel.normalizeHeadingDeg(Number(instance.headingDeg ?? 0) + Number(effector.headingDeg ?? 0)),
+                missionState: "Idle",
+                ammoRemaining: effector.ammoCapacity
+              })),
+              currentHeadingDeg: this.kernel.normalizeHeadingDeg(instance.headingDeg ?? 0),
+              currentSpeedMps: null,
               behaviorState: "Preview",
               destroyed: false,
               status: "Active"
@@ -7478,6 +7922,12 @@
             return;
           }
           const positionText = [object.x, object.y, object.z].map((value) => Number.isFinite(Number(value)) ? this.kernel.round(Number(value), 1) : "-").join(", ");
+          const effectorSummary = (object.effectors || []).length
+            ? (object.effectors || []).map((effector) => {
+                const ammoText = Number.isFinite(Number(effector.ammoRemaining)) ? " (" + effector.ammoRemaining + ")" : "";
+                return (effector.name || effector.id) + ": " + (effector.missionState || "Idle") + ammoText;
+              }).join(" | ")
+            : "No effectors";
           const metrics = [
             { label: "Name", value: object.name || object.id },
             { label: "Side", value: object.side || "-" },
@@ -7486,7 +7936,8 @@
             { label: "Heading", value: Number.isFinite(Number(object.currentHeadingDeg)) ? this.kernel.round(Number(object.currentHeadingDeg), 1) + " deg" : "-" },
             { label: "Speed", value: Number.isFinite(Number(object.currentSpeedMps)) ? this.kernel.round(Number(object.currentSpeedMps), 2) + " m/s" : "-" },
             { label: "Control", value: object.controlMode || object.behaviorState || "-" },
-            { label: "Target", value: object.behaviorTargetId || object.trackId || "-" }
+            { label: "Target", value: object.behaviorTargetId || object.trackId || "-" },
+            { label: "Effectors", value: effectorSummary }
           ];
           container.innerHTML = metrics.map((metric) => (
             "<div class=\"summary-card\"><div class=\"label\">" + escapeHtml(metric.label) + "</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(String(metric.value)) + "</div></div>"
@@ -7520,7 +7971,7 @@
         if (!versionNode) {
           return;
         }
-        versionNode.textContent = "v2.6.4 | Vite modular shell | standalone helper utilities";
+        versionNode.textContent = "v2.6.5 | Vite modular shell | standalone helper utilities";
       }
 
       updateMapSelectionChip() {
@@ -7603,14 +8054,19 @@
               const waypointZ = Number.isFinite(Number(this.state.mapInteraction.waypointZ))
                 ? Number(this.state.mapInteraction.waypointZ)
                 : Number(instance.posZ || 0);
+              const waypointIndex = this.kernel.clamp(Number(this.state.mapInteraction.waypointIndex) || 0, 0, Math.max(0, (instance.missionWaypoints || []).length - 1));
               const waypoint = {
                 x: this.kernel.round(worldPoint.x, 1),
                 y: this.kernel.round(worldPoint.y, 1),
                 z: this.kernel.round(waypointZ, 1)
               };
-              instance.missionWaypoints = [waypoint];
+              if (!Array.isArray(instance.missionWaypoints)) {
+                instance.missionWaypoints = [];
+              }
+              instance.missionWaypoints[waypointIndex] = waypoint;
+              this.state.selectedRouteWaypointIndex = waypointIndex;
               this.state.mapInteraction = null;
-              this.updateScenarioState("Updated first route waypoint");
+              this.updateScenarioState("Updated route waypoint");
               this.updateMapSelectionChip();
               return;
             }
@@ -7638,6 +8094,14 @@
           name: hit.name,
           side: hit.side
         } : null;
+        if (this.state.selectedMapEntity?.type !== "object") {
+          this.state.selectedRouteWaypointIndex = null;
+          this.builderRenderer.setRouteSelection(null);
+        } else {
+          const instance = (this.state.currentScenario.instances || []).find((candidate) => candidate.id === this.state.selectedMapEntity.id);
+          this.state.selectedRouteWaypointIndex = this.getSelectedRouteWaypointIndex(instance);
+          this.syncBuilderRouteSelection();
+        }
         this.renderer.setSelection(this.state.selectedMapEntity);
         this.builderRenderer.setSelection(this.state.selectedMapEntity);
         this.renderCurrentView();
@@ -8251,6 +8715,7 @@
         };
         this.state.currentScenario.instances.push(instance);
         this.state.selectedMapEntity = this.buildObjectSelection(instance);
+        this.state.selectedRouteWaypointIndex = null;
         this.state.mapInteraction = { mode: "selected-object-move", instanceId: instance.id };
         this.updateScenarioState("Added instance. Click the map to place it.");
       }
@@ -8294,6 +8759,8 @@
           this.state.selectedMapEntity = null;
           this.renderer.setSelection(null);
           this.builderRenderer.setSelection(null);
+          this.builderRenderer.setRouteSelection(null);
+          this.state.selectedRouteWaypointIndex = null;
         }
         if (this.state.mapInteraction?.instanceId === instanceId) {
           this.state.mapInteraction = null;
@@ -8308,6 +8775,53 @@
           name: instance.name,
           side: instance.side
         };
+      }
+
+      buildDefaultWaypoint(instance, sourceWaypoint = null) {
+        return {
+          x: Number(sourceWaypoint?.x ?? instance?.posX ?? 0),
+          y: Number(sourceWaypoint?.y ?? instance?.posY ?? 0),
+          z: Number(sourceWaypoint?.z ?? instance?.posZ ?? 0)
+        };
+      }
+
+      getSelectedRouteWaypointIndex(instance) {
+        const waypointCount = Array.isArray(instance?.missionWaypoints) ? instance.missionWaypoints.length : 0;
+        if (!waypointCount) {
+          return null;
+        }
+        const nextIndex = Number(this.state.selectedRouteWaypointIndex);
+        if (!Number.isFinite(nextIndex)) {
+          return 0;
+        }
+        return this.kernel.clamp(nextIndex, 0, waypointCount - 1);
+      }
+
+      syncBuilderRouteSelection() {
+        const selection = this.state.selectedMapEntity;
+        if (selection?.type !== "object") {
+          this.builderRenderer.setRouteSelection(null);
+          return;
+        }
+        const instance = (this.state.currentScenario.instances || []).find((candidate) => candidate.id === selection.id);
+        const waypointIndex = this.getSelectedRouteWaypointIndex(instance);
+        if (!instance || waypointIndex === null) {
+          this.builderRenderer.setRouteSelection(null);
+          return;
+        }
+        this.builderRenderer.setRouteSelection({
+          instanceId: instance.id,
+          waypointIndex
+        });
+      }
+
+      setSelectedRouteWaypoint(instance, waypointIndex) {
+        if (!instance || !Array.isArray(instance.missionWaypoints) || !instance.missionWaypoints.length) {
+          this.state.selectedRouteWaypointIndex = null;
+        } else {
+          this.state.selectedRouteWaypointIndex = this.kernel.clamp(Number(waypointIndex) || 0, 0, instance.missionWaypoints.length - 1);
+        }
+        this.syncBuilderRouteSelection();
       }
 
       isGroupManagedInstance(instance) {
@@ -8334,6 +8848,7 @@
         if (this.state.selectedMapEntity?.type === "object") {
           this.state.selectedMapEntity = this.buildObjectSelection(instance);
         }
+        this.syncBuilderRouteSelection();
       }
 
       selectRosterInstance(instanceId, options = {}) {
@@ -8342,9 +8857,11 @@
           return;
         }
         this.state.selectedMapEntity = this.buildObjectSelection(instance);
+        this.state.selectedRouteWaypointIndex = this.getSelectedRouteWaypointIndex(instance);
         this.state.mapInteraction = options.armMapMove ? { mode: "selected-object-move", instanceId } : null;
         this.renderer.setSelection(this.state.selectedMapEntity);
         this.builderRenderer.setSelection(this.state.selectedMapEntity);
+        this.syncBuilderRouteSelection();
         this.renderRosterEditor();
         this.renderSelectedObjectEditor();
         this.renderScenarioSnapshot();
@@ -8449,11 +8966,8 @@
         const sensorSummary = (template?.components?.sensors || []).map((sensor) => sensor.type).filter(Boolean);
         const effectorSummary = (template?.components?.effectors || []).map((effector) => effector.type).filter(Boolean);
         const supportsRouteEditing = Boolean(template?.components?.movement);
-        const firstWaypoint = this.kernel.ensureArray(instance.missionWaypoints || [])[0] || {
-          x: instance.posX,
-          y: instance.posY,
-          z: instance.posZ
-        };
+        const routeWaypoints = this.kernel.ensureArray(instance.missionWaypoints).map((waypoint) => this.buildDefaultWaypoint(instance, waypoint));
+        const selectedWaypointIndex = this.getSelectedRouteWaypointIndex(instance);
         const quickCapabilityNotes = [
           sensorSummary.length ? sensorSummary.join(", ") : "No sensors",
           effectorSummary.length ? effectorSummary.join(", ") : "No effectors",
@@ -8462,6 +8976,41 @@
           (template?.components?.capability?.canOperateAutonomously === false ? "C2-dependent" : "Autonomy-capable"),
           (this.isGroupManagedInstance(instance) ? "Managed by " + String(instance.builderGroupSide || instance.side) + " group" : "Manually managed")
         ];
+        const routeHtml = supportsRouteEditing
+          ? (
+            "<div class=\"panel\" style=\"margin-top:12px; background: rgba(255,255,255,0.03);\">" +
+              "<div class=\"sidebar-header\" style=\"margin:0 0 10px 0;\"><div><h4 style=\"margin:0;\">Route Editor</h4><p class=\"panel-caption\">Manage multiple waypoints, then use map placement to refine the selected point.</p></div></div>" +
+              (routeWaypoints.length
+                ? routeWaypoints.map((waypoint, waypointIndex) => {
+                    const isSelectedWaypoint = selectedWaypointIndex === waypointIndex;
+                    return (
+                      "<div class=\"timeline-card\" style=\"" + (isSelectedWaypoint ? "border-color: var(--neon-blue); background: rgba(80, 216, 255, 0.08);" : "") + "\">" +
+                        "<div class=\"toolbar-row\" style=\"justify-content:space-between; align-items:flex-start;\">" +
+                          "<div><h4>Waypoint " + escapeHtml(String(waypointIndex + 1)) + "</h4><div class=\"summary-meta\">" + escapeHtml(isSelectedWaypoint ? "Selected for map placement" : "Route waypoint") + "</div></div>" +
+                          "<button class=\"button-link select-route-waypoint-btn\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\">" + escapeHtml(isSelectedWaypoint ? "Selected" : "Select") + "</button>" +
+                        "</div>" +
+                        "<div class=\"form-grid tight\" style=\"margin-top:10px;\">" +
+                          "<div class=\"field-stack\"><label>X</label><input class=\"selected-object-waypoint-field\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\" data-waypoint-field=\"x\" type=\"number\" value=\"" + escapeHtml(String(waypoint.x)) + "\"></div>" +
+                          "<div class=\"field-stack\"><label>Y</label><input class=\"selected-object-waypoint-field\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\" data-waypoint-field=\"y\" type=\"number\" value=\"" + escapeHtml(String(waypoint.y)) + "\"></div>" +
+                          "<div class=\"field-stack\"><label>Z</label><input class=\"selected-object-waypoint-field\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\" data-waypoint-field=\"z\" type=\"number\" value=\"" + escapeHtml(String(waypoint.z)) + "\"></div>" +
+                          "<div class=\"field-stack\"><label>Map Move</label><div class=\"summary-meta\" style=\"padding-top:10px; color: var(--text);\">" + escapeHtml("Place or adjust this waypoint on the map.") + "</div></div>" +
+                        "</div>" +
+                        "<div class=\"controls\" style=\"margin-top:10px;\">" +
+                          "<button class=\"move-route-waypoint-btn\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\">Set On Map</button>" +
+                          "<button class=\"insert-route-waypoint-btn\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\">Insert After</button>" +
+                          "<button class=\"delete-route-waypoint-btn\" data-waypoint-index=\"" + escapeHtml(String(waypointIndex)) + "\">Delete</button>" +
+                        "</div>" +
+                      "</div>"
+                    );
+                  }).join("")
+                : "<div class=\"empty-state\">No route waypoints yet. Add one to start building the instance route.</div>") +
+              "<div class=\"controls\" style=\"margin-top:12px;\">" +
+                "<button id=\"add-route-waypoint-btn\">Add Waypoint</button>" +
+                "<button id=\"clear-route-waypoints-btn\">Clear Route</button>" +
+              "</div>" +
+            "</div>"
+          )
+          : "";
         const html =
           "<div class=\"summary-grid\" style=\"margin-bottom:12px;\">" +
             "<div class=\"summary-card\"><div class=\"label\">Object</div><div class=\"summary-meta\" style=\"margin-top:8px; color: var(--text);\">" + escapeHtml(instance.name) + "</div></div>" +
@@ -8475,24 +9024,35 @@
             "<div class=\"field-stack\"><label>Heading</label><input id=\"selected-object-heading\" type=\"number\" value=\"" + escapeHtml(String(instance.headingDeg ?? 0)) + "\"></div>" +
             "<div class=\"field-stack\"><label>Hidden C2 / Power</label><div class=\"summary-meta\" style=\"padding-top:10px; color: var(--text);\">" + escapeHtml(instance.side + " implicit network + power grid") + "</div></div>" +
           "</div>" +
-          (supportsRouteEditing
-            ? "<div class=\"form-grid tight\" style=\"margin-top:12px;\">" +
-                "<div class=\"field-stack\"><label>Waypoint 1 X</label><input id=\"selected-object-waypoint-x\" type=\"number\" value=\"" + escapeHtml(String(firstWaypoint.x)) + "\"></div>" +
-                "<div class=\"field-stack\"><label>Waypoint 1 Y</label><input id=\"selected-object-waypoint-y\" type=\"number\" value=\"" + escapeHtml(String(firstWaypoint.y)) + "\"></div>" +
-                "<div class=\"field-stack\"><label>Waypoint 1 Z</label><input id=\"selected-object-waypoint-z\" type=\"number\" value=\"" + escapeHtml(String(firstWaypoint.z)) + "\"></div>" +
-                "<div class=\"field-stack\"><label>Route</label><div class=\"summary-meta\" style=\"padding-top:10px; color: var(--text);\">" + escapeHtml(instance.missionWaypoints?.length ? "First waypoint armed" : "No waypoint yet") + "</div></div>" +
-              "</div>"
-            : "") +
           "<div class=\"controls\" style=\"margin-top:12px;\">" +
             "<button id=\"save-selected-object-btn\">Save Object</button>" +
             "<button id=\"move-selected-object-btn\">Move On Map</button>" +
-            (supportsRouteEditing ? "<button id=\"set-selected-waypoint-btn\">Set Waypoint On Map</button>" : "") +
             "<button id=\"open-selected-template-btn\">Open Template</button>" +
-          "</div>";
+          "</div>" +
+          routeHtml;
         resetContainers(
           instance.side === "Blue" ? html : "<div class=\"empty-state\">Select a Blue object to edit placement here.</div>",
           instance.side === "Red" ? html : "<div class=\"empty-state\">Select a Red object to edit placement here.</div>"
         );
+
+        const readWaypointInputs = () => {
+          if (!supportsRouteEditing) {
+            return [];
+          }
+          const grouped = new Map();
+          document.querySelectorAll(".selected-object-waypoint-field").forEach((input) => {
+            const waypointIndex = Number(input.dataset.waypointIndex || 0);
+            const field = input.dataset.waypointField;
+            if (!grouped.has(waypointIndex)) {
+              grouped.set(waypointIndex, this.buildDefaultWaypoint(instance));
+            }
+            const waypoint = grouped.get(waypointIndex);
+            waypoint[field] = Number(input.value || waypoint[field] || 0);
+          });
+          return Array.from(grouped.entries())
+            .sort((left, right) => left[0] - right[0])
+            .map((entry) => this.buildDefaultWaypoint(instance, entry[1]));
+        };
 
         document.getElementById("save-selected-object-btn").addEventListener("click", () => {
           this.detachGroupManagedInstance(instance);
@@ -8501,11 +9061,8 @@
           instance.posZ = Number(document.getElementById("selected-object-z").value || instance.posZ);
           instance.headingDeg = this.kernel.normalizeHeadingDeg(document.getElementById("selected-object-heading").value || instance.headingDeg || 0);
           if (supportsRouteEditing) {
-            instance.missionWaypoints = [{
-              x: Number(document.getElementById("selected-object-waypoint-x").value || firstWaypoint.x),
-              y: Number(document.getElementById("selected-object-waypoint-y").value || firstWaypoint.y),
-              z: Number(document.getElementById("selected-object-waypoint-z").value || firstWaypoint.z)
-            }];
+            instance.missionWaypoints = readWaypointInputs();
+            this.state.selectedRouteWaypointIndex = this.getSelectedRouteWaypointIndex(instance);
           }
           this.updateScenarioState("Updated selected object");
         });
@@ -8515,14 +9072,68 @@
           this.updateMapSelectionChip();
         });
         if (supportsRouteEditing) {
-          document.getElementById("set-selected-waypoint-btn").addEventListener("click", () => {
-            this.state.mapInteraction = {
-              mode: "selected-object-waypoint",
-              instanceId: instance.id,
-              waypointZ: Number(document.getElementById("selected-object-waypoint-z").value || firstWaypoint.z)
-            };
-            this.setStatus("Click the map to place waypoint 1");
-            this.updateMapSelectionChip();
+          document.getElementById("add-route-waypoint-btn").addEventListener("click", () => {
+            this.detachGroupManagedInstance(instance);
+            const nextRoute = readWaypointInputs();
+            const anchor = nextRoute[nextRoute.length - 1] || this.buildDefaultWaypoint(instance);
+            nextRoute.push(this.buildDefaultWaypoint(instance, anchor));
+            instance.missionWaypoints = nextRoute;
+            this.setSelectedRouteWaypoint(instance, nextRoute.length - 1);
+            this.updateScenarioState("Added route waypoint");
+          });
+          document.getElementById("clear-route-waypoints-btn").addEventListener("click", () => {
+            this.detachGroupManagedInstance(instance);
+            instance.missionWaypoints = [];
+            this.setSelectedRouteWaypoint(instance, null);
+            this.updateScenarioState("Cleared route waypoints");
+          });
+          document.querySelectorAll(".select-route-waypoint-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+              this.state.selectedRouteWaypointIndex = Number(button.dataset.waypointIndex || 0);
+              this.syncBuilderRouteSelection();
+              this.renderSelectedObjectEditor();
+              this.renderScenarioSnapshot();
+            });
+          });
+          document.querySelectorAll(".insert-route-waypoint-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+              this.detachGroupManagedInstance(instance);
+              const nextRoute = readWaypointInputs();
+              const waypointIndex = Number(button.dataset.waypointIndex || 0);
+              const anchor = nextRoute[waypointIndex] || nextRoute[nextRoute.length - 1] || this.buildDefaultWaypoint(instance);
+              nextRoute.splice(waypointIndex + 1, 0, this.buildDefaultWaypoint(instance, anchor));
+              instance.missionWaypoints = nextRoute;
+              this.setSelectedRouteWaypoint(instance, waypointIndex + 1);
+              this.updateScenarioState("Inserted route waypoint");
+            });
+          });
+          document.querySelectorAll(".delete-route-waypoint-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+              this.detachGroupManagedInstance(instance);
+              const nextRoute = readWaypointInputs();
+              const waypointIndex = Number(button.dataset.waypointIndex || 0);
+              nextRoute.splice(waypointIndex, 1);
+              instance.missionWaypoints = nextRoute;
+              this.setSelectedRouteWaypoint(instance, Math.max(0, waypointIndex - 1));
+              this.updateScenarioState("Deleted route waypoint");
+            });
+          });
+          document.querySelectorAll(".move-route-waypoint-btn").forEach((button) => {
+            button.addEventListener("click", () => {
+              const nextRoute = readWaypointInputs();
+              const waypointIndex = Number(button.dataset.waypointIndex || 0);
+              const waypoint = nextRoute[waypointIndex] || this.buildDefaultWaypoint(instance);
+              this.state.selectedRouteWaypointIndex = waypointIndex;
+              this.state.mapInteraction = {
+                mode: "selected-object-waypoint",
+                instanceId: instance.id,
+                waypointIndex,
+                waypointZ: Number(waypoint.z || instance.posZ || 0)
+              };
+              this.syncBuilderRouteSelection();
+              this.setStatus("Click the map to place waypoint " + (waypointIndex + 1));
+              this.updateMapSelectionChip();
+            });
           });
         }
         document.getElementById("open-selected-template-btn").addEventListener("click", () => {
@@ -8713,6 +9324,7 @@
           horizontalFovDeg: 360,
           verticalFovDeg: 120,
           headingDeg: 0,
+          slewRateDps: 9999,
           transmitPowerDb: 53,
           noiseFloorDb: -94,
           noiseSigmaDb: 1.2,
@@ -8736,6 +9348,10 @@
           type: effectorType,
           deliveryModel: effectorType === "Interceptor" ? "Guided" : (effectorType === "Kinetic" ? "Ballistic" : "Instant"),
           guidanceType: effectorType === "Interceptor" ? "Command" : "Command",
+          headingDeg: 0,
+          horizontalFovDeg: 360,
+          verticalFovDeg: 180,
+          slewRateDps: 9999,
           maxRangeM: effectorType === "Kinetic" ? 230 : 520,
           basePk: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 0.72 : 0,
           basePe: effectorType === "Kinetic" || effectorType === "DirectedEnergy" || effectorType === "Interceptor" ? 0 : 0.65,
@@ -8935,6 +9551,7 @@
         sensor.headingDeg = Number(document.getElementById("template-sensor-heading-input").value || 0);
         sensor.horizontalFovDeg = Number(document.getElementById("template-sensor-hfov-input").value || 360);
         sensor.verticalFovDeg = Number(document.getElementById("template-sensor-vfov-input").value || 180);
+        sensor.slewRateDps = Number(document.getElementById("template-sensor-slew-dps-input").value || 9999);
         sensor.scanIntervalSec = Number(document.getElementById("template-sensor-scan-input").value || 1);
         sensor.detectionThresholdDb = Number(document.getElementById("template-sensor-threshold-input").value || 17);
         sensor.transmitPowerDb = Number(document.getElementById("template-sensor-transmit-input").value || 0);
@@ -8965,6 +9582,10 @@
         effector.name = document.getElementById("template-effector-name-input").value.trim() || effector.name || "Effector";
         effector.type = document.getElementById("template-effector-type-input").value || "Kinetic";
         effector.guidanceType = document.getElementById("template-effector-guidance-input").value || "Command";
+        effector.headingDeg = Number(document.getElementById("template-effector-heading-input").value || 0);
+        effector.horizontalFovDeg = Number(document.getElementById("template-effector-hfov-input").value || 360);
+        effector.verticalFovDeg = Number(document.getElementById("template-effector-vfov-input").value || 180);
+        effector.slewRateDps = Number(document.getElementById("template-effector-traverse-input").value || 9999);
         effector.maxRangeM = Number(document.getElementById("template-effector-range-input").value || 0);
         effector.basePk = Number(document.getElementById("template-effector-basepk-input").value || 0);
         effector.basePe = Number(document.getElementById("template-effector-basepe-input").value || 0);
@@ -9136,6 +9757,7 @@
         document.getElementById("template-sensor-heading-input").value = sensor?.headingDeg ?? 0;
         document.getElementById("template-sensor-hfov-input").value = sensor?.horizontalFovDeg ?? 360;
         document.getElementById("template-sensor-vfov-input").value = sensor?.verticalFovDeg ?? 180;
+        document.getElementById("template-sensor-slew-dps-input").value = sensor?.slewRateDps ?? 9999;
         document.getElementById("template-sensor-scan-input").value = sensor?.scanIntervalSec ?? 1;
         document.getElementById("template-sensor-threshold-input").value = sensor?.detectionThresholdDb ?? 17;
         document.getElementById("template-sensor-transmit-input").value = sensor?.transmitPowerDb ?? 53;
@@ -9148,6 +9770,10 @@
         document.getElementById("template-effector-name-input").value = effector?.name || "";
         document.getElementById("template-effector-type-input").value = effector?.type || "";
         document.getElementById("template-effector-guidance-input").value = effector?.guidanceType || "Command";
+        document.getElementById("template-effector-heading-input").value = effector?.headingDeg ?? 0;
+        document.getElementById("template-effector-hfov-input").value = effector?.horizontalFovDeg ?? 360;
+        document.getElementById("template-effector-vfov-input").value = effector?.verticalFovDeg ?? 180;
+        document.getElementById("template-effector-traverse-input").value = effector?.slewRateDps ?? 9999;
         document.getElementById("template-effector-range-input").value = effector?.maxRangeM ?? 0;
         document.getElementById("template-effector-basepk-input").value = effector?.basePk ?? 0;
         document.getElementById("template-effector-basepe-input").value = effector?.basePe ?? 0;
@@ -10216,8 +10842,10 @@
         this.state.selectedMonteCarloRowIndex = null;
         if (clearSelection) {
           this.state.selectedMapEntity = null;
+          this.state.selectedRouteWaypointIndex = null;
           this.renderer.setSelection(null);
           this.builderRenderer.setSelection(null);
+          this.builderRenderer.setRouteSelection(null);
         }
         this.updateRunMetrics(null);
         this.updateLog([]);
@@ -10258,9 +10886,19 @@
             x: instance.posX,
             y: instance.posY,
             z: instance.posZ,
-            sensors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.sensors) || []),
-            effectors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.effectors) || []),
+            sensors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.sensors) || []).map((sensor) => ({
+              ...sensor,
+              headingDeg: this.kernel.normalizeHeadingDeg(Number(instance.headingDeg ?? 0) + Number(sensor.headingDeg ?? 0)),
+              missionState: "Scanning"
+            })),
+            effectors: this.kernel.deepClone((scenario.templates.find((template) => template.id === instance.templateId)?.components.effectors) || []).map((effector) => ({
+              ...effector,
+              headingDeg: this.kernel.normalizeHeadingDeg(Number(instance.headingDeg ?? 0) + Number(effector.headingDeg ?? 0)),
+              missionState: "Idle",
+              ammoRemaining: effector.ammoCapacity
+            })),
             currentHeadingDeg: this.kernel.normalizeHeadingDeg(instance.headingDeg ?? 0),
+            currentSpeedMps: null,
             behaviorState: "Preview",
             destroyed: false,
             status: "Active"
@@ -10283,6 +10921,7 @@
 
       renderScenarioSnapshot() {
         this.syncPlaceholderCards();
+        this.syncBuilderRouteSelection();
         this.renderScenarioModel(this.state.currentScenario, { preserveSelection: true, targetRenderers: [this.builderRenderer], updateState: false });
         this.renderDemoPreview();
       }
@@ -10662,15 +11301,7 @@
             );
           });
         } else if (this.state.singleRun?.report) {
-          const report = this.state.singleRun.report;
-          const singleDrivers = [
-            { label: "Detection", ok: report.detected, detail: report.detected ? "Threat detected" : "No detection candidate generated" },
-            { label: "Identification", ok: report.identified, detail: report.identified ? report.finalIdentificationStatus : "No hostile ID achieved" },
-            { label: "Engagement", ok: report.engaged, detail: report.engaged ? "Effector fired" : "No shot fired" },
-            { label: "Outcome", ok: report.targetDestroyed, detail: report.targetDestroyed ? "Threat destroyed" : "Threat survived run window" },
-            { label: "HQ", ok: report.hqSurvived, detail: report.hqSurvived ? "HQ survived" : "HQ was lost" }
-          ];
-          singleDrivers.forEach((driver) => {
+          this.createAnalysisEngine(this.state.singleRun.report).getFailureSignals().forEach((driver) => {
             cards.push(
               "<div class=\"timeline-card\"><h4>" + escapeHtml(driver.label) + "</h4><div class=\"summary-meta\">" +
               escapeHtml(driver.detail) + "</div><small>" + escapeHtml(driver.ok ? "Nominal" : "Attention") + "</small></div>"
@@ -10685,13 +11316,21 @@
       refreshLiveAnalysisSummary() {
         const container = document.getElementById("live-analysis-summary");
         const report = this.state.singleRun?.report || null;
-        const summary = report ? [
-          { label: "Assessment Snapshots", value: report.assessmentSnapshotCount || 0 },
-          { label: "First Detection", value: report.firstDetectionTimeSec ?? "-" },
-          { label: "Track Status", value: report.finalTrackStatus || "-" },
-          { label: "Intent", value: report.finalIntentStatus || "-" },
-          { label: "Spoof / Cyber", value: (report.spoofEvents ?? 0) + " / " + (report.cyberEvents ?? 0) }
-        ] : [
+        const summary = report ? (() => {
+          const analysis = this.createAnalysisEngine(report);
+          const trackSummary = analysis.getTrackSummary();
+          const effectSummary = analysis.getEffectSummary();
+          const trackStatus = trackSummary.find((metric) => metric.label === "Track Status")?.value ?? "-";
+          const firstDetection = trackSummary.find((metric) => metric.label === "First Detection")?.value ?? "-";
+          const intent = trackSummary.find((metric) => metric.label === "Intent")?.value ?? "-";
+          return [
+            { label: "Assessment Snapshots", value: trackSummary.find((metric) => metric.label === "Assessment Snapshots")?.value ?? 0 },
+            { label: "First Detection", value: firstDetection },
+            { label: "Track Status", value: trackStatus },
+            { label: "Intent", value: intent },
+            { label: "Spoof / Cyber", value: (effectSummary.find((metric) => metric.label === "Spoof Events")?.value ?? 0) + " / " + (effectSummary.find((metric) => metric.label === "Cyber Events")?.value ?? 0) }
+          ];
+        })() : [
           { label: "Assessment Snapshots", value: "-" },
           { label: "First Detection", value: "-" },
           { label: "Track Status", value: "-" },
@@ -10726,18 +11365,15 @@
           subtitleNode.textContent = "Single-run debrief for " + (report.scenarioName || "the active scenario") + ".";
         }
 
-        const summary = [
-          { label: "Detection", value: report.detected ? "Successful" : "Missed" },
-          { label: "Ghost Tracks", value: report.ghostTracksGenerated },
-          { label: "Identification", value: report.identified ? report.finalIdentificationStatus : "None" },
-          { label: "Intent", value: report.intentAssessed ? report.finalIntentStatus : "None" },
-          { label: "HQ Survived", value: report.hqSurvived ? "Yes" : "No" },
-          { label: "Outcome", value: report.targetDestroyed ? "Threat destroyed" : "Threat survived" }
-        ];
+        const analysis = this.createAnalysisEngine(report);
+        const summary = analysis.getRunSummary();
         summaryContainer.innerHTML = summary.map((metric) => (
           "<div class=\"metric-card\"><span class=\"label\">" + escapeHtml(metric.label) + "</span><span class=\"value\">" + escapeHtml(String(metric.value)) + "</span></div>"
         )).join("");
 
+        const trackSummary = analysis.getTrackSummary();
+        const engagementSummary = analysis.getEngagementSummary();
+        const effectSummary = analysis.getEffectSummary();
         const details = [
           ["Scenario", report.scenarioName],
           ["Seed", report.seed],
@@ -10758,9 +11394,11 @@
           ["Weighted survival score", report.weightedSurvivalScore],
           ["Threats destroyed", report.threatsDestroyed],
           ["Successful strikes", report.successfulStrikes ?? 0],
-          ["Spoof events", report.spoofEvents ?? 0],
-          ["Cyber events", report.cyberEvents ?? 0],
-          ["Shots fired", report.shotsFired],
+          ["Tracks dropped", trackSummary.find((metric) => metric.label === "Tracks Dropped")?.value ?? 0],
+          ["Spoof events", effectSummary.find((metric) => metric.label === "Spoof Events")?.value ?? 0],
+          ["Cyber events", effectSummary.find((metric) => metric.label === "Cyber Events")?.value ?? 0],
+          ["Shots fired", engagementSummary.find((metric) => metric.label === "Shots Fired")?.value ?? 0],
+          ["Playback effects", engagementSummary.find((metric) => metric.label === "Playback Effects")?.value ?? 0],
           ["Event count", report.eventCount],
           ["Assessment snapshots", report.assessmentSnapshotCount || 0],
           ["Final target status", report.finalTargetStatus]
